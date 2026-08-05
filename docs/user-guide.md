@@ -10,7 +10,7 @@
 
 | Version | Date | Sections revised | Notes |
 |---------|------|-----------------|-------|
-| 1.1 | August 2026 | 1, 2, 3.1–3.12, 3.14, 4.1–4.7, 5.1–5.6, 6.1–6.2; Appendices A–C added; factual corrections in 7.1, 10 | Sections 3.13 and 6.3–10 await client review input |
+| 1.1 | August 2026 | 1, 2, 3.1–3.12, 3.14, 4.1–4.7, 5.1–5.6, 6.1–6.3; Appendices A–C added; factual corrections and terminology alignment in 7–10 | Sections 3.13 and 7–10 have not been fully revised; they received terminology alignment and factual corrections only |
 | 1.0 | July 2026 | Initial release | — |
 
 ---
@@ -116,7 +116,15 @@ Donor receives notification with meal details — a humanitarian outcome deliver
 | Volunteer | `/volunteer/login` | `/volunteer/register` |
 | Beneficiary | No login | `/beneficiary/register` |
 
-### Registration and Approval
+### Registration and Approval Flow
+
+```
+Donor:          /donor/signup ──────────────────────────────► Active immediately
+Food Partner:   /vendor/register ──► pending ──► Admin/VM review ──► approved ──► Active
+Volunteer:      /volunteer/register ──► pending ──► Admin review ──► approved ──► Active
+Beneficiary:    /beneficiary/register ──► pending ──► Admin review ──► approved ──► Active
+Guest:          /donate ──────────────────────────────────────► No account needed
+```
 
 Each role follows a different path from registration to active use:
 
@@ -215,6 +223,8 @@ All tokens across the platform are visible here, filterable by status.
 | `expired` | Terminal: time ran out before the token was redeemed | Expire sweep runs (admin-triggered) | Admin (system) |
 | `blocked` | Terminal: reported lost — replaced with a new token | Admin reports token as lost | Admin |
 
+**QR payload integrity:** Each token's QR code is derived from the token ID using an HMAC-SHA256 signature with a server-held secret (`TOKEN_QR_SECRET`). The QR payload is deterministic and re-derivable but unguessable without the secret — a forged or altered QR code will not match any stored hash and will be rejected at redemption. Only the SHA-256 hash of the payload is persisted in the database (`tokens.qr_hash`); the payload itself is never stored. This prevents QR forgery and duplicate scanning, but it does not prevent a genuine token being redeemed by someone other than the intended recipient — that limitation is documented in Section 4.4.
+
 **What the admin can do:**
 - **Run Expire Sweep** — automatically expire all tokens past their expiry date
 - **Report a token as lost** — blocks the old token and generates a replacement with the same value. The old and new tokens are linked (`replacement_for_token_id`)
@@ -258,7 +268,8 @@ The platform supports four beneficiary categories, hardcoded in `lib/types/enums
 
 **What the admin sees:**
 - Applicant's name, category, contact details and face capture status
-- An Aadhaar indicator (`aadhaar ✓`) when the applicant provided an Aadhaar hash at registration. Aadhaar is always optional. The raw hash is never sent to the admin frontend — only a boolean presence flag is displayed. No Aadhaar number is stored; only a pre-hashed value is accepted.
+- An Aadhaar column. The admin list displays a boolean presence indicator for each applicant. However, no registration path in the application collects an Aadhaar value — the underlying `aadhaar_hash` field is accepted by the API but is never populated by any form. The indicator therefore reads as absent for every record.
+  <!-- PENDING: aadhaar_hash is an unused schema field; no capture, hashing or validation implemented -->
 
 **What the admin can do:**
 - **Approve** — creates a verified beneficiary record; the person can now receive and redeem tokens. Eligibility expiry is calculated automatically for `pregnant_women` and `patient` categories.
@@ -309,10 +320,12 @@ Food Partners propose menu items with pricing. Each item must be approved by an 
 
 <!-- PENDING: pApAmA Standard Meal Framework awaited from Trust -->
 
+**Menu dignity:** Beneficiaries are served from the same approved menu as paying customers. The platform does not contemplate a separate or lower grade of food for token-funded meals.
+
 **What the admin can do:**
 - View proposed menu items (name, description, price, Food Partner)
 - **Approve** — the item becomes available for meal redemptions
-- **Reject** — with a reason; the Food Partner can modify and resubmit
+- **Reject** — with a reason; the Food Partner can modify and resubmit. The purpose of rejection is to reach an approved menu, not to penalise. A good rejection reason is specific and actionable — it tells the Food Partner exactly what to change (e.g. "price exceeds the standard token value" or "item description too vague — please specify portion size") so they can correct and resubmit promptly.
 
 **Special Care items:** Food Partners may propose local equivalents for Special Care categories (pregnant women, patients). The categories with Special Care equivalents are defined by the `is_special_care_equivalent` flag on menu items. Approve these on a case-by-case basis.
 
@@ -341,6 +354,12 @@ After a Food Partner serves a meal, they upload a plate photo as proof of servic
 **What the admin can do:**
 - **Approve** — releases the payment (moves from `locked` to `released`). A notification is sent to the donor who funded the token, including the Food Partner name, meal item, location, value and the beneficiary's category.
 - **Reject** — a reason is mandatory (this is the only action in the platform that enforces a mandatory reason server-side). The Food Partner sees the rejection and can re-upload. Payment stays locked until approved. No resubmission deadline exists.
+
+**Fraud patterns to watch for:** The platform's fraud module detects several patterns automatically, but proof reviewers should also watch for:
+- **Duplicate or recycled photos** — the same plate image submitted for different redemptions (detected automatically when `proof_phash_dup_distance` is configured)
+- **Identical backgrounds** — multiple proof photos with the same table, crockery or setting that suggest staging rather than distinct meals
+- **Inconsistency between claimed item and photo** — a plate photo that does not match the menu item selected at redemption
+- **Unusual volume** — a high number of proofs from a single Food Partner in a short period, which may warrant cross-referencing with fraud flags (face-hash repeats, cooldown breaches)
 
 **Important:** Proof photos are write-once — once uploaded, they cannot be altered or deleted by the Food Partner. This ensures the integrity of the proof record.
 
@@ -392,6 +411,11 @@ Volunteers are custodians of donor trust. They receive tokens from the Admin Poo
 **Holding limits:** The system enforces a concurrent holding limit (`max_tokens_per_volunteer` in System Config). A volunteer cannot hold more than this many undistributed tokens at once. This limit exists to bound exposure — if a volunteer becomes unreachable, the maximum number of tokens at risk is capped.
 
 **Important:** A volunteer cannot return an undistributed token to the Admin Pool. Only an admin can revoke a token back to the pool.
+
+**Judgement factors for allocation:** When deciding how many tokens to allocate to a volunteer, the admin should weigh:
+- **Distribution history** — visible at `/admin/volunteer-activity`, showing past distribution volume and patterns
+- **Current holding** — the volunteer's current undistributed count against the configured `max_tokens_per_volunteer` limit
+- **Area coverage** — whether the volunteer serves an area with unmet need. Note that zone-based allocation is not enforced (`volunteer_zones_enabled` is a configuration seam only; zone assignment is available but not enforced at distribution).
 
 **What the admin can do:**
 - **View all volunteers** — see their status, zone assignment and current token holding count
@@ -451,7 +475,11 @@ Emergency Mode is a set of relaxed controls for use during disasters or crises. 
 - Food Partner temporary closure (`temporary_closure_until`)
 - Food Partner daily capacity limits (if enforced)
 
+**Disaster-affected eligibility:** During an emergency, eligibility requirements are simplified and assistance must not be denied for want of documentation. Emergency tokens do not require special proof from the beneficiary.
+
 **Auto-revert:** If `emergency_mode_max_duration_days` is set, Emergency Mode automatically turns off after that many days.
+
+<!-- PENDING: Emergency Mode activation criteria are Trust policy, awaited -->
 
 ---
 
@@ -518,7 +546,7 @@ This is where you control the rules that govern the platform. Settings are organ
 
 | Page | What it does |
 |------|-------------|
-| `/admin/institutions` | Manage partner institutions — allocate tokens in bulk for institutional distribution. |
+| `/admin/institutions` | Manage partner institutions — allocate tokens in bulk for institutional distribution. <!-- PENDING: institution eligibility and accountability rules are Trust policy documents in preparation --> |
 | `/admin/csr` | Manage corporate CSR donors and view CSR-specific reports. |
 | `/admin/ngo-partners` | Reference registry of partner NGOs and organisations. |
 
@@ -580,7 +608,7 @@ When a donor donates, the payment becomes **Donor Credit** — a non-withdrawabl
 
 Once a donor's credit balance reaches the `standard_token_value` (set by the admin), the donor can mint a token — a digital meal voucher.
 
-**What a token represents:** A token is a one-time entitlement to a freshly prepared meal at any approved Food Partner. It carries a rupee value, a QR code, an expiry date (if configured) and an accountability trail from creation to redemption.
+**What a token represents:** A token is a one-time entitlement to a freshly prepared meal at any approved Food Partner. It carries a rupee value, a QR code, an expiry date (if configured via `token_expiry_days`; NULL by default, meaning no expiry) and an accountability trail from creation to redemption. No reminder is sent to anyone before a token expires, and the expire sweep is triggered manually by an administrator rather than running automatically.
 
 **How to mint:**
 1. Go to the Tokens page
@@ -640,6 +668,8 @@ Donors receive **in-app notifications only**. SMS, email and WhatsApp notificati
 
 **Privacy note:** The beneficiary's category is included in notification metadata and is visible to the donor. No other beneficiary personal information (name, face, location) is included.
 
+**Template editing:** Notification message templates are editable by an administrator at `/admin/notification-templates` (see Section 3.14). Templates use placeholders such as `{{token_value}}` and `{{vendor_name}}`.
+
 **Persistence:** Notification history persists indefinitely. Notifications are marked as read when viewed but are never deleted.
 
 ---
@@ -659,7 +689,7 @@ A Food Partner is a humanitarian partner of the pApAmA Trust — an establishmen
 1. Go to `/vendor/register`
 2. Fill in business details:
    - Shop/restaurant name
-   - Address and geo-location (coordinates)
+   - Address and geo-location (coordinates) — these coordinates are used for the redemption radius check (`token_redemption_radius_km`), so they should be the establishment's actual position rather than an approximate area
    - Phone number and email
    - FSSAI licence number (no expiry date is captured)
    - GST number (if applicable)
@@ -831,15 +861,28 @@ The volunteer's email is pre-confirmed server-side (no email verification step).
 
 **Page:** `/volunteer` (Dashboard → Held Tokens)
 
+**Purpose and dignity:** Volunteers are not distributing QR codes — they are carrying donor-funded meals to people in need, with dignity, compassion and fairness. Every interaction should preserve the beneficiary's self-respect. Avoid anything that could embarrass or stigmatise a person receiving a token. Volunteers exercise reasonable judgement in identifying people who need assistance; they are not expected to perform formal eligibility assessment.
+
+**Distribution steps:**
+
 1. Find the token you want to distribute in your "Held Tokens" list
 2. Click **Distribute**
 3. The QR code is displayed — show it to the beneficiary or share it digitally
 4. The token status changes from `assigned_to_volunteer` to `distributed`
 5. Your holding count decreases, freeing up space for more tokens
 
-You can also view all tokens you've previously distributed in the "Distributed" section.
+**Accountability:** The `assigned_to_volunteer` → `distributed` transition is recorded with a timestamp and distribution channel. This means the token remains traceable through its whole life — from donor credit, through minting, pool allocation, volunteer holding, distribution and finally redemption at a Food Partner. A volunteer cannot return an undistributed token; only an administrator can revoke it back to the Admin Pool.
 
-**Assisting with registration:** You can help beneficiaries register at `/volunteer/beneficiaries`. Fill in their details on their behalf — the registration still goes through the normal admin approval process.
+**Registration assistance:** Volunteers can assist beneficiaries with registration at `/volunteer/beneficiaries` by helping with data entry. The volunteer-assisted registration form collects the same five fields as self-registration (category, name, contact, location hint and face capture). Approval authority remains with the Trust through the normal administrative review process.
+
+**Digital accessibility:** A token can be shown on the volunteer's phone screen, shared electronically, or printed as a QR code. The beneficiary does not need a smartphone — a printed QR code is the normal case, not an exception.
+
+**Exceptional situations:**
+- **No internet connectivity** — there is no offline mode. Both distribution and redemption require connectivity. Face capture at redemption has no fallback. This is a real operational constraint.
+- **QR cannot be displayed** — a printed QR code works. The Food Partner's scan page (`/vendor/scan`) also accepts a pasted code as a fallback.
+- **Urgent need** — there is no volunteer-level priority or urgent distribution path. Emergency Mode is activated by an administrator and applies platform-wide (see Section 3.11). A volunteer cannot escalate individually.
+
+**Distribution records:** The "Distributed" section on the volunteer dashboard shows previously distributed tokens with serial number, token type, value (₹) and current status (e.g. `distributed`, `redeemed`, `expired`). Distribution date is not displayed. Distribution location is captured when the volunteer submits a distribution but is not shown back in the distributed list.
 
 ---
 
@@ -849,7 +892,7 @@ You can also view all tokens you've previously distributed in the "Distributed" 
 
 **Page:** `/beneficiary/register`
 
-Anyone in need can register. No smartphone, bank account or formal ID is mandatory.
+Anyone in need can register. No Aadhaar, smartphone, bank account or formal ID is mandatory.
 
 1. Go to `/beneficiary/register` (or ask a volunteer for help)
 2. Enter your name and basic details
@@ -1023,7 +1066,7 @@ These settings are managed by the Admin at `/admin/system-config`. Each setting 
 A: Yes. A volunteer can distribute a printed QR code, and the Food Partner handles the scanning. The beneficiary does not need a phone.
 
 **Q: Can a beneficiary receive meals without an Aadhaar card or formal ID?**
-A: Yes. Face verification is the primary identity method at redemption, and assisted registration (via a volunteer) ensures no genuine beneficiary is denied.
+A: Yes. Aadhaar is not collected by the platform. Face verification is the primary identity method at redemption, and assisted registration (via a volunteer) ensures no genuine beneficiary is denied.
 
 **Q: Does pApAmA cook or deliver food?**
 A: No. pApAmA is a meal-enablement platform. Food is freshly cooked by approved Food Partners and served at their premises. pApAmA never cooks, stores, or delivers food.
