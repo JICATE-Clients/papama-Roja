@@ -88,7 +88,7 @@ Note: this is distinct from the token expiry reminder question. The guide's stat
 
 **Recommended fix:** Add a brief note in §3.3 or §3.14 documenting the scheduled-redemption reminder sweep endpoint, its purpose and its current status.
 
-**Applied:** No (MINOR — recommendation only).
+**Applied:** Yes — added "Run Scheduled-Redemption Reminder Sweep" paragraph in §3.3 alongside the existing "Run Expire Sweep" entry.
 
 ---
 
@@ -112,7 +112,7 @@ Note: this is distinct from the token expiry reminder question. The guide's stat
 
 **Recommended fix:** Replace "face photo" with "face capture" or "face image" (the user-facing action) and ensure the parenthetical clarification is present. Example: "a face capture (for identity verification — only the mathematical embedding is stored; no photograph is retained)."
 
-**Applied:** No (MINOR — recommendation only).
+**Applied:** Yes — §2 changed to "a face capture (only the mathematical embedding is stored; no photograph is retained)"; §6.1 changed to "Capture your face (for identity verification) — a mathematical embedding is computed on-device; only the embedding is stored, no photograph is retained."
 
 ---
 
@@ -194,7 +194,7 @@ All 32 build items (B-01 through B-32, excluding closed B-04/B-05 and resolved B
 
 ### 10 undocumented features from Register §5
 
-9 of 10 documented. Missing: scheduled-redemption reminders (Finding 3, MINOR).
+All 10 documented. Scheduled-redemption reminders added by audit (Finding 3).
 
 ### Changelog source tags
 
@@ -208,8 +208,8 @@ Spot-checked 40+ entries across all changelog sections. Every entry carries at l
 |----------|-------|---------|---------------------|
 | CRITICAL | 1 | 1 | 0 |
 | MAJOR | 1 | 1 | 0 |
-| MINOR | 2 | 0 | 2 |
-| **Total** | **4** | **2** | **2** |
+| MINOR | 2 | 2 | 0 |
+| **Total** | **4** | **4** | **0** |
 
 | Test | Findings |
 |------|----------|

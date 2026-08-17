@@ -131,7 +131,7 @@ Each role follows a different path from registration to active use:
 
 **Food Partners (Vendors)** — Registration requires admin approval. A Food Partner registers at `/vendor/register` with business details, FSSAI licence number and KYC documents. Their email is pre-confirmed server-side (no email verification step). The registration enters `pending` status and must be approved by an administrator or vendor manager before the Food Partner can sign in. KYC status is also set to `pending` at registration.
 
-**Volunteers** — Registration requires admin approval. A volunteer registers at `/volunteer/register` with name, contact details and a face photo. Their email is pre-confirmed server-side. The registration enters `pending` status and must be approved by an administrator.
+**Volunteers** — Registration requires admin approval. A volunteer registers at `/volunteer/register` with name, contact details and a face capture (only the mathematical embedding is stored; no photograph is retained). Their email is pre-confirmed server-side. The registration enters `pending` status and must be approved by an administrator.
 
 **Beneficiaries** — Registration requires admin approval. A beneficiary (or a volunteer assisting them) submits a registration at `/beneficiary/register`. The registration enters `pending` status and must be approved by an administrator.
 
@@ -283,7 +283,9 @@ Tokens are created with one of two distribution modes, fixed at creation:
 
 **What the admin can do:**
 
-**Run Expire Sweep** — automatically expire all tokens past their expiry date. No reminder is sent to anyone before a token expires, and the expire sweep is triggered manually by an administrator rather than running automatically.
+**Run Expire Sweep** — automatically expire all tokens past their expiry date. The expire sweep is triggered manually by an administrator rather than running automatically.
+
+**Run Scheduled-Redemption Reminder Sweep** — send reminder notifications for tokens with upcoming scheduled redemption dates. The sweep at `/api/admin/scheduled-reminders/sweep` checks for tokens whose `scheduled_redemption_date` is within 7 days and sends a reminder to the relevant party. Each reminded token is marked as `reminded` to prevent duplicate notifications. This is a separate mechanism from the expire sweep — it concerns pre-arranged redemption dates, not token expiry.
 
 **Controlled Reissue (replaces revalidation):**
 
@@ -1098,7 +1100,7 @@ Volunteers are the bridge between the platform and beneficiaries in the field. T
 **Registration and verification journey:**
 
 1. Enter name, phone number and email
-2. Capture a face photo (for identity verification) — only the mathematical embedding is stored; no photograph is retained
+2. Capture your face (for identity verification) — a mathematical embedding is computed on-device; only the embedding is stored, no photograph is retained
 3. Submit the registration
 
 The volunteer's email is pre-confirmed server-side (no email verification step). The registration enters `pending` status and must be approved by an administrator. After approval, the volunteer signs in at `/volunteer/login`.
