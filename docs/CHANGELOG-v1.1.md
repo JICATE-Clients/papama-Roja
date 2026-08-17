@@ -502,3 +502,10 @@ This changelog records every substantive change in the v1.1 rewrite, grouped by 
 - ₹10 contribution language consistent throughout: "contribution to pApAmA, collected by Food Partner as authorised collection agent, remitted to Administration Account, waivable" [DECISION-1]
 - Notification content aligned to approved privacy policy throughout [DECISION-10]
 - Pre-sign-off maker-checker demonstration noted in register (not in guide text) [DECISION-4]
+
+---
+
+## Independent Audit — 17 August 2026
+
+- §9.9 `patient_eligibility_months`: classification corrected from "Superseded" to "Optional"; "Previously set" changed to "Sets"; business implication updated to note the key is currently active and will be superseded when B-28 lands — V-17 confirms the key is actively applied in code [audit] [V-17] [B-28 planned]
+- §10.3 Q6 "Reconciled" status: removed parenthetical "(including ₹10 contribution verification)" — this behaviour is Planned (B-01/B-24), not current; the body text in §3.8 already carries the correct Planned (B-01) marker [audit] [V-11] [B-01 planned]

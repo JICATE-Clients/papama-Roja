@@ -1487,7 +1487,7 @@ The current implementation has four **beneficiary categories** (Pregnant Women, 
 |-----|------|---------------|-----------------|-------------|---------|---------------------|
 | `special_care_multiplier` | Number | **Internal analysis only** | **Not functional.** Defined in config but never applied in any token minting, redemption or value calculation code. Maintained within an approved range of approximately 1.5x–2x for internal financial and policy analysis only. | Not applied | Seeded as 2 | Do NOT set with the expectation that it affects token values. The donor-facing Special Care Token value is fixed at ₹100. |
 | `special_care_post_delivery_months` | Number | **Optional** | Months post-delivery a pregnant woman qualifies for Special Care eligibility extension | No post-delivery extension | NULL | Sets the eligibility-expiry window for approved pregnant-women beneficiaries |
-| `patient_eligibility_months` | Number | **Superseded** | Previously set a universal patient eligibility period | Uses general approval without time limit | NULL | **Superseded** by per-record review dates with system reminders (approved model). Retained for backward compatibility. |
+| `patient_eligibility_months` | Number | **Optional** | Sets a universal patient eligibility period (months from approval) | Uses general approval without time limit | NULL | Currently active — used to compute `eligibility_expires_at` for patients at approval. Will be **superseded** by per-record review dates with system reminders when the approved Special Care model is implemented (Planned B-28). |
 
 ---
 
@@ -1726,7 +1726,7 @@ A: Proof protects all parties: donor funds are protected; Food Partners have evi
 A: Settlement cycles may be daily, twice weekly or weekly, depending on the Foundation's configured operating policy. You can view the status of your settlements at `/vendor/settlements`. The Foundation's operating target is Food Partner payment within 7 working days of settlement reconciliation.
 
 **Q6: What do the settlement statuses mean?**
-A: **Pending** — approved meals awaiting settlement. **Locked** — settlement prepared and locked for review. **Approved** — reviewed and approved by the checker. **Reconciled** — pre-payment reconciliation complete (including ₹10 contribution verification). **Paid** — payment transferred to the Food Partner. A settlement can be placed **on hold** at any stage before payment for further review.
+A: **Pending** — approved meals awaiting settlement. **Locked** — settlement prepared and locked for review. **Approved** — reviewed and approved by the checker. **Reconciled** — pre-payment reconciliation complete. **Paid** — payment transferred to the Food Partner. A settlement can be placed **on hold** at any stage before payment for further review.
 
 > **Planned (B-24):** System-enforced maker-checker — the person who prepares (locks) a settlement cannot be the same person who approves it.
 
