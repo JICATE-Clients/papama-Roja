@@ -1,45 +1,41 @@
-# pApAmA — Platform Administration Guide
+# pApAmA — Technical Administration Guide
 
 > **Version:** 1.1 (Phase 1)
 > **Last updated:** August 2026
-> **Audience:** For administrators, implementation partners and technical teams
-
----
-
-## Changelog
-
-| Version | Date | Sections revised | Notes |
-|---------|------|-----------------|-------|
-| 1.1 | August 2026 | 1, 2, 3.1–3.12, 3.14, 4.1–4.7, 5.1–5.6, 6.1–6.3; Appendices A–C added; factual corrections and terminology alignment in 7–10 | Sections 3.13 and 7–10 have not been fully revised; they received terminology alignment and factual corrections only |
-| 1.0 | July 2026 | Initial release | — |
+> **Supersedes:** Platform User Guide v1.0 (July 2026)
+> **Audience:** Administrators, compliance officers, vendor managers, implementation partners and technical teams
 
 ---
 
 ## How to Use This Guide
 
-This document is the operational reference for the pApAmA platform. It covers system behaviour, administrative procedures, role definitions and integration details as implemented in the Phase 1 codebase.
+This document is the **Technical Administration Guide** for the pApAmA platform. It is written for administrators and technical stakeholders who configure, operate and oversee the platform. It covers system behaviour, administrative procedures, role definitions, configuration keys, internal route paths and integration details as implemented in the Phase 1 codebase.
 
-Sections 1–3 cover platform overview, authentication and the admin console. Sections 4–6 describe donor, Food Partner and volunteer workflows respectively. Section 7 covers beneficiary interactions, Section 8 covers public features, Section 9 is the system configuration reference and Section 10 is a technical FAQ.
+A simplified **Public User Guide** — written for donors, Food Partners, volunteers and beneficiaries in non-technical language — will follow in a later phase.
 
-All page paths (e.g. `/admin/tokens`), configuration keys (e.g. `standard_token_value`) and interface labels are cited verbatim from the running application.
+Sections 1–2 cover platform overview and authentication. The **Go-Live Checklist** identifies every setting that must be reviewed before production. Sections 3–6 describe admin, donor, Food Partner and volunteer workflows respectively. Section 7 covers beneficiary interactions, Section 8 covers public features, Section 9 is the system configuration reference and Section 10 is a comprehensive FAQ.
 
----
+### Terminology
 
-## Terminology
+| Guide term | Application interface term | Meaning |
+|------------|---------------------------|---------|
+| **Food Partner** | Vendor | An approved restaurant, hotel, canteen or other food establishment participating in the platform. The application interface currently uses "Vendor" in page paths (`/admin/vendors`, `/vendor/scan`), configuration keys (`vendor_max_complaint_rate`, `vendor_capacity_enforcement_enabled`), database tables and on-screen labels. UI standardisation to "Food Partner" is a future enhancement. |
+| **General Donation Pool** | Guest Pool | The accumulated credit balance from anonymous (guest) donations, managed by the admin and convertible into tokens for volunteer distribution. |
+| **Token** | — | A digital meal voucher funded by a donation, redeemable for one freshly prepared meal at a Food Partner. Tokens are not money and carry no cash value. |
+| **Donor Credit** | — | A non-withdrawable internal accounting balance representing a donor's committed meal-funding capacity. Donor Credit does not expire. |
+| **Admin Pool** | — | The holding area for Path B tokens awaiting volunteer allocation. |
+
+### Conventions
 
 - **pApAmA** — People Against Poverty and Malnutrition. This expansion is a Trust-supplied name and does not appear in the codebase.
-- **Food Partner** — An approved restaurant, hotel, canteen or other food establishment participating in the platform. The application interface currently uses "Vendor" (in page paths such as `/admin/vendors`, `/vendor/scan`, configuration keys such as `vendor_max_complaint_rate` and `vendor_capacity_enforcement_enabled`, database tables and on-screen labels). Standardisation to "Food Partner" across the interface is a future enhancement. This guide uses "Food Partner" in narrative and principles and retains "Vendor" for all technical references.
-- **Token** — A digital meal voucher funded by a donation, redeemable for one freshly prepared meal at a Food Partner. Tokens are not money and carry no cash value.
-- **Donor Credit** — A non-withdrawable internal accounting balance representing a donor's committed meal-funding capacity.
-- **Admin Pool** — The holding area for Path B tokens awaiting volunteer allocation.
-- **Guest Pool** — The accumulated credit balance from anonymous (guest) donations, managed by the admin and convertible into tokens for volunteer distribution.
-  <!-- PENDING: client to choose replacement name for Guest Pool -->
+- All page paths (e.g. `/admin/tokens`), configuration keys (e.g. `standard_token_value`) and interface labels are cited verbatim from the running application.
+- Route paths, config keys and code identifiers are always shown as-is, even where they use "vendor" or "guest_pool".
 
 ---
 
 ## 1. What is pApAmA?
 
-pApAmA (People Against Poverty and Malnutrition) is a humanitarian meal-enablement platform operated by the pApAmA Trust. Its purpose is to connect people who want to fund meals with people who need them, through a network of approved Food Partners — restaurants, hotels, canteens and other food establishments that prepare and serve fresh food.
+pApAmA (People Against Poverty and Malnutrition) is a humanitarian meal-enablement platform operated by the pApAmA Trust. Its purpose is to connect people who want to fund meals with people who need them, through a network of approved Food Partners (shown as "Vendor" in the application interface) — restaurants, hotels, canteens and other food establishments that prepare and serve fresh food.
 
 pApAmA does not cook, store or deliver food. It enables a beneficiary to walk into an approved Food Partner and receive a freshly prepared meal, funded by a donor's contribution and verified end-to-end through digital accountability.
 
@@ -48,23 +44,25 @@ pApAmA does not cook, store or deliver food. It enables a beneficiary to walk in
 ```
 Donor donates money
       ↓
-Money becomes "Donor Credit" (non-withdrawable)
+Money becomes "Donor Credit" (non-withdrawable, never expires)
       ↓
-Donor mints a "Token" (digital meal voucher)
+Donor mints a "Token" (digital meal voucher, 60-day validity)
       ↓
 Token reaches a beneficiary:
-  Path A — donor distributes directly
-  Path B — donor entrusts to pApAmA → admin allocates to volunteer → volunteer distributes
+  Path A (Donor Controlled) — donor distributes directly
+  Path B (PAPAMA Distributed) — donor entrusts to pApAmA → admin allocates to volunteer → volunteer distributes
       ↓
 Beneficiary visits an approved Food Partner → presents the token QR code
       ↓
-Food Partner verifies identity (face) → selects menu item → serves the meal
+Food Partner verifies identity (face embedding) → selects menu item → serves the meal
+      ↓
+Beneficiary contributes ₹10 to pApAmA (collected by Food Partner; waivable if unable to pay)
       ↓
 Food Partner uploads proof (plate photo)
       ↓
-Admin reviews and approves proof → Food Partner receives payment via settlement
+Admin reviews and approves proof → Food Partner receives full meal value via settlement
       ↓
-Donor receives notification with meal details — a humanitarian outcome delivered
+Donor receives notification with meal location (City, State) — a humanitarian outcome delivered
 ```
 
 ### Founding Principles
@@ -86,10 +84,10 @@ Donor receives notification with meal details — a humanitarian outcome deliver
 | **Compliance Officer** | Audits platform activity with read-only access to all operational data — donations, tokens, vendors, beneficiaries, settlements, proofs, fraud flags and audit logs. Cannot create, update, approve or delete any record. |
 | **Vendor Manager** | Manages Food Partner relationships: approves vendor registrations and menus, manages vendor KYC documents, reviews settlements and proofs, triages complaints. Cannot approve beneficiaries or volunteers, and cannot override settlement holds. |
 | **Donor** | Funds meals by donating, minting tokens and choosing a distribution path. Tracks the impact of donations through notifications and dashboards. |
-| **Food Partner (Vendor)** | Serves meals to token holders, uploads proof of service and receives payment through periodic settlements. |
+| **Food Partner (Vendor)** | Serves meals to token holders, uploads proof of service and receives payment through periodic settlements. Collects the ₹10 beneficiary contribution as an authorised collection agent of pApAmA. |
 | **Volunteer** | Receives tokens from the Admin Pool and distributes them to beneficiaries in the field. Assists with beneficiary registration. |
 | **Beneficiary** | Registers for eligibility, receives tokens and redeems them for meals at approved Food Partners. |
-| **Guest** | Donates without creating an account. Guest donations accumulate in the Guest Pool for admin-managed distribution. |
+| **Guest** | Donates without creating an account. Guest donations accumulate in the General Donation Pool (shown as "Guest Pool" in the application interface) for admin-managed distribution. |
 
 > **pApAmA does not cook, store or deliver food.** Food is freshly prepared by approved Food Partners and consumed at their premises.
 
@@ -100,8 +98,9 @@ Donor receives notification with meal details — a humanitarian outcome deliver
 ### Role Purposes
 
 - **Administrator, Compliance Officer and Vendor Manager** access the admin console at `/login`. The console adapts to each role's permission scope — an administrator sees all features, a compliance officer sees read-only audit views and a vendor manager sees vendor onboarding and management.
+- **Compliance Officer capabilities:** Read-all access on audit logs, fraud monitoring, donations, tokens, vendors, beneficiaries, settlements, proofs and all operational data. No mutation rights — cannot create, update, delete, approve or override anything.
 - **Donors** manage their donations, tokens and impact at `/donor/login`.
-- **Food Partners (Vendors)** manage their menus, serve meals and track settlements at `/vendor/login`.
+- **Food Partners** (shown as "Vendor" in the application interface) manage their menus, serve meals and track settlements at `/vendor/login`.
 - **Volunteers** manage their token holdings and distribution activity at `/volunteer/login`.
 - **Beneficiaries** do not have a login-based dashboard. Their interaction with the platform is through the registration form and the token redemption process at Food Partners. This is a deliberate design choice for digital-literacy and device inclusion — a beneficiary needs neither a smartphone nor an account to receive a meal.
 - **Guests** donate at the public `/donate` page with no account required.
@@ -139,6 +138,46 @@ Each role follows a different path from registration to active use:
 ### Forgot Password
 
 Use the `/forgot-password` page to request a password reset link by email.
+
+---
+
+## Go-Live Checklist
+
+Before the platform goes into production, every setting below must be reviewed and configured by an authorised administrator. This checklist distinguishes **business configuration** (set via the admin console at `/admin/system-config`) from **technical environment variables** (set by the authorised deployment team in the hosting environment).
+
+### Business Configuration (Admin Console)
+
+| Setting | Classification | Action required |
+|---------|---------------|----------------|
+| `standard_token_value` | Mandatory | Set the standard meal token value (₹). Tokens cannot be minted until this is set. |
+| `meal_cooldown_hours` | Mandatory | Set the minimum hours between meals for a beneficiary (e.g. 6). If NULL, no cooldown is enforced. |
+| `max_meals_per_day` | Mandatory | Set the daily meal limit per beneficiary. If NULL, no daily limit is enforced. |
+| `token_redemption_radius_km` | Mandatory | Set the maximum distance (km) between a Food Partner and a beneficiary for redemption. |
+| `max_tokens_per_volunteer` | Mandatory | Set the concurrent holding limit for volunteers. If NULL, no limit is enforced — exposure is unbounded. |
+| `token_expiry_days` | Mandatory | Set to **60** per approved policy (60-day validity from activation). |
+| `co_contribution_max` | Mandatory | Set to **10** (₹10 beneficiary contribution). Current system accepts any non-negative value; the ₹10 hard ceiling is not yet code-enforced. |
+| `vendor_max_complaint_rate` | Recommended | Set the complaint-ratio threshold for auto-suspension flagging (e.g. 0.15). |
+| `vendor_auto_suspend_enabled` | Review | Default OFF. The graduated corrective-action ladder governs Food Partner discipline operationally; auto-suspend remains available but OFF. |
+| `vendor_capacity_enforcement_enabled` | Recommended | Enable if Food Partners have set daily capacity limits. |
+| `meal_window_enforcement_enabled` | Recommended | Enable and configure meal windows at `/admin/meal-windows` before activating. |
+| `settlement_random_audit_rate` | Mandatory | Set to **0.10** (10% baseline per approved audit policy). |
+| `emergency_mode_enabled` | Review | Default OFF. Review emergency values before any activation: `emergency_max_meals_per_day` = 4, `emergency_meal_cooldown_hours` = 3, `emergency_mode_max_duration_days` = 7. |
+| `city_lock_enabled` / `operating_city` | Review | For pilot: enable city lock and set operating city. City lock is enforced at redemption only; registration gating is planned. |
+| `transparency_dashboard_enabled` | Review | Enable when public transparency page is ready. |
+| `proof_phash_dup_distance` | Recommended | Set a threshold for duplicate proof-photo detection (perceptual hash distance). |
+| `audit_log_retention_days` | Review | Leave NULL for permanent retention (recommended). |
+| Special Care settings | Review | Configure `special_care_post_delivery_months` if Special Care is active. See Section 9. |
+| Notification templates | Review | Review and customise templates at `/admin/notification-templates`. |
+
+### Technical Environment Variables
+
+| Variable | Action required |
+|----------|----------------|
+| `NEXT_PUBLIC_UPI_VPA` | Set the UPI merchant VPA for real payment collection. Verified by the authorised deployment team — not editable by administrators. |
+| `TOKEN_QR_SECRET` | Set the HMAC secret for token QR code generation. Must be kept confidential. |
+| SMS/Email/WhatsApp API keys | Configure when notification channels are activated (currently stub adapters). |
+
+> **Planned (B-06):** Dashboard warning when critical configuration is incomplete — a go-live readiness indicator on the admin dashboard alerting administrators to mandatory settings that remain unconfigured.
 
 ---
 
@@ -181,25 +220,23 @@ This page lists every donation on the platform — from registered donors and fr
 **What the admin sees:**
 - All donations with amount, donor name (or "Guest"), payment method, status and date
 - Client-side text search across donor label, payment reference and status (20 records per page). Export is not available on this page.
-- The **Guest Pool balance** — accumulated credit from anonymous donations
+- The **General Donation Pool balance** (shown as "Guest Pool" in the application interface) — accumulated credit from anonymous donations
 
-<!-- PENDING: client to choose replacement name for Guest Pool -->
+**General Donation Pool purpose and lifecycle:**
 
-**Guest Pool purpose and lifecycle:**
-
-The Guest Pool exists so that anyone can fund meals without creating an account. Its lifecycle has six stages:
+The General Donation Pool exists so that anyone can fund meals without creating an account. Its lifecycle has six stages:
 
 1. **Donation** — A guest donates at `/donate` or `/donate/qr`
-2. **Credit** — The donation amount is credited to the Guest Pool balance
-3. **Accumulation** — Guest Pool credit accumulates until the admin acts
-4. **Token conversion** — The admin selects an amount and mints tokens from Guest Pool credit into the Admin Pool
+2. **Credit** — The donation amount is credited to the General Donation Pool balance
+3. **Accumulation** — Pool credit accumulates until the admin acts
+4. **Token conversion** — The admin selects an amount and mints tokens from pool credit into the Admin Pool
 5. **Volunteer distribution** — The admin allocates minted tokens to volunteers for field distribution
 6. **Redemption** — A beneficiary redeems the token at a Food Partner for a meal
 
 CSR donations and institutional donations are handled through dedicated pages (`/admin/csr` and `/admin/institutions`) and follow the same underlying credit-to-token conversion mechanism.
 
 **What the admin can do:**
-- **Convert Guest Pool credit to tokens** — select an amount and mint tokens into the Admin Pool for volunteer distribution
+- **Convert General Donation Pool credit to tokens** — select an amount and mint tokens into the Admin Pool for volunteer distribution
 - **Reverse a donation** — in case of a payment error or duplicate. This reverses the internal credit; it is not a money-back refund. pApAmA does not offer money-back refunds — donated funds are committed to meals.
 
 ---
@@ -208,38 +245,90 @@ CSR donations and institutional donations are handled through dedicated pages (`
 
 **Page:** `/admin/tokens`
 
-All tokens across the platform are visible here, filterable by status.
+Tokens are the core accountability instrument of pApAmA — each one traces a donor's generosity through the system to a meal served. All tokens across the platform are visible here, filterable by status.
+
+**Token Model (approved policy):**
+
+Per the approved token model, a pApAmA token is **PAN INDIA** by default and may be redeemed at any authorised pApAmA Food Partner anywhere in India. Only a geographic restriction specifically selected by the donor restricts the token's redemption area.
+
+> **Planned (B-23):** Donor-selected geographic restriction (PAN INDIA / State / District / City / PIN) stored as a token attribute and checked at redemption against the actual service location. Token face content (type, value, geographic eligibility, activation date, expiry date) for physical and digital tokens.
+
+Every token has a **60-day validity period** from its activation date. After expiry, an unused token becomes invalid and may be considered for **controlled reissue** by an authorised administrator (see below). The `token_expiry_days` configuration is set to 60.
+
+**Distribution Mode:**
+
+Tokens are created with one of two distribution modes, fixed at creation:
+
+| Mode | Path | Description |
+|------|------|-------------|
+| **PAPAMA Distributed** | Path B | Token enters the Admin Pool for volunteer allocation. |
+| **Donor Controlled** | Path A | Token goes `live` immediately for the donor to distribute personally. |
+
+> **Planned (B-32):** FIFO (First-In-First-Out) allocation for pool tokens including the Special Care distribution pool. Donor-controlled tokens never enter FIFO — this is architecturally guaranteed by the distribution mode attribute.
 
 **Token statuses:**
 
-| Status | Meaning | How a token reaches this status | Who advances it |
-|--------|---------|-------------------------------|----------------|
-| `generated` | Just created, before the donor picks a distribution path | Donor mints a token from credit | Donor (automatic on creation) |
-| `live` | Active — donor chose to distribute personally (Path A) | Donor selects "I'll distribute it myself" | Donor |
-| `in_admin_pool` | Donor chose to let pApAmA distribute (Path B) — waiting for admin allocation | Donor selects "Let pApAmA distribute" | Donor |
-| `assigned_to_volunteer` | Allocated to a volunteer, not yet given to a beneficiary | Admin allocates from the Admin Pool | Admin |
-| `distributed` | Volunteer has given the token to a beneficiary | Volunteer marks as distributed | Volunteer |
-| `redeemed` | Terminal: consumed at a Food Partner — a meal was served | Food Partner completes redemption | Food Partner (system) |
-| `expired` | Terminal: time ran out before the token was redeemed | Expire sweep runs (admin-triggered) | Admin (system) |
-| `blocked` | Terminal: reported lost — replaced with a new token | Admin reports token as lost | Admin |
+| Status | Meaning | How a token reaches this status | Approved vocabulary |
+|--------|---------|-------------------------------|---------------------|
+| `generated` | Just created, before the donor picks a distribution path | Donor mints a token from credit | Created |
+| `live` | Active — donor chose to distribute personally (Path A) | Donor selects "I'll distribute it myself" | Donor Controlled |
+| `in_admin_pool` | Donor chose to let pApAmA distribute (Path B) — waiting for admin allocation | Donor selects "Let pApAmA distribute" | Available / FIFO Pool |
+| `assigned_to_volunteer` | Allocated to a volunteer, not yet given to a beneficiary | Admin allocates from the Admin Pool | Allocated |
+| `distributed` | Volunteer has given the token to a beneficiary | Volunteer marks as distributed | Allocated (distributed) |
+| `redeemed` | Terminal: consumed at a Food Partner — a meal was served | Food Partner completes redemption | Redeemed |
+| `expired` | Terminal: time ran out before the token was redeemed. Display as "Expired – Not Redeemed". | Expire sweep runs (admin-triggered) | Expired |
+| `blocked` | Terminal: reported lost — replaced with a new token | Admin or donor reports token as lost | Blocked |
 
-**QR payload integrity:** Each token's QR code is derived from the token ID using an HMAC-SHA256 signature with a server-held secret (`TOKEN_QR_SECRET`). The QR payload is deterministic and re-derivable but unguessable without the secret — a forged or altered QR code will not match any stored hash and will be rejected at redemption. Only the SHA-256 hash of the payload is persisted in the database (`tokens.qr_hash`); the payload itself is never stored. This prevents QR forgery and duplicate scanning, but it does not prevent a genuine token being redeemed by someone other than the intended recipient — that limitation is documented in Section 4.4.
+**QR payload integrity:** Each token's QR code is derived from the token ID using an HMAC-SHA256 signature with a server-held secret (`TOKEN_QR_SECRET`). The QR payload is deterministic and re-derivable but unguessable without the secret — a forged or altered QR code will not match any stored hash and will be rejected at redemption. Only the SHA-256 hash of the payload is persisted in the database (`tokens.qr_hash`); the payload itself is never stored. The QR carries the token ID only — the backend is the final authority on validity, value and geographic scope.
 
 **What the admin can do:**
-- **Run Expire Sweep** — automatically expire all tokens past their expiry date
-- **Report a token as lost** — blocks the old token and generates a replacement with the same value. The old and new tokens are linked (`replacement_for_token_id`)
-- **Revalidate an expired token** — only if `token_revalidation_allowed` is enabled in System Config. This is an audited action.
-- **Revoke a token** — returns a volunteer-held token to `in_admin_pool` status for reallocation. No money reversal or donor refund occurs.
 
-**Token value disposition (current behaviour):**
+**Run Expire Sweep** — automatically expire all tokens past their expiry date. No reminder is sent to anyone before a token expires, and the expire sweep is triggered manually by an administrator rather than running automatically.
 
-| Scenario | What happens |
-|----------|-------------|
-| **Forfeited balance** (token value exceeds menu price) | The surplus is posted to the platform revenue ledger. It is not refunded to the donor. |
-| **Expired tokens** | Status is set to `expired`. No refund, no pool return and no ledger entry. The value is written off. |
-| **Revoked tokens** (volunteer-held) | Token status resets to `in_admin_pool` for reallocation. |
+**Controlled Reissue (replaces revalidation):**
 
-> **Approved policy change (pending implementation):** The Trust has approved a revised policy under which forfeited and expired token value returns to the meal pool for reissue rather than being written off or posted to revenue. This revised policy is not yet implemented. The behaviour described above is the current live behaviour.
+When a token expires without being redeemed, an authorised administrator may reissue it through a controlled process:
+
+1. Administrator reviews the expired token and determines reissue is appropriate
+2. Administrator approves the reissue with a recorded reason
+3. The system creates a **new token** with a new ID, new QR code and new 60-day validity dates
+4. The new token is permanently linked to the original via `replacement_for_token_id`
+5. The original token remains **permanently expired** — it is never reactivated
+
+This controlled reissue implements the approved policy that expired token value returns to the Meal Pool for future meals rather than being written off.
+
+> **Planned (B-03):** Expired token value returning to the Meal Pool via the reissue mechanism. Current behaviour: expired tokens receive a status flip to `expired` only — no refund, no pool return, no ledger entry. The value is written off.
+
+> **Planned (B-23):** The controlled reissue model as described above. The existing `token_revalidation_allowed` configuration key and associated code remain in the codebase but are being retired in favour of the reissue model.
+
+**Report a token as lost:**
+
+1. The admin (or donor — see Section 4.8) reports a token as lost
+2. The old token is immediately set to `blocked` status with a `cancelled_at` timestamp
+3. A new replacement token is minted with the same value, type, donor, beneficiary and expiry
+4. The new token is linked to the original via `replacement_for_token_id`
+5. If the replacement minting fails, the system automatically un-blocks the original token (compensating rollback) to restore the original state
+6. Both the block and the replacement are audit-logged with `old_token_id` and `new_token_id`
+
+Only tokens in `live` or `distributed` status are eligible for lost-token replacement.
+
+**Revoke a token:**
+
+- Only tokens in `assigned_to_volunteer` status can be revoked
+- Revocation returns the token to `in_admin_pool` status for reallocation — value is preserved in the system
+- No donor credit reversal and no money refund occurs
+- The revocation is audit-logged with channel `admin_revoke` and an optional reason
+- There is no donor-side cancellation mechanism — donors cannot cancel or revoke their own tokens
+
+**Token value disposition:**
+
+| Scenario | Current behaviour | Approved policy |
+|----------|------------------|----------------|
+| **Forfeited balance** (token value exceeds menu price) | Surplus posted to platform revenue ledger (`forfeited_balances` table + revenue ledger). Not refunded to donor. | Returns to Meal Pool for reissue — never treated as revenue. |
+| **Expired tokens** | Status set to `expired`. No refund, no pool return, no ledger entry. Value written off. | Returns to Meal Pool via controlled reissue process. |
+| **Revoked tokens** (volunteer-held) | Token status resets to `in_admin_pool` for reallocation. | Same — no change needed. |
+
+> **Planned (B-03):** Implementation of the approved policy — forfeited and expired token value returns to the Meal Pool for future meals.
 
 ---
 
@@ -250,8 +339,6 @@ All tokens across the platform are visible here, filterable by status.
 When a person registers as a beneficiary (via `/beneficiary/register` or with volunteer assistance), their application appears here for review.
 
 **Verification objective:** The admin's role is to confirm that the applicant belongs to an eligible category and that their face capture is usable for identity verification at redemption. The approval decision is made on the basis of category, face verification and administrative judgement.
-
-<!-- PENDING: eligibility proof capture not implemented -->
 
 **Beneficiary categories (as implemented):**
 
@@ -264,12 +351,11 @@ The platform supports four beneficiary categories, hardcoded in `lib/types/enums
 | Persons with Disabilities | `disability` |
 | Disaster-Affected | `disaster_affected` |
 
-> **Future enhancements:** The Trust intends to support additional categories in a later phase: Children, Elderly Persons, Lactating Mothers and General Category. These are not implemented today. Note that the existing `special_care_post_delivery_months` configuration already extends Special Care eligibility beyond delivery, which may partly cover lactating mothers.
+> **Future categories:** The Trust intends to support additional categories in a later phase: Children, Elderly Persons, Lactating Mothers and General Category. These are not implemented today.
 
 **What the admin sees:**
 - Applicant's name, category, contact details and face capture status
-- An Aadhaar column. The admin list displays a boolean presence indicator for each applicant. However, no registration path in the application collects an Aadhaar value — the underlying `aadhaar_hash` field is accepted by the API but is never populated by any form. The indicator therefore reads as absent for every record.
-  <!-- PENDING: aadhaar_hash is an unused schema field; no capture, hashing or validation implemented -->
+- An Aadhaar column. The admin list displays a boolean presence indicator for each applicant. However, no registration path in the application collects an Aadhaar value — the underlying `aadhaar_hash` field is accepted by the API but is never populated by any form. Aadhaar is not required; face verification is the primary identity method.
 
 **What the admin can do:**
 - **Approve** — creates a verified beneficiary record; the person can now receive and redeem tokens. Eligibility expiry is calculated automatically for `pregnant_women` and `patient` categories.
@@ -279,7 +365,7 @@ The platform supports four beneficiary categories, hardcoded in `lib/types/enums
 
 **Dignity framing:** Beneficiary registration is designed to be as simple as possible — name, contact, category, location hint and face capture. No smartphone, bank account or formal ID is required. A volunteer can assist with registration in person.
 
-**Privacy:** Only a non-reversible 1024-dimension face embedding is retained by the platform. The face image never leaves the device on which it was captured and is never stored on the server.
+**Privacy:** Only a non-reversible 1024-dimension face embedding is retained by the platform. The face image is computed on-device and never leaves the device on which it was captured — no photograph is ever transmitted to or stored on the server.
 
 ---
 
@@ -287,9 +373,7 @@ The platform supports four beneficiary categories, hardcoded in `lib/types/enums
 
 **Page:** `/admin/vendors`
 
-Food Partners are mission partners — the establishments that prepare and serve meals to beneficiaries. This page manages their lifecycle from onboarding to active service.
-
-<!-- PENDING: Food Partner eligibility and selection criteria are Trust policy documents in preparation -->
+Food Partners (shown as "Vendor" in the application interface) are mission partners — the establishments that prepare and serve meals to beneficiaries. This page manages their lifecycle from onboarding to active service.
 
 **Onboarding journey:**
 
@@ -302,13 +386,29 @@ Food Partners are mission partners — the establishments that prepare and serve
 **What the admin can do:**
 - **Register a new Food Partner** — enter details (name, location, FSSAI licence, GST, contact, geo-coordinates)
 - **Approve or reject** a registration
-- **Suspend** a Food Partner — temporarily block them from receiving redemptions (e.g. due to quality issues)
+- **Suspend** a Food Partner — temporarily block them from receiving redemptions
 - **Reinstate** a suspended Food Partner
 - **Manage KYC documents** — view uploaded documents at `/admin/vendors/[id]/documents`
 
+**Graduated Corrective-Action Ladder:**
+
+The Foundation operates a graduated discipline framework for Food Partner governance. `vendor_auto_suspend_enabled` remains **OFF**; the ladder governs operationally:
+
+| Step | Action | When |
+|------|--------|------|
+| 1 | **Warning** | First minor quality or compliance issue |
+| 2 | **Final Warning** | Repeated minor issue or first moderate issue |
+| 3 | **Penalty / Enhanced Monitoring** | Continued issues after final warning |
+| 4 | **Suspension** | Failure to improve after enhanced monitoring |
+| — | **Immediate Suspension** | Food-safety hazard, fraud, or risk to beneficiaries — bypasses the ladder |
+
+Settlement audit finding severities (Critical / Major / Minor per Section 3.8) link to this corrective-action framework.
+
 **Quality monitoring:**
-- Food Partner ratings are driven by beneficiary feedback
-- If a Food Partner's complaint rate exceeds the threshold (`vendor_max_complaint_rate` in System Config) and auto-suspend is enabled (`vendor_auto_suspend_enabled`), they are automatically flagged
+
+- **Quality score composition:** Food Partner quality scores are computed from beneficiary feedback ratings, complaint rates and inspection outcomes (`lib/services/vendorRating.ts`). The complaint rate is calculated as the count of `is_complaint=true` feedback entries divided by total feedback count.
+- If a Food Partner's complaint rate exceeds the threshold (`vendor_max_complaint_rate` in System Config) and auto-suspend is enabled (`vendor_auto_suspend_enabled`), they are automatically flagged. The complaint ratio should be read in context — a single complaint from very few interactions may not indicate a systemic issue.
+- **Vendor inspection workflow:** Administrators can record surprise inspections at `/admin/vendor-feedback` via `POST /api/admin/vendor-inspections`. Each inspection records pass/fail and notes. On a failed inspection, the `vendor_inspection_fail_penalty` configuration value is read as a **numeric quality-score deduction** applied to the Food Partner's quality score: `nextScore = max(0, round((current_score - penalty) * 100) / 100)`. The penalty is audit-logged. If `vendor_inspection_fail_penalty` is not set, no penalty is applied (soft-skip).
 
 ---
 
@@ -316,9 +416,7 @@ Food Partners are mission partners — the establishments that prepare and serve
 
 **Page:** `/admin/vendor-menus`
 
-Food Partners propose menu items with pricing. Each item must be approved by an administrator or vendor manager before it can be used for redemptions. Menu approval ensures that the items and prices offered to beneficiaries meet platform standards.
-
-<!-- PENDING: pApAmA Standard Meal Framework awaited from Trust -->
+Food Partners (shown as "Vendor" in the application interface) propose menu items with pricing. Each item must be approved by an administrator or vendor manager before it can be used for redemptions. Menu approval ensures that the items and prices offered to beneficiaries meet platform standards.
 
 **Menu dignity:** Beneficiaries are served from the same approved menu as paying customers. The platform does not contemplate a separate or lower grade of food for token-funded meals.
 
@@ -352,18 +450,26 @@ After a Food Partner serves a meal, they upload a plate photo as proof of servic
 - The menu item claimed should be consistent with what appears in the photo
 
 **What the admin can do:**
-- **Approve** — releases the payment (moves from `locked` to `released`). A notification is sent to the donor who funded the token, including the Food Partner name, meal item, location, value and the beneficiary's category.
+- **Approve** — releases the payment for settlement processing. A notification is sent to the donor who funded the token.
 - **Reject** — a reason is mandatory (this is the only action in the platform that enforces a mandatory reason server-side). The Food Partner sees the rejection and can re-upload. Payment stays locked until approved. No resubmission deadline exists.
 
+**Duplicate-media detection (phash flow):**
+
+When `proof_phash_dup_distance` is configured, the system computes a perceptual hash (phash) of each uploaded proof photo and compares it against existing proofs. If a match is found:
+
+1. The proof remains in `submitted` status awaiting admin review — it is **not auto-rejected**
+2. A `duplicate_media` fraud flag is raised (with `blocked: false`)
+3. Settlements covering the related redemptions are automatically placed on hold
+4. Detection is best-effort (soft-fail) — a detection failure does not block proof submission
+
+**Important:** A duplicate-media flag is a signal for investigation, not proof of fraud. The same plate, crockery or setting may legitimately appear in multiple photos. The admin investigates and determines the appropriate response.
+
 **Fraud patterns to watch for:** The platform's fraud module detects several patterns automatically, but proof reviewers should also watch for:
-- **Duplicate or recycled photos** — the same plate image submitted for different redemptions (detected automatically when `proof_phash_dup_distance` is configured)
 - **Identical backgrounds** — multiple proof photos with the same table, crockery or setting that suggest staging rather than distinct meals
 - **Inconsistency between claimed item and photo** — a plate photo that does not match the menu item selected at redemption
-- **Unusual volume** — a high number of proofs from a single Food Partner in a short period, which may warrant cross-referencing with fraud flags (face-hash repeats, cooldown breaches)
+- **Unusual volume** — a high number of proofs from a single Food Partner in a short period
 
 **Important:** Proof photos are write-once — once uploaded, they cannot be altered or deleted by the Food Partner. This ensures the integrity of the proof record.
-
-<!-- PENDING: SLA thresholds issued by Trust; no config keys or alerting implemented -->
 
 ---
 
@@ -371,27 +477,76 @@ After a Food Partner serves a meal, they upload a plate photo as proof of servic
 
 **Pages:** `/admin/settlements` and `/admin/settlement-audit`
 
-Settlements exist to convert approved meal service into Food Partner payments in a controlled, auditable process. Once meal proofs are approved, the platform-owed amounts accumulate. The admin runs a settlement cycle to batch them and track payment.
+Settlements exist to convert approved meal service into Food Partner payments in a controlled, auditable process. The Foundation's operating principle is that no individual should be able to prepare, independently verify, approve and release the same settlement without appropriate oversight.
 
-**Payout formula:** For each redeemed meal, the platform pays the Food Partner `min(token_value, menu_value)`. If the menu price exceeds the token value, the difference (`menu_value - token_value`) is borne by the beneficiary as a top-up. Co-pay (₹0 to ₹5 via `co_contribution_max`) is collected by the Food Partner at the counter and retained by them — it is not deducted from the settlement payout.
+**Payout formula:** For each redeemed meal, the platform pays the Food Partner the **full approved meal value**: `min(token_value, menu_value)`. If the menu price exceeds the token value, the difference (`menu_value - token_value`) is borne by the beneficiary as a top-up.
 
-**Current co-pay behaviour:** The beneficiary may contribute a small co-pay amount at the point of service, currently configured between ₹0 and ₹5 via the `co_contribution_max` setting. This amount is collected and retained by the Food Partner at the counter.
+The ₹10 beneficiary contribution is an entirely separate transaction — it is collected by the Food Partner at the counter and remitted to the pApAmA Administration Account. It is **not** deducted from the settlement payout. The Food Partner receives the full meal value via settlement regardless of whether the ₹10 contribution was collected or waived.
 
-> **Future enhancement (under Trust consideration):** A revised beneficiary contribution model — a standard ₹10 contribution collected by the Food Partner and remitted to a pApAmA Administration Account — is under Trust consideration for a future phase. It is not implemented.
+> **Planned (B-01):** Settlement-release gate on ₹10 contribution reconciliation — settlements will only be eligible for release after the contribution has been received/reconciled or an authorised humanitarian waiver has been recorded against each redemption.
 
 **Settlement lifecycle:**
 
-1. **Run a settlement** — go to `/admin/settlements` and click "Run Settlement." Choose the cycle period (daily, twice weekly, or weekly). The system gathers all approved-but-unsettled redemptions, groups them by Food Partner and creates settlement records.
-2. **Review settlements** — each settlement shows the Food Partner name, total amount, number of meals included, and status: `pending` → `reconciled` → `paid`.
-3. **Reconcile** — after reviewing line items, mark a settlement as `reconciled`.
-4. **Pay** — mark as `paid` once funds are transferred to the Food Partner. Record the payment date.
-5. **Hold** — if something looks suspicious, put a settlement on hold for further review.
+The verified settlement lifecycle follows this progression with an orthogonal hold/release mechanism:
 
-**Settlement audit queue** (`/admin/settlement-audit`): A random sample of settlements is pulled for audit review (percentage configurable via `settlement_random_audit_rate`). These must be reviewed before being released.
+```
+pending → locked → approved → reconciled → paid
+                                              ↑
+                          hold/release at any point before paid
+```
+
+| Action | Status transition | Audit-logged | Notes |
+|--------|------------------|-------------|-------|
+| **Generate** | Creates settlement header + line items | Yes | Groups approved-but-unsettled redemptions by Food Partner |
+| **Lock** | `pending` → `locked` | Yes (`settlement.lock`) | Settlement is prepared for review |
+| **Unlock** | `locked` → `pending` | Yes (`settlement.unlock`) | Returns to pending for amendment |
+| **Approve** | `locked` → `approved` | Yes (`settlement.approve`) | Approved for reconciliation |
+| **Reconcile** | `approved` → `reconciled` | Yes (`settlement.reconcile`) | Pre-payment reconciliation complete |
+| **Hold** | `on_hold = true` with optional `hold_note` | Yes | Suspends processing at any point before paid |
+| **Release** | `on_hold = false` | Yes | Resumes processing |
+| **Pay** | `reconciled` → `paid` with `settled_at` timestamp | Yes (`settlement.pay`) | Ledger entry posted; settlement finalised |
+
+**Maker-checker discipline:**
+
+The Foundation operates a maker-checker principle for settlements: the person who prepares a settlement should not be the same person who independently approves and releases it. This is currently an **operating procedure** enforced through administrative practice and audit oversight.
+
+> **Planned (B-24):** System-enforced maker-checker segregation — including blocked same-user prepare/approve, settlement versioning with approval auto-invalidation on material change, reject/return-to-maker with mandatory reason, bank-account change four-eyes control, and three-way reconciliation view including ₹10 contribution figures. A live demonstration of the maker-checker workflow (10-step happy path + 5 exception scenarios) is required before final sign-off.
+
+**Hold discipline:**
+
+When a settlement is placed on hold, the `hold_note` field records the reason (optional in the current system). The responsible person is recorded via `actor_id` in the audit log. Holds block Food Partner payments — review and release or escalate promptly.
+
+**Settlement finality:** Once a settlement is marked as `paid`, the record is final. Corrections to paid settlements are recorded as separate adjustment/recovery records.
+
+> **Planned (B-07):** Auditable settlement adjustment and recovery records — corrections as new linked transactions; paid settlements never edited.
+
+> **Planned (B-08):** Line-item settlement hold — hold only the disputed transaction while protecting the Food Partner's cash flow on undisputed items.
+
+**Settlement audit queue** (`/admin/settlement-audit`):
+
+A random sample of settlements is pulled for audit review. The `settlement_random_audit_rate` is set to **10%** — this is the baseline, not the ceiling.
+
+> The approved audit policy: "An initial random audit rate of 10% of eligible Food Partner settlement batches shall apply during the Coimbatore pilot, subject to a minimum of one settlement per audit cycle. The system shall select the sample randomly and maintain an auditable record of the selection. Random sampling shall be supplemented by risk-based and exception-based audits. Settlements or Food Partners exhibiting defined risk indicators, material discrepancies, prior audit findings, unusual transaction patterns or compliance concerns may be subjected to enhanced or 100% review."
+
+The audit queue includes clear/flag actions, and flagged settlements are automatically held. Selection records are maintained.
+
+> **Planned (B-25):** Full risk-based audit framework — tamper-proof system selection with permanent 14-field audit records, three tiers (normal 10% / high-risk enhanced / critical 100%), exception auto-flag queue for inherently risky transactions, and finding severities linked to the corrective-action ladder.
 
 **Note:** There is no Food Partner-side dispute or query mechanism for settlements. Food Partners have read-only access to their settlement status.
 
-> **Approved policy change (pending implementation):** Under the current implementation, forfeited balance (token value exceeding menu price) is posted to the platform revenue ledger. The Trust has approved a revised policy under which forfeited value returns to the meal pool for reissue. This revised policy is not yet implemented.
+**Operational Service Levels:**
+
+The Foundation operates the following service levels as configurable parameters (not system-enforced):
+
+| Service | Target |
+|---------|--------|
+| Proof approval | ≤ 24 hours |
+| Settlement reconciliation | ≤ 48 hours after proof approval |
+| Food Partner payment | ≤ 7 working days after reconciliation |
+| Complaint acknowledgement | ≤ 24 hours |
+| Complaint resolution | Normally ≤ 7 working days |
+
+These are Foundation operating parameters — the system does not currently enforce or alert on SLA breaches.
 
 ---
 
@@ -436,7 +591,7 @@ The fraud monitoring system exists to protect the platform's integrity — its o
 - **Duplicate token scan** — same token QR scanned more than once
 - **Face hash repeat** — same face detected at multiple Food Partners within the cooldown window
 - **Cooldown breach** — beneficiary attempted to redeem before their cooldown period expired
-- **Duplicate media** — same proof photo uploaded for different redemptions
+- **Duplicate media** — same proof photo (by perceptual hash) uploaded for different redemptions. Flagged for review with `blocked: false`; related settlements auto-held. Never auto-rejected — the admin investigates and decides.
 
 **Severity levels:** Low | Medium | High | Critical
 
@@ -457,29 +612,99 @@ The admin can also **run a fraud scan** manually to trigger a check for duplicat
 
 **Page:** `/admin/emergency`
 
-Emergency Mode is a set of relaxed controls for use during disasters or crises. It is present in the platform but is not activated for the pilot.
+Emergency Mode is a humanitarian response mechanism — a temporary, authorised operating mode activated by pApAmA Administration in response to an approved humanitarian emergency. Its purpose is to ensure that people affected by disasters, crises or emergencies receive food assistance without being obstructed by normal-period controls that are inappropriate during the emergency.
+
+**The three-mode distinction:**
+
+| Mode | Description |
+|------|-------------|
+| **Normal Operations** | All standard controls active. Default state. |
+| **Emergency Mode** | Meal-frequency and cooldown parameters relaxed within approved limits for the defined emergency scope. Time-boxed. |
+| **Financial Governance** | Always on — in both Normal and Emergency modes. Token expiry, settlement controls, audit logging, Food Partner accountability and all financial controls remain fully active. |
+
+**Emergency Mode values (approved):**
+
+| Parameter | Emergency value | Normal comparison |
+|-----------|----------------|------------------|
+| `emergency_max_meals_per_day` | **4** meals/day | `max_meals_per_day` (admin-set) |
+| `emergency_meal_cooldown_hours` | **3** hours | `meal_cooldown_hours` (admin-set) |
+| `emergency_mode_max_duration_days` | **7** days (auto-revert) | N/A |
+
+These values are configurable within approved limits. Extension requires explicit authorised action with a recorded reason and revised end date. No indefinite Emergency Mode is permitted.
+
+**Flexibility, not unlimited:** Emergency Mode is a set of controlled relaxations, not an absence of controls. The principle is that humanitarian need during a genuine emergency justifies increased meal access within defined, auditable boundaries.
 
 **How to activate:**
+
 1. Go to `/admin/emergency`
 2. Toggle **Emergency Mode ON** (`emergency_mode_enabled`)
+3. The system applies emergency overrides to meal limits and cooldowns
 
 **What Emergency Mode changes:**
-- Meal cooldown periods become soft warnings rather than hard blocks (configurable: `emergency_meal_cooldown_hours`)
-- Daily meal limits become soft warnings rather than hard blocks (configurable: `emergency_max_meals_per_day`)
+- Meal cooldown periods become soft warnings rather than hard blocks (using `emergency_meal_cooldown_hours`)
+- Daily meal limits become soft warnings rather than hard blocks (using `emergency_max_meals_per_day`)
 - Emergency tokens can be issued directly into the Admin Pool for immediate volunteer distribution
 
 **What Emergency Mode does NOT override (these remain mandatory):**
+- Token expiry and validity
+- Donor geographic restrictions
+- Token value
+- Food Partner suspension status
+- Food safety, FSSAI and compliance holds
+- Fraud blocks
 - Meal window enforcement (if enabled)
 - Food Partner opening state (`is_open`)
 - Food Partner stock exhaustion (`stock_exhausted`)
 - Food Partner temporary closure (`temporary_closure_until`)
 - Food Partner daily capacity limits (if enforced)
+- All financial controls (settlements, audit, ledger entries)
 
-**Disaster-affected eligibility:** During an emergency, eligibility requirements are simplified and assistance must not be denied for want of documentation. Emergency tokens do not require special proof from the beneficiary.
+**Verification relaxation during emergencies:**
 
-**Auto-revert:** If `emergency_mode_max_duration_days` is set, Emergency Mode automatically turns off after that many days.
+During an authorised Emergency Mode, pApAmA may relax beneficiary documentation and verification requirements to ensure that genuine beneficiaries are not denied emergency food assistance due to lack of documentation. The core transaction controls (valid token, not already redeemed, within validity, authorised active Food Partner, geographic restriction, emergency meal limit, cooldown, date/time recorded) continue to apply.
 
-<!-- PENDING: Emergency Mode activation criteria are Trust policy, awaited -->
+A face embedding may be captured where operationally feasible and appropriately consented, for transaction verification and post-emergency audit, but inability or refusal to provide a face embedding does not by itself prevent emergency meal access.
+
+> **Planned (B-27):** Face-verification skip path during active emergency, with verification level recording (Standard / Enhanced / Referred). Automatic ₹10 waiver rule tied to emergency state and scope.
+
+**Documentation correction:** The platform stores no photograph of any person in any mode. Identity verification uses only an on-device-computed mathematical representation (1024-dimension face embedding). No image is transmitted or retained. No facial-recognition expansion is introduced by the emergency process.
+
+**₹10 contribution waiver during emergencies:**
+
+During an authorised Emergency Mode, pApAmA Administration may waive the ₹10 beneficiary contribution, either generally within the defined emergency scope or for specified emergency circumstances. Where the contribution is waived, the Food Partner continues to receive the full approved meal value through the normal settlement process. Every waiver is recorded against the relevant redemption transaction and included in settlement and emergency reconciliation.
+
+> **Planned (B-27):** System-indicated emergency waiver rule — waiver is never Food Partner or volunteer discretion. All transactions processed under relaxed verification and all ₹10 waivers are tagged to the relevant Emergency ID.
+
+**Emergency ID and governance:**
+
+> **Planned (B-26):** Full Emergency Response Framework — unique Emergency ID (e.g., TN-FLOOD-2026-001) with authorised activation, reason, geographic scope, beneficiary scope, period and complete audit trail. Emergency Appeal workflow with approved templates and authorised dispatch. Emergency-ID tagging of donations and tokens. Closure reconciliation (funds received/utilised/committed; tokens issued/redeemed/unused; surplus; utilisation decision; approver; closure date) as a permanent record.
+
+**Surplus hierarchy (approved policy):**
+
+Any surplus funds or unused token value remaining after emergency requirements have been met:
+1. First considered for the specific emergency's continuing needs
+2. Then for other genuine humanitarian needs in the same affected area
+3. Then transferred to the PAPAMA Emergency Response Fund or another approved humanitarian purpose
+
+No donor refund mechanism exists for emergency contributions. This policy is disclosed at contribution time.
+
+**What is audit-logged today:**
+
+| Event | What is captured | Detail level |
+|-------|-----------------|-------------|
+| Emergency toggle (`emergency_mode_enabled`) | Actor, timestamp, previous/new value | Via generic config path — no dedicated reason field |
+| Emergency override activation | Actor, config key, from/to values, optional reason, expiry | Per-override detail |
+| Emergency override manual revert | Actor, config key | Per-override detail |
+| Emergency auto-revert (pg_cron) | Aggregate count, source "pg_cron" | **Aggregate only** — `actor_id: null`, summary: "auto-reverted N emergency override(s) [cron]" |
+| Emergency token issuance | Actor, optional reason | Per-token detail |
+
+> **Planned (B-19):** Per-override detail in auto-revert audit log (currently aggregate count only).
+
+> **Planned (B-09):** Emergency Mode governance workflow — initiator/approver/oversight roles, mandatory reason capture on activation/deactivation, extension review.
+
+**Post-emergency review:** After Emergency Mode ends (by expiry or manual deactivation), a review of all emergency-period transactions should be conducted. Transactions processed under relaxed verification are available for risk-based post-emergency audit.
+
+**Auto-revert:** When `emergency_mode_max_duration_days` is set, Emergency Mode automatically turns off after that many days via a pg_cron job that runs daily at 03:00 UTC. The auto-revert is logged as an aggregate audit entry.
 
 ---
 
@@ -505,9 +730,11 @@ Generate and export compliance and CSR reports. Reports can be downloaded as fil
 
 **Audit Logs:** `/admin/audit-logs`
 
-Every admin action is logged permanently — who did what, when and on which record. This log is append-only at database level (entries cannot be edited or deleted). Client-side text search is available across action, entity table and summary fields (20 records per page). Export is not available on audit logs.
+Every admin action is logged permanently — who did what, when and on which record. This log is append-only at database level — two PostgreSQL triggers (`audit_logs_no_update`, `audit_logs_no_delete`) block any update or delete operation, including by `service_role`. Entries cannot be edited or deleted by any route, service or administrative action.
 
-**Donations page search:** The donations page (`/admin/donations`) also supports client-side text search across donor label, payment reference and status (20 records per page). Export is not available.
+Client-side text search is available across action, entity table and summary fields (20 records per page). Export is not available on audit logs.
+
+**Permanent-retention policy:** The `audit_log_retention_days` configuration key exists but is intentionally unset (NULL). No automated purge or retention job runs. Financial, token, settlement and governance records are never deleted. This is the approved retention policy.
 
 ---
 
@@ -515,20 +742,29 @@ Every admin action is logged permanently — who did what, when and on which rec
 
 **Page:** `/admin/system-config`
 
-This is where you control the rules that govern the platform. Settings are organized in tabs.
+This is where authorised administrators control the rules that govern the platform. Settings are organized in tabs.
 
-> **See [Section 9](#9-system-configuration-reference) for a complete reference of all configuration keys.**
+> **See [Section 9](#9-system-configuration-reference) for a complete reference of all configuration keys, including classification, NULL semantics and business implications.**
+
+**Governance principles:**
+
+- Only authorised administrators may change system configuration values
+- Every change is audit-logged with the previous value, new value, actor and timestamp
+- > **Planned (B-14):** Optional reason field on system-config change audit trail — enabling administrators to record why a significant configuration change was made
+- Significant changes (e.g. token value, contribution policy, emergency activation) should follow the Foundation's internal approval practice
 
 **Key settings you'll use most often:**
 
-| Setting | What it controls |
-|---------|-----------------|
-| `standard_token_value` | The value of a standard meal token (in ₹) |
-| `token_expiry_days` | How many days before an unused token expires |
-| `max_tokens_per_volunteer` | Maximum tokens a volunteer can hold at once |
-| `meal_cooldown_hours` | Minimum hours between meals for a beneficiary |
-| `max_meals_per_day` | Maximum meals a beneficiary can receive per day |
-| `emergency_mode_enabled` | Toggle emergency/disaster mode ON or OFF |
+| Setting | What it controls | Go-live action |
+|---------|-----------------|---------------|
+| `standard_token_value` | The value of a standard meal token (in ₹) | Must be set before tokens can be minted |
+| `token_expiry_days` | Days before an unused token expires | Set to 60 (approved policy) |
+| `max_tokens_per_volunteer` | Maximum tokens a volunteer can hold at once | Must be set to bound exposure |
+| `meal_cooldown_hours` | Minimum hours between meals for a beneficiary | Must be set |
+| `max_meals_per_day` | Maximum meals a beneficiary can receive per day | Must be set |
+| `emergency_mode_enabled` | Toggle emergency/disaster mode ON or OFF | Review emergency values first |
+| `co_contribution_max` | Beneficiary contribution amount at redemption | Set to 10 (₹10 policy) |
+| `settlement_random_audit_rate` | Fraction of settlements sampled for audit | Set to 0.10 (10% baseline) |
 
 ---
 
@@ -539,14 +775,15 @@ This is where you control the rules that govern the platform. Settings are organ
 | Page | What it does |
 |------|-------------|
 | `/admin/meal-windows` | Set serving time windows (breakfast, lunch, dinner, snack). If `meal_window_enforcement_enabled` is ON, redemptions are blocked outside these windows. |
-| `/admin/vendor-capacity` | Set each Food Partner's daily meal capacity. If `vendor_capacity_enforcement_enabled` is ON, redemptions stop when a Food Partner reaches their limit for the day. |
+| `/admin/vendor-capacity` | Monitor and set each Food Partner's daily meal capacity. Shows real-time capacity usage (served/remaining) for all Food Partners. If `vendor_capacity_enforcement_enabled` is ON, redemptions stop when a Food Partner reaches their limit for the day. |
 | `/admin/emergency` | Activate or deactivate Emergency Mode (see Section 3.11). |
+| `/admin/vendor-feedback` | View beneficiary feedback, Food Partner ratings and inspection results. Record surprise inspections. |
 
 #### Partnership Management
 
 | Page | What it does |
 |------|-------------|
-| `/admin/institutions` | Manage partner institutions — allocate tokens in bulk for institutional distribution. <!-- PENDING: institution eligibility and accountability rules are Trust policy documents in preparation --> |
+| `/admin/institutions` | Manage partner institutions — allocate tokens in bulk for institutional distribution. |
 | `/admin/csr` | Manage corporate CSR donors and view CSR-specific reports. |
 | `/admin/ngo-partners` | Reference registry of partner NGOs and organisations. |
 
@@ -557,19 +794,19 @@ This is where you control the rules that govern the platform. Settings are organ
 | `/admin/notification-templates` | Edit the notification messages sent to donors (e.g. when their token is redeemed). Uses placeholders like `{{token_value}}`, `{{vendor_name}}`. |
 | `/admin/complaints` | View and resolve complaints submitted by beneficiaries. Status flow: Open → Investigating → Resolved/Dismissed. |
 
-<!-- PENDING: complaint categories with escalation and timelines are Trust policy documents in preparation -->
-
 #### Governance and Service Quality
 
 | Page | What it does |
 |------|-------------|
 | `/admin/vendor-feedback` | View beneficiary feedback and Food Partner inspection results. |
-| `/admin/audit-logs` | Full audit trail of all admin actions (append-only). |
+| `/admin/audit-logs` | Full audit trail of all admin actions (append-only, immutable). |
 | `/admin/settlement-audit` | Random-sample audit queue for settlement review. |
 
 ---
 
 ## 4. Donor Workflow
+
+Donors are the foundation of pApAmA's mission — their generosity funds every meal served through the platform. The donor workflow is designed to make giving simple, transparent and connected to real humanitarian outcomes.
 
 ### 4.1 Making a Donation
 
@@ -579,13 +816,11 @@ The donor signs in at `/donor/login` (or signs up at `/donor/signup`) and naviga
 
 1. The donor enters the amount to donate (in ₹)
 2. The donor chooses a payment method:
-   - **Scan & Pay (UPI QR)** — The donor sees a QR code, scans it with any UPI app (Google Pay, PhonePe, Paytm, etc.) and completes the payment. After paying, the donor enters the **UTR number** (the transaction reference from the UPI app) for manual reconciliation. This is not an integrated payment gateway — the admin reconciles UPI payments against UTR numbers.
+   - **Scan & Pay (UPI QR)** — The donor sees a QR code, scans it with any UPI app (Google Pay, PhonePe, Paytm, etc.) and completes the payment. After paying, the donor enters the **UTR number** (the Unique Transaction Reference — the transaction reference from the UPI app) for manual reconciliation. This is not an integrated payment gateway — the admin reconciles UPI payments against UTR numbers.
    - **Card, Net Banking, Bank Transfer** — These methods are available for demonstration purposes only and are not connected to a live payment gateway.
 3. After payment, the donor sees a confirmation page with their updated credit balance.
 
-<!-- PENDING: no donation receipt mechanism implemented -->
-
-**Guest donations:** Anyone can donate without an account at the public `/donate` page. Guest donations go into the Guest Pool, which the admin manages and converts into tokens for volunteer distribution.
+**Guest donations:** Anyone can donate without an account at the public `/donate` page. Guest donations go into the General Donation Pool (shown as "Guest Pool" in the application interface), which the admin manages and converts into tokens for volunteer distribution.
 
 ### 4.2 Understanding Donor Credit
 
@@ -598,9 +833,7 @@ When a donor donates, the payment becomes **Donor Credit** — a non-withdrawabl
 - Credit decreases when the donor mints a token
 - The donor can view their full credit history (top-ups and deductions)
 
-**Donor Credit does not expire.** This is Trust policy, unless required by future statutory or regulatory provisions.
-
-**Irrevocability:** Once donated, funds cannot be withdrawn as cash. This is by design — the donor's contribution is a commitment to fund meals for people in need.
+**Donor Credit does not expire.** This is Trust policy, unless required by future statutory or regulatory provisions. The donor's contribution is a commitment to fund meals for people in need — once donated, funds cannot be withdrawn as cash.
 
 ### 4.3 Minting a Token
 
@@ -608,18 +841,24 @@ When a donor donates, the payment becomes **Donor Credit** — a non-withdrawabl
 
 Once a donor's credit balance reaches the `standard_token_value` (set by the admin), the donor can mint a token — a digital meal voucher.
 
-**What a token represents:** A token is a one-time entitlement to a freshly prepared meal at any approved Food Partner. It carries a rupee value, a QR code, an expiry date (if configured via `token_expiry_days`; NULL by default, meaning no expiry) and an accountability trail from creation to redemption. No reminder is sent to anyone before a token expires, and the expire sweep is triggered manually by an administrator rather than running automatically.
+**What a token represents:** A token is a one-time entitlement to a freshly prepared meal at any approved Food Partner. Per the approved model, it is PAN INDIA by default — redeemable at any authorised pApAmA Food Partner anywhere in India. It carries a rupee value, a QR code, an activation date and a 60-day expiry date.
+
+> **Planned (B-23):** Donor-selected geographic restriction (PAN INDIA / State / District / City / PIN) at token creation; token face content showing type, value, geographic eligibility, activation date and expiry date.
+
+No reminder is sent to anyone before a token expires, and the expire sweep is triggered manually by an administrator rather than running automatically.
 
 **How to mint:**
 1. Go to the Tokens page
 2. Click **Create Token**
 3. Choose the token amount (must be at least the standard token value and cannot exceed the credit balance)
 4. Choose the distribution path:
-   - **"I'll distribute it myself" (Path A)** — The token goes `live` immediately. The donor gets a QR code to share. This suits donors who know a specific person they want to help.
-   - **"Let pApAmA distribute" (Path B)** — The token goes into the **Admin Pool** (`in_admin_pool`). The admin allocates it to a volunteer for field distribution. This suits donors who want to fund meals but do not have a specific recipient in mind.
+   - **"I'll distribute it myself" (Path A — Donor Controlled)** — The token goes `live` immediately. The donor gets a QR code to share. This suits donors who know a specific person they want to help.
+   - **"Let pApAmA distribute" (Path B — PAPAMA Distributed)** — The token goes into the **Admin Pool** (`in_admin_pool`). The admin allocates it to a volunteer for field distribution. This suits donors who want to fund meals but do not have a specific recipient in mind.
 5. The donor's credit balance is reduced by the token amount.
 
-### 4.4 Distributing a Token (Path A)
+The distribution mode is fixed at creation and cannot be changed afterwards. Donor-controlled tokens never enter the FIFO allocation queue.
+
+### 4.4 Distributing a Token (Path A — Donor Controlled)
 
 When a donor chooses Path A:
 
@@ -628,11 +867,12 @@ When a donor chooses Path A:
 3. The donor shares the QR code with someone in need — by showing it on screen, printing it, or sharing it digitally
 4. The recipient takes the QR code to any approved Food Partner to receive a meal
 
-**Responsible distribution guidance:**
-- Beneficiaries should never be photographed or publicised in connection with receiving a token
-- A Path A token can be redeemed by whoever presents the QR code first — there is no binding to a named recipient. The donor should share the QR code discreetly and only with the intended person.
+**Responsible distribution and transferability caution:**
+- A Path A token can be redeemed by **whoever presents the QR code first** — there is no binding to a named recipient. A live QR code is a live meal entitlement. The donor should share the QR code discreetly and only with the intended person.
+- Do not post token QR codes publicly (social media, public websites, open messaging groups). A publicly posted QR can be redeemed by anyone who scans it first.
+- Beneficiaries should never be photographed or publicised in connection with receiving a token.
 
-### 4.5 Letting pApAmA Distribute (Path B)
+### 4.5 Letting pApAmA Distribute (Path B — PAPAMA Distributed)
 
 When a donor chooses Path B:
 
@@ -641,7 +881,9 @@ When a donor chooses Path B:
 3. The volunteer distributes the token (with QR code) to a beneficiary in the field
 4. The donor receives a notification when the token is redeemed for a meal
 
-**The Admin Pool** ensures end-to-end transparency: every token is tracked from the pool, through a named volunteer, to distribution and redemption. Volunteer accountability (holding limits, activity logs, admin revocation) exists to safeguard donor trust.
+> **Planned (B-32):** FIFO allocation from the pool, ensuring fair sequential distribution.
+
+**The Admin Pool** ensures end-to-end transparency: every token is tracked from the pool, through a named volunteer, to distribution and redemption. Allocation and utilisation are separate events — the donor is notified on actual redemption, not on allocation.
 
 ### 4.6 Tracking Impact
 
@@ -662,27 +904,43 @@ This framing connects a financial contribution to a humanitarian outcome: a dona
 
 Donors receive **in-app notifications only**. SMS, email and WhatsApp notification channels are not active — adapter stubs exist but skip delivery when provider API keys are not configured. No multi-language support exists.
 
-**Notification types:**
-- **Token redeemed** — sent when a token is used at a Food Partner. Includes: Food Partner name, meal item, location, time, value and the beneficiary's category (e.g. `pregnant_women`, `patient`).
-- **Meal photo** — sent when the admin approves the proof of service. Includes: Food Partner name, location, time, value, beneficiary category, token reference and a 30-day signed URL to the plate photo.
+**Approved notification templates:**
 
-**Privacy note:** The beneficiary's category is included in notification metadata and is visible to the donor. No other beneficiary personal information (name, face, location) is included.
+Per the approved Beneficiary Privacy and Donor Communication policy, donor-facing communications contain only information necessary to confirm donation/token utilisation and communicate programme impact. The following are the standard templates — the only donor-visible redemption content:
+
+| Token type | Template |
+|-----------|---------|
+| **Standard** | PAPAMA Redemption Update — Your sponsored meal token has been successfully redeemed in [City, State]. Thank you for helping PAPAMA provide food with dignity. |
+| **Special Care** | PAPAMA Special Care Update — Your ₹100 Special Care Token has been successfully redeemed in [City, State]. Thank you for supporting PAPAMA's Special Care programme. |
+| **Emergency** | PAPAMA Emergency Response Update — Your sponsored emergency meal token has been successfully redeemed in [City, State]. Thank you for supporting PAPAMA's emergency food response. |
+
+The location follows the **City + State actual-location convention** — e.g., a Coimbatore-sponsored unrestricted token redeemed in Mumbai reads "Mumbai, Maharashtra".
+
+**Current notification contents (to be aligned):**
+
+The current implementation sends two notifications per redemption with metadata including: `vendor_name`, `meal_info` (menu item name), `location` (vendor city), `time`, `value_inr`, `beneficiary_category` and `token_reference`. The `beneficiary_category` is currently included in notification metadata and is visible to the donor.
+
+Per the approved policy, beneficiary category shall **not** be disclosed to donors — it is sensitive information restricted to authorised pApAmA personnel on a need-to-know basis.
+
+> **Planned (B-29):** Notification engine whitelist filter — sensitive fields (including beneficiary category, health status, vulnerability information) structurally unreachable from donor-facing communications. Need-to-know role access tiers. Adoption of the three approved templates above as the standard notification content.
 
 **Template editing:** Notification message templates are editable by an administrator at `/admin/notification-templates` (see Section 3.14). Templates use placeholders such as `{{token_value}}` and `{{vendor_name}}`.
 
 **Persistence:** Notification history persists indefinitely. Notifications are marked as read when viewed but are never deleted.
 
+### 4.8 Reporting a Lost Token (Donor)
+
+Donors can self-service report a lost token through the API at `POST /api/donor/tokens/[id]/report-loss`. This triggers the same lost-token replacement process described in Section 3.3 — the old token is blocked and a new replacement is minted with the same value, linked via `replacement_for_token_id`.
+
 ---
 
 ## 5. Food Partner Workflow
 
+Food Partners (shown as "Vendor" in the application interface) are humanitarian partners of the pApAmA Trust. They prepare and serve fresh meals to beneficiaries, collect the beneficiary contribution on behalf of pApAmA, upload proof of service and receive payment through settlements. This section describes their complete workflow.
+
 ### 5.1 Registering as a Food Partner
 
 **Page:** `/vendor/register`
-
-A Food Partner is a humanitarian partner of the pApAmA Trust — an establishment that prepares and serves fresh meals to beneficiaries as part of the platform's mission.
-
-<!-- PENDING: Food Partner eligibility and selection criteria are Trust policy documents in preparation -->
 
 **Registration and approval journey:**
 
@@ -699,6 +957,8 @@ A Food Partner is a humanitarian partner of the pApAmA Trust — an establishmen
 
 The registration enters `pending` status. An administrator or vendor manager reviews the application and KYC documents, then approves or rejects it. Once approved, the Food Partner can sign in at `/vendor/login`.
 
+> **Planned (B-02):** Structured geographic address fields — State/District masters, City/Town/Village/Locality, 6-digit PIN validation, location IDs, and registered-vs-operating/service address maintained separately. Current build uses city string + coordinates.
+
 ### 5.2 Managing the Menu
 
 **Page:** `/vendor/menu`
@@ -711,9 +971,7 @@ After approval, the Food Partner sets up their menu:
 4. Submit for admin approval
 5. Once approved, the item is available for meal redemptions
 
-<!-- PENDING: pApAmA Standard Meal Framework awaited from Trust -->
-
-**Special Care categories as implemented:** Special Care items serve beneficiaries in the `pregnant_women` and `patient` categories. The `special_care_multiplier` config key controls the token value multiplier for Special Care tokens.
+**Special Care categories as implemented:** Special Care items serve beneficiaries in the `pregnant_women` and `patient` categories. The `special_care_multiplier` config key exists in the system but is an **internal analysis parameter only** — it is defined but never applied in any token minting, redemption or value calculation code. It is maintained within an approved range of approximately 1.5x to 2x of the standard token value for financial and policy analysis purposes, but the donor-facing Special Care Token value is fixed at ₹100 per the approved Special Care programme.
 
 **Pricing:** Menu price edits overwrite the previous value — no price history is maintained. There is no per-item availability toggle; the Food Partner manages availability at the establishment level (see Section 5.3).
 
@@ -725,11 +983,13 @@ The Food Partner manages their operational status through three controls:
 
 | Control | Purpose | Effect on redemptions |
 |---------|---------|----------------------|
-| `is_open` | General open/closed toggle | When closed (`false`), all redemptions are blocked |
-| `temporary_closure_until` | Scheduled temporary closure with a return date/time | Redemptions are blocked until the specified time passes |
-| `stock_exhausted` | Indicates the Food Partner has run out of food for the day | Redemptions are blocked until reset |
+| `is_open` | General open/closed toggle | When closed (`false`), all redemptions are **hard-blocked** |
+| `temporary_closure_until` | Scheduled temporary closure with a return date/time | Redemptions are **hard-blocked** until the specified time passes. Shown as "Temporarily closed" on the beneficiary nearby list. |
+| `stock_exhausted` | Indicates the Food Partner has run out of food for the day | Redemptions are **hard-blocked** until reset |
 
-**Daily capacity:** The Food Partner sets a `daily_meal_capacity` — the maximum meals they can serve per day. When `vendor_capacity_enforcement_enabled` is ON in System Config, redemptions stop when the Food Partner reaches their daily limit.
+**Daily capacity:** The Food Partner sets a `daily_meal_capacity` — the maximum meals they can serve per day. When `vendor_capacity_enforcement_enabled` is ON in System Config, redemptions stop (hard block) when the Food Partner reaches their daily limit. Capacity is not displayed on the beneficiary-facing nearby list — only the admin console shows remaining capacity via `/admin/vendor-capacity`.
+
+> **Planned (B-13):** Beneficiary-facing redirection to nearby open Food Partners when capacity or closure blocks a redemption. Currently, the redemption simply fails with an appropriate message.
 
 **Meal session participation:** The Food Partner's serving windows (breakfast, lunch, dinner, snack) are configured by the admin at `/admin/meal-windows`. When `meal_window_enforcement_enabled` is ON, redemptions are only accepted during active windows.
 
@@ -746,9 +1006,29 @@ This is the core Food Partner workflow — serving a meal to someone holding a p
 1. **Go to the Scan page** at `/vendor/scan`
 2. **Scan the token QR code** — use the phone camera, or paste the code manually (a paste fallback exists for when the camera cannot read the QR)
 3. **Select the menu item** being served — the Food Partner chooses from their approved menu
-4. **Capture the beneficiary's face** — the camera captures a face for identity verification. This is mandatory; there is no manual fallback to skip face capture. No offline mode exists.
-5. **Enter co-pay amount** (if any) — the beneficiary may contribute a small amount (₹0 to ₹5, configured via `co_contribution_max`)
+4. **Capture the beneficiary's face** — the camera captures a face for identity verification. This is mandatory; there is no manual fallback to skip face capture. Only a mathematical embedding is computed on-device and transmitted — no photograph is stored. No offline mode exists.
+5. **Collect the ₹10 beneficiary contribution** — per the approved contribution policy:
+   - The ₹10 is a beneficiary contribution to pApAmA, collected by the Food Partner as an authorised collection agent
+   - If the beneficiary is unable to contribute, an authorised waiver is applied and recorded
+   - No beneficiary is ever denied food for inability to pay the ₹10
+   - The contribution is recorded against the redemption transaction
 6. **Confirm the redemption**
+
+**Current implementation note:** The admin can set `co_contribution_max` to any non-negative value (no code-enforced ceiling). The vendor scan UI currently hardcodes a ₹5 maximum (`CO_PAY_MAX = 5` in `app/vendor/scan/page.tsx`).
+
+> **Planned (B-10):** Enforce a hard upper bound of ₹10 on `co_contribution_max` in the config validation route.
+
+> **Planned (B-20):** Align the client-side CO_PAY_MAX in the vendor scan UI with the server-side `co_contribution_max` configuration value.
+
+**₹10 contribution settlement treatment:**
+
+The ₹10 beneficiary contribution and the Food Partner's meal settlement are completely separate:
+
+- **Food Partner receives:** Full approved meal value (`min(token_value, menu_value)`) via settlement
+- **₹10 contribution:** Collected at counter, retained by Food Partner, remitted to pApAmA Administration Account under the CA-approved process
+- **Settlement payout formula:** `min(token_value, menu_value)` — the ₹10 contribution is entirely excluded from this calculation
+
+> **Planned (B-01):** ₹10 contribution enforcement system — contribution status per redemption (collected/waived/outstanding), waiver records, daily remittance/reconciliation records, settlement-release gate on contribution reconciliation, and contribution report (expected/collected/remitted/received/outstanding/waived/settled).
 
 **System checks (all must pass):**
 - Is the QR code valid and not already used?
@@ -759,10 +1039,6 @@ This is the core Food Partner workflow — serving a meal to someone holding a p
 - Has the beneficiary's cooldown period elapsed?
 - Has the beneficiary's daily meal limit not been exceeded?
 - Is the token still valid (not expired, blocked or already redeemed)?
-
-**Co-pay:** The co-pay is collected by the Food Partner at the counter and retained by them. It is not deducted from the settlement payout.
-
-> **Future enhancement (under Trust consideration):** A revised beneficiary contribution model — a standard ₹10 contribution collected by the Food Partner and remitted to a pApAmA Administration Account — is under Trust consideration for a future phase. It is not implemented.
 
 **Accessibility:** No smartphone is required of the beneficiary. A printed QR code works. However, face capture at the point of service is mandatory and requires a camera-equipped device on the Food Partner's side.
 
@@ -802,7 +1078,9 @@ The Food Partner has a read-only view of their payment status:
 | Status | Meaning |
 |--------|---------|
 | **Pending** | Approved meals waiting for the next settlement cycle |
-| **Reconciled** | Settlement reviewed by admin, awaiting payment |
+| **Locked** | Settlement prepared and locked for review |
+| **Approved** | Reviewed and approved for reconciliation |
+| **Reconciled** | Pre-payment reconciliation complete, awaiting payment |
 | **Paid** | Funds transferred to the Food Partner's account |
 
 The admin controls when settlements are run and payments are released. There is no Food Partner-side dispute or query mechanism for settlements.
@@ -811,7 +1089,7 @@ The admin controls when settlements are run and payments are released. There is 
 
 ## 6. Volunteer Workflow
 
-Volunteers are the bridge between the platform and beneficiaries in the field. They carry tokens from the Admin Pool to people in need — a role of trust and accountability.
+Volunteers are the bridge between the platform and beneficiaries in the field. They carry tokens from the Admin Pool to people in need — a role of trust and accountability. The volunteer's role is to facilitate access to pApAmA assistance, not to create or alter entitlement.
 
 ### 6.1 Registering as a Volunteer
 
@@ -820,7 +1098,7 @@ Volunteers are the bridge between the platform and beneficiaries in the field. T
 **Registration and verification journey:**
 
 1. Enter name, phone number and email
-2. Capture a face photo (for identity verification)
+2. Capture a face photo (for identity verification) — only the mathematical embedding is stored; no photograph is retained
 3. Submit the registration
 
 The volunteer's email is pre-confirmed server-side (no email verification step). The registration enters `pending` status and must be approved by an administrator. After approval, the volunteer signs in at `/volunteer/login`.
@@ -861,9 +1139,52 @@ The volunteer's email is pre-confirmed server-side (no email verification step).
 
 **Page:** `/volunteer` (Dashboard → Held Tokens)
 
-**Purpose and dignity:** Volunteers are not distributing QR codes — they are carrying donor-funded meals to people in need, with dignity, compassion and fairness. Every interaction should preserve the beneficiary's self-respect. Avoid anything that could embarrass or stigmatise a person receiving a token. Volunteers exercise reasonable judgement in identifying people who need assistance; they are not expected to perform formal eligibility assessment.
+**Purpose and dignity:** Volunteers are not distributing QR codes — they are carrying donor-funded meals to people in need, with dignity, compassion and fairness. Every interaction should preserve the beneficiary's self-respect. Avoid anything that could embarrass or stigmatise a person receiving a token.
 
-**Distribution steps:**
+**Governing principle:** Volunteers shall facilitate beneficiary access to pApAmA assistance but shall not create, modify or independently authorise beneficiary entitlement.
+
+**Seven field situations:**
+
+**Situation 1 — Beneficiary has a smartphone:**
+The beneficiary receives a digital QR code. Normal flow — the volunteer distributes the token, the beneficiary presents the QR at a Food Partner, and the transaction proceeds through standard validation.
+
+**Situation 2 — No smartphone, but has a printed QR:**
+The volunteer presents the official pApAmA printed QR token on behalf of the beneficiary. Normal validation applies — the Food Partner scans the printed QR and proceeds with standard verification.
+
+**Situation 3 — No phone and no token, during normal operations:**
+The volunteer follows the approved assistance and registration process. If the person is not yet registered, the volunteer assists with registration at `/volunteer/beneficiaries`. If already registered but without a token, the volunteer facilitates access through normal administrative channels (token allocation from the admin). The volunteer does not improvise or create unverified transactions.
+
+**Situation 4 — No phone or token during Emergency Mode:**
+During an authorised Emergency Mode, relaxed verification applies. The volunteer assists the person to the nearest active Food Partner and facilitates an emergency redemption with the available controls. The transaction is recorded with Emergency Mode tagging.
+
+> **Planned (B-27):** Relaxed beneficiary verification during Emergency Mode with verification level recording. ₹10 waiver applied to emergency transactions where authorised.
+
+**Situation 5 — No connectivity during normal operations:**
+The volunteer does not improvise. There is no offline mode during normal operations. The volunteer should:
+- Direct the person to a connected Food Partner if one is nearby
+- Submit an assistance request through administrative channels
+- Escalate to an administrator
+
+Both distribution and redemption require connectivity. Face capture at redemption has no fallback. This is a real operational constraint.
+
+**Situation 6 — No connectivity during Emergency Mode:**
+During an authorised Emergency Mode, controlled offline emergency transactions may be permitted.
+
+> **Planned (B-30):** Controlled offline emergency transaction capability — offline transaction record (offline txn ID, token ID, volunteer ID, Food Partner ID, beneficiary identifier, Emergency ID, date/time, token/meal type, waiver status, device reference), synchronisation with full normal validation ("Pending Offline Validation"), configured limits (max pending per volunteer/device, max sync window), cross-batch duplicate-token detection with exception-queue routing, and admin visibility of unsynchronised transactions. This is emergency-only — normal operations have no offline path.
+
+**Situation 7 — Immediate safety risk:**
+Safety first. If the volunteer encounters an unsafe situation, they should prioritise their own safety and the beneficiary's safety. Escalate to the administrator. Never force a transaction in an unsafe environment. Volunteer safety and food-safety requirements apply at all times.
+
+> **Planned (B-31):** Volunteer incident reporting — 11 one-tap report categories (no phone / no token / partner closed / partner refusing valid token / no food / connectivity failure / token problem / urgent need / food-safety concern / safety concern / other) feeding an admin queue.
+
+**Volunteers shall not:**
+- Independently activate Emergency Mode
+- Alter token value or expiry
+- Override geographic restrictions
+- Reactivate suspended Food Partners
+- Bypass pApAmA controls
+
+**Distribution steps (standard):**
 
 1. Find the token you want to distribute in your "Held Tokens" list
 2. Click **Distribute**
@@ -871,22 +1192,21 @@ The volunteer's email is pre-confirmed server-side (no email verification step).
 4. The token status changes from `assigned_to_volunteer` to `distributed`
 5. Your holding count decreases, freeing up space for more tokens
 
-**Accountability:** The `assigned_to_volunteer` → `distributed` transition is recorded with a timestamp and distribution channel. This means the token remains traceable through its whole life — from donor credit, through minting, pool allocation, volunteer holding, distribution and finally redemption at a Food Partner. A volunteer cannot return an undistributed token; only an administrator can revoke it back to the Admin Pool.
+**Accountability:** The `assigned_to_volunteer` → `distributed` transition is recorded with a timestamp and distribution channel. This means the token remains traceable through its whole life — from donor credit, through minting, pool allocation, volunteer holding, distribution and finally redemption at a Food Partner.
 
 **Registration assistance:** Volunteers can assist beneficiaries with registration at `/volunteer/beneficiaries` by helping with data entry. The volunteer-assisted registration form collects the same five fields as self-registration (category, name, contact, location hint and face capture). Approval authority remains with the Trust through the normal administrative review process.
 
 **Digital accessibility:** A token can be shown on the volunteer's phone screen, shared electronically, or printed as a QR code. The beneficiary does not need a smartphone — a printed QR code is the normal case, not an exception.
 
-**Exceptional situations:**
-- **No internet connectivity** — there is no offline mode. Both distribution and redemption require connectivity. Face capture at redemption has no fallback. This is a real operational constraint.
-- **QR cannot be displayed** — a printed QR code works. The Food Partner's scan page (`/vendor/scan`) also accepts a pasted code as a fallback.
-- **Urgent need** — there is no volunteer-level priority or urgent distribution path. Emergency Mode is activated by an administrator and applies platform-wide (see Section 3.11). A volunteer cannot escalate individually.
+**Distribution records:** The "Distributed" section on the volunteer dashboard shows previously distributed tokens with serial number, token type, value (₹) and current status (e.g. `distributed`, `redeemed`, `expired`). Distribution date is not displayed in the list. Distribution location is captured when the volunteer submits a distribution but is not shown back in the distributed list.
 
-**Distribution records:** The "Distributed" section on the volunteer dashboard shows previously distributed tokens with serial number, token type, value (₹) and current status (e.g. `distributed`, `redeemed`, `expired`). Distribution date is not displayed. Distribution location is captured when the volunteer submits a distribution but is not shown back in the distributed list.
+> Distribution-record enrichment (date, value, location, redemption/expiry status in the list) and a Volunteer Field Activity Dashboard are planned for a future phase (Phase 2 backlog).
 
 ---
 
 ## 7. For Beneficiaries — Receiving Meals
+
+pApAmA exists to serve beneficiaries — people in need of a meal. Every other role on the platform exists to make this service possible. The beneficiary's experience is designed to be simple, dignified and barrier-free.
 
 ### 7.1 Registering as a Beneficiary
 
@@ -901,20 +1221,37 @@ Anyone in need can register. No Aadhaar, smartphone, bank account or formal ID i
    - Patients
    - Persons with Disabilities
    - Disaster-Affected (during emergencies)
-4. Capture your face photo — this is used for identity verification at meal time. Only a non-reversible embedding is stored; the image never leaves the device.
+4. Capture your face — a mathematical embedding is computed on-device for identity verification at meal time. No photograph is ever transmitted to or stored on the server; only the non-reversible embedding is retained.
 5. Submit
-
-<!-- PENDING: eligibility proof capture not implemented -->
 
 An admin will review and approve your registration. The approval decision is based on category, face verification and administrative judgement.
 
-> **Note:** These four categories are hardcoded in the current implementation. Additional categories (Children, Elderly Persons, Lactating Mothers, General Category) are planned for a future phase.
+> **Note:** These four categories are hardcoded in the current implementation (`lib/types/enums.ts`). Adding a category requires a code change.
 
-### 7.2 Finding a Nearby Vendor
+> **Future categories:** Children, Elderly Persons, Lactating Mothers and General Category are planned for a future phase.
+
+### 7.2 Finding a Nearby Food Partner
 
 **Page:** `/beneficiary/nearby-vendors`
 
-View a list of approved pApAmA Food Partners near your location. Each listing shows the Food Partner's name, address, and available menu items.
+This page helps beneficiaries find an approved pApAmA Food Partner (shown as "Vendor" in the application interface) near their location.
+
+**How it works:**
+- The beneficiary clicks "Use my location" to share their browser GPS position (on-demand, not stored)
+- The system computes the distance to each Food Partner using Haversine (great-circle) distance
+- Results are listed within the configured radius (`token_redemption_radius_km`)
+
+**What each listing shows:**
+
+| Field | Shown |
+|-------|-------|
+| Food Partner name | Yes |
+| Address / city | Yes |
+| Distance (km) | Yes |
+| Status (Open / Closed / Temporarily closed / Out of stock) | Yes |
+| Operating hours (meal windows) | Yes |
+| Contact number | **No** |
+| Menu items | **No** (separate menu API exists) |
 
 ### 7.3 Redeeming a Token at a Food Partner
 
@@ -923,13 +1260,27 @@ Once you have a token (received from a donor or volunteer):
 1. **Visit any approved pApAmA Food Partner**
 2. **Show your token QR code** to the Food Partner (on your phone or printed)
 3. The Food Partner scans the QR code, selects a menu item from their approved menu and verifies your face
-4. You receive your meal — freshly cooked, served at the premises
-5. That's it! The token is consumed and the Food Partner handles the rest
+4. **Contribute ₹10** — a small contribution to pApAmA, collected by the Food Partner. If you cannot pay, the contribution is waived — no beneficiary is ever denied a meal for inability to pay.
+5. You receive your meal — freshly cooked, served at the premises
+6. That's it! The token is consumed and the Food Partner handles the rest
 
 **Meal limits (for fairness):**
 - There is a minimum waiting period between meals (cooldown, e.g. 6 hours)
 - There is a maximum number of meals per day
-- Special Care beneficiaries (pregnant women, patients) may have relaxed cooldown periods
+- Category-specific cooldown overrides may apply (e.g. relaxed cooldown for pregnant women or patients)
+
+**Exception behaviours:**
+
+| Exception | What happens | Message shown |
+|-----------|-------------|--------------|
+| Expired token | Hard block — redemption refused | "token has expired" |
+| Already-redeemed token | Hard block — duplicate scan detection rolls back redemption | "token was already redeemed" |
+| Failed face verification | Hard block — identity check failed | "could not verify beneficiary identity" or "face capture failed the liveness/anti-spoof check — retake in good lighting" |
+| Network interruption | Graceful failure — no offline queue; token not burned until full commit | "Network error — please try again." |
+| Food Partner capacity reached | Hard block (if `vendor_capacity_enforcement_enabled` is ON) | "vendor daily capacity reached (served/cap)" |
+| Outside meal window | Hard block (if `meal_window_enforcement_enabled` is ON) | "outside meal windows — next window opens at [time]" |
+
+**Face privacy:** Only a non-reversible 1024-dimension face embedding is retained. The face image is computed on-device and never leaves the device — no photograph is ever transmitted to or stored on the server.
 
 ### 7.4 Giving Feedback
 
@@ -940,32 +1291,60 @@ After a meal, you can share your experience:
 1. Go to `/beneficiary/feedback`
 2. Select the Food Partner
 3. Rate your experience (1–5 stars)
-4. Add comments about food quality, quantity, or service
-5. Submit
+4. Add comments about food quality, quantity, or service (optional, up to 1000 characters)
+5. Check the complaint box if this is a serious issue ("This is a complaint — hygiene, behaviour, or a serious problem")
+6. Submit
 
-Your feedback helps the admin monitor Food Partner quality. If there's a serious issue, you can file a complaint that the admin will investigate.
+Feedback is a star rating plus free-text comment plus a binary `is_complaint` flag. There are no predefined complaint categories in the current implementation.
+
+> **Planned (B-12):** Predefined complaint categories (quality, quantity, hygiene, staff behaviour, delay, redemption issue, other) to enable structured triage and root-cause reporting.
+
+Complaints enter a status workflow: **Open → Investigating → Resolved / Dismissed**. Resolution is recorded with notes and the resolving administrator.
+
+Your feedback helps the admin monitor Food Partner quality and is factored into the Food Partner's quality score.
 
 ---
 
 ## 8. Public Features (No Account Needed)
 
-### Public Donation
+### 8.1 Public Donation — General Donation Pool
 
 **Page:** `/donate`
 
-Anyone can donate without creating an account. The donation goes into the **Guest Pool** managed by the admin.
+Anyone can donate without creating an account. The donation goes into the **General Donation Pool** (shown as "Guest Pool" in the application interface) — a dedicated fund managed by the admin for converting into tokens and distributing to beneficiaries through volunteers.
 
-### UPI QR Donation
+The General Donation Pool operates with the same governance and audit standards as registered donor contributions. Every rupee is tracked from donation through token conversion, volunteer allocation, distribution, redemption and settlement.
+
+No contact information (mobile or email) is captured from guest donors. Even if notification channels were configured, there is no contact data to deliver to.
+
+> **Planned (B-11):** Capture optional contact (mobile/email) on guest donation for receipt and thank-you notifications.
+
+### 8.2 UPI QR Donation
 
 **Page:** `/donate/qr`
 
 Scan a UPI QR code with any UPI app (Google Pay, PhonePe, Paytm, etc.) and confirm the payment with your UTR number.
 
-### Transparency Dashboard
+**UTR (Unique Transaction Reference):** The UTR is a self-asserted transaction reference entered by the donor. It is used for manual reconciliation — the admin matches UTR numbers against bank records. The UTR is **not** verified against any bank or payment service provider feed.
+
+**Duplicate UTR protection:** A database uniqueness constraint prevents the same UTR from being used twice. If a duplicate UTR is submitted, the system returns HTTP 409: "this UPI reference number has already been used to confirm a payment."
+
+**Optional `payer_vpa` capture:** The UTR confirmation endpoint also accepts an optional `payerVpa` field — the donor's UPI virtual payment address. This is captured for reconciliation support but is not required.
+
+| Scenario | Behaviour |
+|----------|-----------|
+| Payment failure | Manual re-entry (user can try again) |
+| Incorrect UTR format | Client-side validation: min 6, max 40 characters |
+| Pending status (timeout) | Lazy expiry flip to `EXPIRED` on first touch after deadline |
+| Duplicate UTR | First confirms atomically; second gets 409 Conflict |
+
+> **Planned (B-21):** UTR verification against bank/PSP feed (currently donor-self-asserted; a fabricated UTR can mint pool credit). This should ride the live payment gateway integration workstream.
+
+### 8.3 Transparency Dashboard
 
 **Page:** `/transparency`
 
-A public page showing aggregate platform impact — total donations, meals served, Food Partners, and beneficiaries reached. No personal information is ever shown.
+A public page showing aggregate platform impact — total donations, meals served, Food Partners, and beneficiaries reached. No personal information is ever shown. All figures derive from verified platform records.
 
 > This page is only visible when `transparency_dashboard_enabled` is turned ON by the admin.
 
@@ -973,156 +1352,491 @@ A public page showing aggregate platform impact — total donations, meals serve
 
 ## 9. System Configuration Reference
 
-These settings are managed by the Admin at `/admin/system-config`. Each setting controls a specific platform rule.
+These settings are managed by an authorised administrator at `/admin/system-config`. Each setting controls a specific platform rule.
 
-### Token Settings
+### Configuration Governance
 
-| Key | Type | What it controls | Default |
-|-----|------|-----------------|---------|
-| `standard_token_value` | Number (₹) | Minimum and pool-mint token value | Must be set by admin |
-| `token_expiry_days` | Number | Days before an unused token expires. NULL = no expiry. | NULL |
-| `max_tokens_per_volunteer` | Number | Maximum undistributed tokens a volunteer can hold at once | NULL (no limit until set) |
-| `token_revalidation_allowed` | Boolean | Allow admins to revalidate expired tokens | OFF |
+- **Access:** Only authorised administrators may change system configuration values.
+- **Audit trail:** Every change is audit-logged with the previous value, new value, actor (`actor_id`) and timestamp. The audit action is `system_config.update` with summary format `"key: old → new"`.
+- > **Planned (B-14):** Optional reason field on system-config change audit trail — currently absent for all configuration changes.
+- **Approval practice:** Significant changes (token value, contribution policy, emergency activation, audit rate changes) should follow the Foundation's internal approval practice before being applied in the system.
+- **Permanent rate reductions:** The settlement audit rate should only be permanently reduced after review with the accounting/audit advisor.
 
-### Meal & Redemption Settings
+### Classification key
 
-| Key | Type | What it controls | Default |
-|-----|------|-----------------|---------|
-| `meal_cooldown_hours` | Number | Minimum hours between meals for a beneficiary | Must be set |
-| `meal_cooldown_hours_pregnant_women` | Number | Relaxed cooldown for pregnant women | NULL (uses general) |
-| `meal_cooldown_hours_patient` | Number | Relaxed cooldown for patients | NULL (uses general) |
-| `meal_cooldown_hours_disability` | Number | Relaxed cooldown for persons with disabilities | NULL (uses general) |
-| `meal_cooldown_hours_disaster_affected` | Number | Relaxed cooldown for disaster-affected | NULL (uses general) |
-| `max_meals_per_day` | Number | Maximum meals a beneficiary can receive per day | Must be set |
-| `token_redemption_radius_km` | Number | Maximum distance (km) between Food Partner and beneficiary for redemption | Must be set |
-| `meal_window_enforcement_enabled` | Boolean | Block redemptions outside defined meal windows | OFF |
-| `co_contribution_max` | Number (₹) | Maximum co-pay a beneficiary may contribute at redemption | NULL |
+| Tag | Meaning |
+|-----|---------|
+| **Mandatory** | Must be set before go-live; system behaviour is undefined or degraded without it |
+| **Recommended** | Should be set for proper operation; system functions without it but with reduced governance |
+| **Optional** | Enable as needed; system operates correctly without it |
+| **NULL-permitted** | NULL has a specific, stated meaning (not a universal "soft-skip") |
 
-### Vendor Settings
+### 9.1 Token Settings
 
-| Key | Type | What it controls | Default |
-|-----|------|-----------------|---------|
-| `vendor_auto_suspend_enabled` | Boolean | Auto-suspend Food Partners when complaint rate exceeds threshold | OFF |
-| `vendor_max_complaint_rate` | Number (0–1) | Complaint ratio threshold for auto-suspend | NULL |
-| `vendor_min_rating` | Number | Minimum acceptable Food Partner rating | NULL |
-| `vendor_min_feedback_count` | Number | Minimum feedback entries before rating is considered reliable | NULL |
-| `vendor_capacity_enforcement_enabled` | Boolean | Enforce Food Partner daily capacity limits | OFF |
-| `vendor_inspection_fail_penalty` | String | Action on failed inspection (e.g., quality score reduction) | NULL |
+| Key | Type | Classification | What it controls | NULL meaning | Default | Business implication |
+|-----|------|---------------|-----------------|-------------|---------|---------------------|
+| `standard_token_value` | Number (₹) | **Mandatory** | Minimum and pool-mint token value | Tokens cannot be minted | Must be set | Determines the rupee value of every standard meal token |
+| `token_expiry_days` | Number | **Mandatory** | Days before an unused token expires from activation | No expiry — tokens live indefinitely | NULL | Set to **60** per approved policy. Unset = unbounded token liability. |
+| `max_tokens_per_volunteer` | Number | **Mandatory** | Maximum undistributed tokens a volunteer can hold at once | No holding limit — exposure unbounded | NULL | Caps risk if a volunteer becomes unreachable |
 
-### Settlement & Financial Settings
+### 9.2 Meal and Redemption Settings
 
-| Key | Type | What it controls | Default |
-|-----|------|-----------------|---------|
-| `settlement_random_audit_rate` | Number (0–1) | Fraction of settlements sampled for random audit | NULL (off) |
+| Key | Type | Classification | What it controls | NULL meaning | Default | Business implication |
+|-----|------|---------------|-----------------|-------------|---------|---------------------|
+| `meal_cooldown_hours` | Number | **Mandatory** | Minimum hours between meals for a beneficiary | No cooldown — unlimited meal frequency | Must be set | Prevents rapid repeat redemptions |
+| `meal_cooldown_hours_pregnant_women` | Number | **Optional** | Relaxed cooldown for pregnant women | Uses general `meal_cooldown_hours` | NULL | Category-specific relaxation |
+| `meal_cooldown_hours_patient` | Number | **Optional** | Relaxed cooldown for patients | Uses general `meal_cooldown_hours` | NULL | Category-specific relaxation |
+| `meal_cooldown_hours_disability` | Number | **Optional** | Relaxed cooldown for persons with disabilities | Uses general `meal_cooldown_hours` | NULL | Category-specific relaxation |
+| `meal_cooldown_hours_disaster_affected` | Number | **Optional** | Relaxed cooldown for disaster-affected | Uses general `meal_cooldown_hours` | NULL | Category-specific relaxation |
+| `max_meals_per_day` | Number | **Mandatory** | Maximum meals a beneficiary can receive per day | No daily limit | Must be set | Ensures equitable distribution |
+| `token_redemption_radius_km` | Number | **Mandatory** | Maximum distance (km) between Food Partner and beneficiary for redemption | No distance check | Must be set | Prevents remote/proxy redemptions |
+| `meal_window_enforcement_enabled` | Boolean | **Recommended** | Block redemptions outside defined meal windows | — | OFF | Enable with configured windows at `/admin/meal-windows` |
+| `co_contribution_max` | Number (₹) | **Mandatory** | Maximum beneficiary contribution at redemption | Only ₹0 accepted | NULL | Set to **10** (₹10 approved policy). No code-enforced ceiling currently exists. |
 
-### Emergency Mode Settings
+### 9.3 Food Partner Settings
 
-| Key | Type | What it controls | Default |
-|-----|------|-----------------|---------|
-| `emergency_mode_enabled` | Boolean | Activate disaster/emergency relief mode | OFF |
-| `emergency_max_meals_per_day` | Number | Relaxed daily meal limit during emergency. NULL = no cap. | NULL |
-| `emergency_meal_cooldown_hours` | Number | Relaxed cooldown during emergency. NULL = no cooldown. | NULL |
-| `emergency_mode_max_duration_days` | Number | Auto-revert emergency mode after this many days | NULL (never auto-reverts) |
+| Key | Type | Classification | What it controls | NULL meaning | Default | Business implication |
+|-----|------|---------------|-----------------|-------------|---------|---------------------|
+| `vendor_auto_suspend_enabled` | Boolean | **Optional** | Auto-flag Food Partners when complaint rate exceeds threshold | — | OFF | The graduated corrective-action ladder governs operationally; this remains OFF |
+| `vendor_max_complaint_rate` | Number (0–1) | **Recommended** | Complaint ratio threshold for auto-suspend flagging | Auto-suspend never triggers (even if enabled) | NULL | Set in context — a single complaint from few interactions may not indicate systemic issues |
+| `vendor_min_rating` | Number | **Optional** | Minimum acceptable Food Partner rating | No minimum enforced | NULL | Quality floor — rating is one signal among several |
+| `vendor_min_feedback_count` | Number | **Optional** | Minimum feedback entries before rating is considered reliable | Rating always considered | NULL | Prevents premature quality judgements from few data points |
+| `vendor_capacity_enforcement_enabled` | Boolean | **Recommended** | Enforce Food Partner daily capacity limits | — | OFF | Enable after Food Partners set `daily_meal_capacity` |
+| `vendor_inspection_fail_penalty` | Number | **Recommended** | Quality-score deduction on failed inspection | No penalty applied on failed inspections | NULL | Numeric value deducted from quality score (e.g. 10 = deduct 10 points) |
 
-### Location Settings
+### 9.4 Settlement and Financial Settings
 
-| Key | Type | What it controls | Default |
-|-----|------|-----------------|---------|
-| `city_lock_enabled` | Boolean | Restrict operations to a single city | OFF |
-| `operating_city` | String | The current operating city (only applies if city lock is ON) | NULL |
+| Key | Type | Classification | What it controls | NULL meaning | Default | Business implication |
+|-----|------|---------------|-----------------|-------------|---------|---------------------|
+| `settlement_random_audit_rate` | Number (0–1) | **Mandatory** | Fraction of settlements sampled for random audit | No random audit | NULL | Set to **0.10** (10% baseline). "Baseline, not the ceiling." |
 
-### Quality & Security Settings
+### 9.5 Emergency Mode Settings
 
-| Key | Type | What it controls | Default |
-|-----|------|-----------------|---------|
-| `proof_phash_dup_distance` | Number | How similar two proof photos can be before flagging as duplicate | NULL (off) |
-| `audit_log_retention_days` | Number | How many days to keep audit logs | NULL (keep forever) |
+| Key | Type | Classification | What it controls | NULL meaning | Default | Business implication |
+|-----|------|---------------|-----------------|-------------|---------|---------------------|
+| `emergency_mode_enabled` | Boolean | **Optional** | Activate disaster/emergency relief mode | — | OFF | Review all emergency values before activation |
+| `emergency_max_meals_per_day` | Number | **NULL-permitted** | Relaxed daily meal limit during emergency | No daily cap during emergency | NULL | Set to **4** per approved policy |
+| `emergency_meal_cooldown_hours` | Number | **NULL-permitted** | Relaxed cooldown during emergency | No cooldown during emergency | NULL | Set to **3** per approved policy |
+| `emergency_mode_max_duration_days` | Number | **Mandatory (before activation)** | Auto-revert emergency mode after this many days | Never auto-reverts — emergency persists until manually disabled | NULL | Set to **7** per approved policy. No indefinite Emergency Mode permitted. |
 
-### Feature Toggles
+### 9.6 Location Settings
 
-| Key | Type | What it controls | Default |
-|-----|------|-----------------|---------|
-| `transparency_dashboard_enabled` | Boolean | Show the public `/transparency` page | OFF |
-| `csr_80g_certificates_enabled` | Boolean | Enable 80G certificate generation for CSR donors | OFF |
-| `volunteer_zones_enabled` | Boolean | Enable volunteer zone geofencing | OFF |
+| Key | Type | Classification | What it controls | NULL meaning | Default | Business implication |
+|-----|------|---------------|-----------------|-------------|---------|---------------------|
+| `city_lock_enabled` | Boolean | **Recommended (pilot)** | Restrict redemptions to a single city | — | OFF | Pilot-phase operational control. Enforced at redemption only — not at registration. |
+| `operating_city` | String | **Mandatory (if city lock ON)** | The operating city for redemption gating | City lock has no effect | NULL | Standardise city name for consistent matching |
 
-### Special Care Settings
+**City lock enforcement scope:** City lock is enforced **only at token redemption** — the system compares the Food Partner's city against the operating city (case-insensitive) and hard-blocks mismatches. Beneficiary registration, Food Partner onboarding and volunteer registration are **not** gated by city lock.
 
-| Key | Type | What it controls | Default |
-|-----|------|-----------------|---------|
-| `special_care_multiplier` | Number | Token value multiplier for Special Care tokens (e.g., 1.5 = 50% more) | NULL |
-| `special_care_post_delivery_months` | Number | Months post-delivery a pregnant woman qualifies for Special Care | NULL |
-| `patient_eligibility_months` | Number | Months a patient qualifies for Special Care | NULL |
+> **Planned (B-15):** Extend city-lock enforcement to registration flows — currently, out-of-city registrations succeed but redemptions fail later.
 
-> **Convention:** All boolean settings ship **OFF** by default. All numeric settings ship **NULL** (the rule soft-skips until you set a value). This means every feature is opt-in — nothing activates until you explicitly configure it.
+**Geographic hierarchy:** The approved geographic structure for Phase 1 is Country → State → District → City/Town/Village/Locality with 6-digit PIN validation and location IDs. Current build uses city string + coordinates.
+
+> **Planned (B-02):** Structured geographic hierarchy with State/District masters, location IDs, per-stakeholder requirement levels, and actual service-location snapshot per redemption transaction.
+
+City lock is a pilot-phase operational control. The token-level geographic restriction model (PAN INDIA / State / District / City / PIN per D-2A) will supersede it.
+
+### 9.7 Quality and Security Settings
+
+| Key | Type | Classification | What it controls | NULL meaning | Default | Business implication |
+|-----|------|---------------|-----------------|-------------|---------|---------------------|
+| `proof_phash_dup_distance` | Number | **Recommended** | How similar two proof photos can be before flagging as duplicate | Duplicate detection OFF | NULL | Lower = stricter matching. Flagged for review, never auto-rejected. |
+| `audit_log_retention_days` | Number | **NULL-permitted** | How many days to keep audit logs | **Permanent retention** — logs kept forever | NULL | Leave NULL. Permanent retention is the approved policy. |
+
+**Audit log immutability:** Audit logs are append-only. Two PostgreSQL triggers (`audit_logs_no_update`, `audit_logs_no_delete`) call `audit_logs_block_mutation()` which raises an exception for **any** update or delete operation, including by `service_role`. RLS policies permit SELECT for admin/compliance and INSERT-only for authenticated users. No UPDATE or DELETE policies exist. The code exposes only INSERT methods.
+
+**Permanent-retention policy:** Financial, token, settlement and governance audit records are never deleted. The `audit_log_retention_days` key should remain unset (NULL) until a retention policy is formally adopted by the Foundation with appropriate legal and accounting advice.
+
+### 9.8 Feature Toggles
+
+| Key | Type | Classification | What it controls | NULL meaning | Default | Business implication |
+|-----|------|---------------|-----------------|-------------|---------|---------------------|
+| `transparency_dashboard_enabled` | Boolean | **Optional** | Show the public `/transparency` page | — | OFF | Enable when public-facing data is reviewed and approved |
+| `csr_80g_certificates_enabled` | Boolean | **Optional** | Enable 80G certificate generation for CSR donors | — | OFF | **Leave OFF** — no generation code exists. Activation requires (a) Foundation 80G registration number and (b) CA-approved certificate format. |
+| `volunteer_zones_enabled` | Boolean | **Optional** | Enable volunteer zone geofencing | — | OFF | Zone assignment is available regardless of this toggle; toggle controls enforcement at distribution |
+
+> **Planned (B-16):** 80G certificate generation end-to-end — donor details, transaction reference, Foundation 80G registration, unique certificate number and permanent certificate record. Blocked on external dependencies.
+
+All boolean settings ship **OFF** by default — nothing activates until explicitly configured. Feature toggles follow the same audit trail as other configuration changes.
+
+### 9.9 Special Care Settings
+
+The Special Care programme is designed to provide enhanced nutritional support to beneficiaries with elevated needs. The approved model operates through a separate donor category and fixed-value tokens.
+
+**Approved Special Care programme:**
+
+Donors may sponsor Special Care Tokens at **₹100 per token**. Each Special Care Token has a face value of ₹100 and is independently configurable from the standard pApAmA meal token. Where the approved value of the Special Care meal is less than ₹100, the unused balance is automatically credited to the **PAPAMA Common Special Care Pool** — a separate ledger used exclusively for approved Special Care purposes.
+
+> **Planned (B-28):** Full Special Care programme implementation — SPECIAL_CARE token type at ₹100, donor sponsorship flow, Common Special Care Pool with separate ledger and automatic surplus routing, configurable Special Care Category Master, and eligibility model with EDD/delivery-date/review-date logic.
+
+**Special Care categories (distinct from beneficiary categories):**
+
+The current implementation has four **beneficiary categories** (Pregnant Women, Patients, Persons with Disabilities, Disaster-Affected). The approved Special Care programme introduces a separate **Special Care Category Master** with initial categories:
+- Pregnant Women
+- Postpartum/Lactating Mothers (new — not in current beneficiary enum)
+- Medically Vulnerable/Patients
+
+**Eligibility model (approved policy):**
+- **Pregnancy:** From verified pregnancy until delivery. Expected delivery date (EDD) recordable. No monthly re-verification required.
+- **Postpartum:** Six months from delivery date, auto-calculated.
+- **Patients:** No universal period. Per-record category, start date, review/end date, professional recommendation, evidence reference, verification status and verifier. System reminder at review date. The `patient_eligibility_months` configuration key is superseded by this per-record review-date model.
+
+**Medical privacy:** The Food Partner sees only "SPECIAL CARE TOKEN – ₹100" — never the diagnosis, condition or specific Special Care category. Medical details are restricted to authorised pApAmA personnel on a need-to-know basis.
+
+| Key | Type | Classification | What it controls | NULL meaning | Default | Business implication |
+|-----|------|---------------|-----------------|-------------|---------|---------------------|
+| `special_care_multiplier` | Number | **Internal analysis only** | **Not functional.** Defined in config but never applied in any token minting, redemption or value calculation code. Maintained within an approved range of approximately 1.5x–2x for internal financial and policy analysis only. | Not applied | Seeded as 2 | Do NOT set with the expectation that it affects token values. The donor-facing Special Care Token value is fixed at ₹100. |
+| `special_care_post_delivery_months` | Number | **Optional** | Months post-delivery a pregnant woman qualifies for Special Care eligibility extension | No post-delivery extension | NULL | Sets the eligibility-expiry window for approved pregnant-women beneficiaries |
+| `patient_eligibility_months` | Number | **Superseded** | Previously set a universal patient eligibility period | Uses general approval without time limit | NULL | **Superseded** by per-record review dates with system reminders (approved model). Retained for backward compatibility. |
 
 ---
 
 ## 10. Frequently Asked Questions
 
-### General
+### 10.1 General
 
-**Q: Can a beneficiary receive meals without a smartphone?**
-A: Yes. A volunteer can distribute a printed QR code, and the Food Partner handles the scanning. The beneficiary does not need a phone.
+**Q1: What is pApAmA?**
+A: pApAmA (People Against Poverty and Malnutrition) is a humanitarian meal-enablement platform. It connects donors who fund meals with beneficiaries who need them, through a network of approved Food Partners that prepare and serve fresh food. pApAmA does not cook, store or deliver food.
 
-**Q: Can a beneficiary receive meals without an Aadhaar card or formal ID?**
-A: Yes. Aadhaar is not collected by the platform. Face verification is the primary identity method at redemption, and assisted registration (via a volunteer) ensures no genuine beneficiary is denied.
+**Q2: What is pApAmA's mission?**
+A: To ensure that no person in need is denied a meal when a donor has funded one and a Food Partner is ready to serve it.
 
-**Q: Does pApAmA cook or deliver food?**
-A: No. pApAmA is a meal-enablement platform. Food is freshly cooked by approved Food Partners and served at their premises. pApAmA never cooks, stores, or delivers food.
+**Q3: Does pApAmA cook or deliver food?**
+A: No. pApAmA is a meal-enablement platform. Food is freshly cooked by approved Food Partners and served at their premises. pApAmA never cooks, stores, packages or delivers food.
 
-### For Donors
+**Q4: Can a beneficiary receive meals without a smartphone?**
+A: Yes. A volunteer can distribute a printed QR code, and the Food Partner handles the scanning. The beneficiary does not need a phone, an app or an account. The vendor scan page also accepts a pasted code as a fallback.
 
-**Q: Can I get my money back after donating?**
-A: No. Donations become non-withdrawable Donor Credit committed to funding meals. This is by design — your contribution goes directly to feeding people.
+**Q5: Can a beneficiary receive meals without an Aadhaar card or formal ID?**
+A: Yes. Aadhaar is not collected or required by the platform. The `aadhaar_hash` field exists in the database schema but is never populated by any registration form. Face verification (via embedding, not photograph) is the primary identity method at redemption, and assisted registration via a volunteer ensures no genuine beneficiary is denied.
 
-**Q: What is the difference between Path A and Path B?**
-A: **Path A** — you distribute the token yourself (you choose who gets the meal). **Path B** — you hand the token to pApAmA, and they distribute it through volunteers to people in need.
+**Q6: How does face verification protect privacy?**
+A: Only a non-reversible 1024-dimension mathematical representation (face embedding) is computed on-device and transmitted. No photograph is ever transmitted to or stored on the server. The embedding cannot be reversed to reconstruct a face image. No facial-recognition database is built — the embedding is used only for transaction verification.
 
-**Q: When do I get notified?**
-A: You receive an in-app notification when your token is redeemed — including the Food Partner name, meal served, value, location and the beneficiary's category. A second notification is sent when the meal proof is approved, including a photo of the plate.
+**Q7: What is a token worth?**
+A: A standard token is worth the `standard_token_value` configured by the admin (in ₹). A Special Care Token is worth ₹100.
 
-### For Food Partners
+**Q8: How long is a token valid?**
+A: Tokens have a **60-day validity period** from activation. After expiry, an unused token becomes invalid and may be considered for controlled reissue by an authorised administrator. No pre-expiry reminders are sent.
 
-**Q: Why is my payment locked?**
-A: Payment is locked until you upload proof of service (plate photo) and the admin approves it. This ensures accountability.
+**Q9: What beneficiary categories does pApAmA support?**
+A: Four categories are currently implemented: Pregnant Women, Patients, Persons with Disabilities, and Disaster-Affected. These are hardcoded; adding a category requires a code change.
 
-**Q: What if my proof is rejected?**
-A: You'll see the rejection reason on your Redemptions page. Fix the issue (e.g., take a clearer photo) and re-upload. There is no deadline for resubmission.
+> **Future categories:** Children, Elderly Persons, Lactating Mothers and General Category are planned for a future phase.
 
-**Q: How often do I get paid?**
-A: The admin runs settlement cycles — daily, twice weekly, or weekly. You can see your settlement status at `/vendor/settlements`.
+**Q10: What is the ₹10 beneficiary contribution?**
+A: Per the approved contribution policy, each beneficiary contributes ₹10 to pApAmA at the time of receiving a meal. This is collected by the Food Partner as an authorised collection agent and remitted to the pApAmA Administration Account. The ₹10 is a contribution to pApAmA, not Food Partner revenue. It is completely separate from the Food Partner's meal settlement. If a beneficiary is unable to pay, the contribution is waived — no beneficiary is ever denied food for inability to pay.
 
-### For Admins
+**Q11: What happens to the value of a token that expires without being redeemed?**
+A: **Approved policy:** Expired token value returns to the Meal Pool for future meals via the controlled reissue process — it is never treated as revenue. **Current behaviour:** Expired tokens receive a status flip only; the value is written off with no ledger entry.
 
-**Q: What should I configure first?**
-A: At minimum, set these values before going live:
-1. `standard_token_value` — the value of a meal token
-2. `meal_cooldown_hours` — minimum hours between meals
-3. `max_meals_per_day` — daily meal limit per beneficiary
-4. `token_redemption_radius_km` — Food Partner proximity limit
-5. `max_tokens_per_volunteer` — volunteer holding limit
-6. UPI merchant VPA (environment variable `NEXT_PUBLIC_UPI_VPA`) — for real UPI payments
+> **Planned (B-03):** Implementation of the approved Meal Pool return policy for expired and forfeited token value.
 
-**Q: What happens if I don't set a numeric config value?**
-A: The rule **soft-skips** — it's not enforced. For example, if `meal_cooldown_hours` is NULL, there's no cooldown between meals. Set values before going live.
+**Q12: What happens when a token is worth more than the meal?**
+A: If the token value exceeds the menu price, the difference is forfeited. **Approved policy:** Forfeited value returns to the Meal Pool for future meals. **Current behaviour:** Forfeited value is posted to the platform revenue ledger.
 
-**Q: Can I undo a settlement payment?**
-A: Settlements are designed to be one-directional. If there's an issue, put the settlement on hold before marking it as paid. Once paid, the record is final.
+> **Planned (B-03):** Forfeited value will return to the Meal Pool instead of the revenue ledger.
+
+**Q13: What is the General Donation Pool?**
+A: The General Donation Pool (shown as "Guest Pool" in the application interface) accumulates credit from anonymous donations made without an account at the public `/donate` page. The admin converts this pool credit into tokens for volunteer distribution.
+
+**Q14: How does a guest donation work?**
+A: Anyone can donate at `/donate` or `/donate/qr` without creating an account. The donation is credited to the General Donation Pool. The admin then converts pool credit into tokens and allocates them to volunteers for distribution. No contact information is captured from guest donors.
+
+**Q15: Where does pApAmA operate?**
+A: pApAmA tokens are **PAN INDIA** by default — redeemable at any authorised Food Partner anywhere in India. The pilot operates with city lock enabled for the operating city (e.g. Coimbatore). The approved geographic structure includes State, District, City/Town/Village/Locality and PIN Code levels.
+
+> **Planned (B-02):** Structured geographic hierarchy with location masters and IDs. Current build uses city string + coordinates.
+
+**Q16: What is the Special Care programme?**
+A: The Special Care programme provides enhanced nutritional support through ₹100 Special Care Tokens. Donors sponsor these tokens through a dedicated flow. Where the meal costs less than ₹100, the surplus is credited to the Common Special Care Pool for future Special Care purposes. The Food Partner sees only "SPECIAL CARE TOKEN – ₹100" — never the diagnosis or specific category.
+
+> **Planned (B-28):** Full Special Care programme implementation.
+
+**Q17: What is Emergency Mode?**
+A: Emergency Mode is a temporary operating mode activated during disasters or crises. It relaxes meal-frequency and cooldown controls (4 meals/day, 3-hour cooldown, 7-day maximum) so that affected people can receive more frequent meals. Financial controls remain fully active. Emergency Mode auto-reverts after the configured duration.
+
+**Q18: Can the ₹10 contribution be waived during emergencies?**
+A: Yes. During an authorised Emergency Mode, the ₹10 contribution may be waived. The Food Partner continues to receive the full approved meal value through settlement. Every waiver is recorded.
+
+**Q19: Is occasion-based giving supported?**
+A: Occasion-based and recurring giving (birthday meals, memorials, monthly sponsorships) are planned for a future phase. They are not implemented today.
+
+**Q20: What happens when a Food Partner is at capacity?**
+A: When `vendor_capacity_enforcement_enabled` is ON and the Food Partner has reached their daily limit, the redemption is hard-blocked with the message "vendor daily capacity reached."
+
+> **Planned (B-13):** Beneficiary-facing redirection to nearby open Food Partners when capacity is reached.
+
+**Q21: Can guest donors receive notifications?**
+A: Not currently. No contact information is captured from guest donors, so notifications cannot be delivered.
+
+> **Planned (B-11):** Optional contact capture on guest donations for receipts and thank-you notifications.
+
+**Q22: What notification channels are available?**
+A: Currently, **in-app only**. SMS, email and WhatsApp adapter stubs exist but skip delivery when provider API keys are not configured.
+
+**Q23: Does pApAmA store photographs?**
+A: No. The platform stores no photograph of any person in any mode. Identity verification uses only on-device-computed mathematical representations (face embeddings). Proof photos (plate images) are stored privately for audit purposes — these show the food, not the person.
+
+**Q24: How is data retained?**
+A: No donation, token, settlement or audit record is deleted in normal operation. Audit logs are append-only and immutable (DB triggers block update/delete even for service_role). The approved policy is permanent retention of financial and governance records. No automated purge job runs.
+
+**Q25: What geographic structure does pApAmA use?**
+A: The approved Phase 1 structure is Country → State → District → City/Town/Village/Locality with 6-digit PIN validation and unique location IDs. Current build uses city string + coordinates.
+
+> **Planned (B-02):** Full geographic hierarchy implementation.
+
+**Q26: What categories qualify for Special Care?**
+A: The approved Special Care Category Master includes: Pregnant Women, Postpartum/Lactating Mothers, and Medically Vulnerable/Patients. These are distinct from the four beneficiary categories. The Food Partner never sees the specific category — only "SPECIAL CARE TOKEN – ₹100".
+
+> **Planned (B-28):** Configurable Special Care Category Master.
+
+**Q27: Does the `special_care_multiplier` affect token values?**
+A: No. The `special_care_multiplier` is defined in system configuration but is **never applied** in any token minting, redemption or value calculation code. It is maintained only as an internal analysis parameter within an approved range of approximately 1.5x–2x. The Special Care Token value is fixed at ₹100.
+
+**Q28: How are Emergency Mode changes audited?**
+A: The emergency toggle (`emergency_mode_enabled`) is audit-logged via the standard config-change path with actor, timestamp and previous/new value but no dedicated reason field. Emergency overrides (time-boxed parameter changes) are logged per-override with optional reason. Auto-revert is logged as an aggregate entry only.
+
+> **Planned (B-19):** Per-override detail in auto-revert logs. **Planned (B-14):** Reason field on config changes.
+
+**Q29: What happens to surplus emergency funds?**
+A: Surplus follows this hierarchy: (1) the specific emergency's continuing needs, (2) other humanitarian needs in the same affected area, (3) the PAPAMA Emergency Response Fund. No donor refund mechanism exists for emergency contributions — this is disclosed at contribution time.
+
+**Q30: Are Food Partner inspections tracked?**
+A: Yes. Administrators can record surprise inspections. Failed inspections apply a numeric quality-score deduction (`vendor_inspection_fail_penalty`). Results are audit-logged and factor into the Food Partner's composite quality score.
+
+### 10.2 For Donors
+
+**Q1: Can I get my money back after donating?**
+A: No. Donations become non-withdrawable Donor Credit committed to funding meals. This is by design — your contribution goes directly to feeding people. pApAmA does not offer money-back refunds. Refunds are only processed for confirmed failed or duplicate payments.
+
+**Q2: Does my Donor Credit expire?**
+A: No. Donor Credit does not expire — this is Trust policy, unless required by future statutory or regulatory provisions.
+
+**Q3: What is the difference between Path A and Path B?**
+A: **Path A (Donor Controlled)** — you distribute the token yourself (you choose who gets the meal). The token goes `live` immediately with a QR code you can share. **Path B (PAPAMA Distributed)** — you hand the token to pApAmA, and they distribute it through volunteers to people in need using FIFO allocation.
+
+**Q4: If I choose Path A, can anyone redeem my token?**
+A: Yes. A Path A token can be redeemed by **whoever presents the QR code first**. There is no binding to a named recipient. Share the QR code discreetly and only with the intended person. Do not post it publicly.
+
+**Q5: What happens if I lose a token I was distributing?**
+A: You can report a lost token through the donor interface. The system blocks the old token immediately and mints a replacement with the same value, linked to the original. If the replacement fails, the original is automatically un-blocked. You can also ask an administrator to report the loss.
+
+**Q6: Can I cancel a token I've minted?**
+A: No. There is no donor-side cancellation mechanism. Once minted, a token follows its lifecycle. An administrator can revoke a token that is held by a volunteer (returning it to the Admin Pool), but this is an administrative action, not a donor-initiated one.
+
+**Q7: How will my token be reissued if it expires?**
+A: If your token expires without being redeemed, an authorised administrator may reissue it — creating a new token with a new QR code and new 60-day validity, permanently linked to the original. The original remains expired. This is a controlled process with recorded reasons, not automatic.
+
+**Q8: When do I get notified about my token?**
+A: You receive an in-app notification when your token is redeemed. Per the approved privacy policy, the notification contains only: the type of token, the redemption location at City and State level (e.g. "Mumbai, Maharashtra"), and a thank-you message. No beneficiary personal information is disclosed.
+
+**Q9: What information do I see about the beneficiary?**
+A: Per the approved Beneficiary Privacy and Donor Communication policy: nothing identifying. You do not see the beneficiary's name, photograph, health status, category, address or any personal information. Donor reporting uses anonymised or aggregated information.
+
+> **Planned (B-29):** Full privacy framework implementation including notification whitelist filter and role-based access tiers.
+
+**Q10: How do I track my impact?**
+A: Your donor dashboard (`/donor/dashboard`) shows total donated, credit balance, tokens minted, meals served and monthly trends. The impact page (`/donor/impact`) provides a per-donor impact summary connecting your contributions to humanitarian outcomes.
+
+**Q11: Is occasion-based giving available?**
+A: Occasion-based giving (birthday meals, memorials, anniversary sponsorships) and recurring monthly giving are planned for a future phase. They are not implemented today.
+
+**Q12: What is a Special Care Token?**
+A: A Special Care Token is a ₹100 token that provides enhanced nutritional support. Donors may sponsor these through a dedicated flow. Surplus value (meal cost less than ₹100) is credited to the Common Special Care Pool for future Special Care purposes.
+
+> **Planned (B-28):** Full Special Care Token donor sponsorship flow.
+
+**Q13: What happens to forfeited value from my token?**
+A: **Approved policy:** Forfeited value (when the token is worth more than the meal) returns to the Meal Pool. **Current behaviour:** Forfeited value is posted to the platform revenue ledger.
+
+> **Planned (B-03):** Meal Pool return implementation.
+
+**Q14: Can I choose where my token is redeemed?**
+A: Tokens are PAN INDIA by default — redeemable at any authorised Food Partner.
+
+> **Planned (B-23):** Donor-selected geographic restriction at token creation (PAN INDIA / State / District / City / PIN).
+
+**Q15: How is my donation secured?**
+A: Every donation, token, redemption and settlement is recorded and auditable. Audit logs are immutable. Token QR codes use HMAC-SHA256 signatures. Proof of service is required before any Food Partner payment.
+
+**Q16: What notification channels are available?**
+A: Currently in-app only. SMS, email and WhatsApp channels have adapter stubs but are not active.
+
+**Q17: What privacy protections exist for donors?**
+A: Donor information is used only for platform operations. Your personal details are not shared with Food Partners or beneficiaries. Beneficiary information is not disclosed to donors beyond aggregated impact statistics.
+
+**Q18: Can I see the meal photo?**
+A: Currently, the meal-photo notification includes a 30-day signed URL to the plate photo. The approved notification templates above do not include a photo — the notification content will be aligned to the approved templates.
+
+> **Planned (B-29):** Notification content alignment with approved templates.
+
+**Q19: How do tokens work during emergencies?**
+A: Emergency tokens follow the same lifecycle but with relaxed meal limits (4/day, 3-hour cooldown) for up to 7 days. The ₹10 contribution may be waived. Financial controls remain active.
+
+**Q20: What happens to my emergency donation surplus?**
+A: Surplus follows the hierarchy: specific emergency needs → same-area humanitarian needs → PAPAMA Emergency Response Fund. No refund is available — this is disclosed at the time of contribution.
+
+### 10.3 For Food Partners
+
+**Q1: Why is my payment locked?**
+A: Payment is locked until you upload proof of service (plate photo) and the admin approves it. This ensures accountability — every meal payment is backed by verified proof.
+
+**Q2: What if my proof is rejected?**
+A: You'll see the rejection reason on your Redemptions page (the reviewer must provide a reason — it is the only mandatory-reason action in the system). Fix the issue (e.g., take a clearer photo) and re-upload. There is no deadline for resubmission. Payment stays locked until proof is approved.
+
+**Q3: How often do I get paid?**
+A: The admin runs settlement cycles — daily, twice weekly, or weekly. You can see your settlement status at `/vendor/settlements`. The Foundation's operating target is payment within 7 working days of settlement reconciliation.
+
+**Q4: What is the settlement lifecycle?**
+A: Settlements progress through: **pending** (meals awaiting settlement) → **locked** (prepared for review) → **approved** (reviewed and approved) → **reconciled** (pre-payment reconciliation complete) → **paid** (funds transferred). A settlement can be placed on hold at any point before payment.
+
+**Q5: What does "on hold" mean for my settlement?**
+A: A held settlement is suspended pending further review. The admin investigates and either releases the hold (allowing payment to proceed) or escalates. The hold reason and responsible person are recorded in the audit trail.
+
+**Q6: Can a paid settlement be changed?**
+A: No. Once marked as paid, a settlement record is final. Corrections are recorded as separate adjustment/recovery records.
+
+> **Planned (B-07):** Auditable settlement adjustment records.
+
+**Q7: How does the ₹10 beneficiary contribution affect my payment?**
+A: It does not affect your settlement payment at all. You receive the **full approved meal value** (`min(token_value, menu_value)`) via settlement. The ₹10 is collected by you as an authorised collection agent of pApAmA and remitted to the pApAmA Administration Account. These are completely separate transactions.
+
+**Q8: What if the beneficiary cannot pay the ₹10?**
+A: The contribution is waived. You serve the meal regardless — no beneficiary is ever denied food for inability to pay. The waiver is recorded against the redemption transaction. You still receive the full meal value via settlement.
+
+**Q9: How do I remit the collected ₹10 contributions?**
+A: Contributions are remitted to the pApAmA Administration Account under the CA-approved process, initially on a daily cycle. Remittance and reconciliation records are maintained.
+
+> **Planned (B-01):** Systematic remittance tracking and reconciliation within the platform.
+
+**Q10: What is the ₹10 contribution report?**
+A: The contribution report tracks: expected contributions, collected, remitted, received and reconciled, outstanding, waived, and finally settled. This provides a complete audit trail for every ₹10.
+
+> **Planned (B-01):** Automated contribution reporting.
+
+**Q11: What is the graduated corrective-action process?**
+A: The Foundation operates a graduated discipline framework: warning → final warning → penalty/enhanced monitoring → suspension. Immediate suspension is reserved for food-safety hazards, fraud or risk to beneficiaries. The `vendor_auto_suspend_enabled` setting remains OFF — the ladder governs operationally through administrative practice.
+
+**Q12: How do inspections work?**
+A: Administrators conduct surprise inspections recorded in the system. A failed inspection applies a numeric quality-score deduction (`vendor_inspection_fail_penalty`). Results are audit-logged. Inspection outcomes feed into the composite quality score alongside ratings and complaint rates.
+
+**Q13: How is my quality score calculated?**
+A: Your quality score is a composite of beneficiary feedback ratings, complaint rate (`is_complaint=true` count / total feedback) and inspection outcomes. The exact formula is in `lib/services/vendorRating.ts`.
+
+**Q14: What happens if I temporarily close?**
+A: Set a `temporary_closure_until` date/time via your availability page. Redemptions are hard-blocked until the specified time passes. The beneficiary nearby list shows "Temporarily closed".
+
+**Q15: What happens when I reach daily capacity?**
+A: When `vendor_capacity_enforcement_enabled` is ON and you reach your `daily_meal_capacity`, redemptions are hard-blocked. Beneficiaries see the capacity status.
+
+> **Planned (B-13):** Automatic redirection to nearby open Food Partners.
+
+**Q16: Can I mark individual menu items as unavailable?**
+A: No. The `vendor_menus` table has no per-item availability flag. You manage availability at the establishment level (open/closed, temporary closure, stock exhausted).
+
+**Q17: What does the settlement audit involve?**
+A: 10% of settlements are randomly sampled for audit review. Selected settlements receive enhanced scrutiny. The audit verifies the full chain: token → Food Partner → contribution/waiver → settlement → payment. The ₹10 contribution reconciliation receives special attention.
+
+**Q18: What triggers an immediate suspension?**
+A: Food-safety hazards, fraud or risk to beneficiaries. These bypass the normal graduated ladder.
+
+**Q19: Do I see the beneficiary's category?**
+A: No. The platform does not display the beneficiary's category to the Food Partner at the point of service. For Special Care tokens, you see only "SPECIAL CARE TOKEN – ₹100" — never the diagnosis or specific category.
+
+**Q20: Can I dispute a settlement?**
+A: There is no Food Partner-side dispute or query mechanism. Food Partners have read-only access to their settlement status. If you have concerns, contact pApAmA administration.
+
+**Q21: What is the proof review process?**
+A: After you upload a plate photo, the admin reviews it within the 24-hour operating target. If approved, payment is released. If rejected with a reason, you can re-upload — there is no resubmission deadline.
+
+**Q22: What is duplicate-media detection?**
+A: The system computes a perceptual hash of proof photos. If two photos are too similar (per `proof_phash_dup_distance`), a flag is raised and related settlements are held for review. A flag is not proof of fraud — it is a signal for investigation.
+
+**Q23: What is the maker-checker process for settlements?**
+A: The person who prepares a settlement should not be the same person who approves it. This is currently an operating procedure enforced through administrative practice.
+
+> **Planned (B-24):** System-enforced maker-checker segregation.
+
+**Q24: Can individual line items within a settlement be held?**
+A: Not currently. Holds apply to the entire settlement.
+
+> **Planned (B-08):** Line-item settlement hold.
+
+**Q25: What happens during Emergency Mode?**
+A: Meal limits and cooldowns are relaxed (4/day, 3-hour cooldown). The ₹10 contribution may be waived. You continue to receive the full meal value via settlement. All other controls (token validity, your authorisation status, food safety, settlement process) remain active.
+
+**Q26: How do I handle the ₹10 during an emergency?**
+A: If an emergency-period ₹10 waiver is in effect, you serve the meal without collecting the contribution. Record the waiver against the transaction. You still receive the full meal value via settlement.
+
+**Q27: What are my obligations regarding beneficiary privacy?**
+A: Do not photograph beneficiaries. Do not share any beneficiary information observed during service. Proof photos show the meal, not the person. You never retain face images — the device computes embeddings only.
+
+**Q28: What menu pricing rules apply?**
+A: Charge only the prices listed in your approved menu. Do not add surcharges, service charges or fees beyond the configured contribution amount. Menu price edits overwrite the previous value — no price history is maintained.
+
+### 10.4 For Administrators
+
+**Q1: What must I configure before going live?**
+A: See the **Go-Live Checklist** section (between Section 2 and Section 3). At minimum: `standard_token_value`, `meal_cooldown_hours`, `max_meals_per_day`, `token_redemption_radius_km`, `max_tokens_per_volunteer`, `token_expiry_days` (set to 60), `co_contribution_max` (set to 10), `settlement_random_audit_rate` (set to 0.10), and the UPI merchant VPA environment variable.
+
+**Q2: What happens if a setting is NULL?**
+A: Each setting has specific NULL semantics — there is no universal "soft-skip". For example:
+- `meal_cooldown_hours` = NULL → no cooldown enforced (unlimited meal frequency)
+- `max_meals_per_day` = NULL → no daily limit enforced
+- `token_expiry_days` = NULL → tokens never expire (unbounded liability)
+- `max_tokens_per_volunteer` = NULL → no holding limit (unbounded exposure)
+- `audit_log_retention_days` = NULL → permanent retention (correct default)
+- `emergency_meal_cooldown_hours` = NULL → no cooldown during emergency
+- `co_contribution_max` = NULL → only ₹0 accepted
+
+See Section 9 for per-key NULL semantics.
+
+**Q3: What is the fail-safe principle?**
+A: Mandatory configuration settings that are left NULL may allow the system to operate without intended safeguards (e.g. no cooldown, no daily limit, no holding cap). Review and set all mandatory settings before going live.
+
+> **Planned (B-06):** Dashboard warning when critical configuration is incomplete.
+
+**Q4: Can I undo a settlement payment?**
+A: No. Once a settlement is marked as `paid`, the record is final. Corrections to paid settlements are recorded as separate adjustment/recovery records — the original is never edited.
+
+> **Planned (B-07):** Auditable settlement adjustment and recovery records.
+
+**Q5: How does maker-checker work for settlements?**
+A: The person who prepares a settlement should not be the same person who approves and releases payment. This is an operating procedure with audit oversight. The system records the actor for each settlement status transition.
+
+> **Planned (B-24):** System-enforced maker-checker — maker ≠ checker blocked, settlement versioning, approval auto-invalidation, reject with mandatory reason, bank-account change controls.
+
+**Q6: What settlement pre-payment checks should I perform?**
+A: Before marking a settlement as paid:
+- Verify all included redemptions have approved proofs
+- Check that no fraud flags are outstanding for included transactions
+- Confirm ₹10 contribution status (collected/waived/outstanding) for each redemption
+- Ensure the settlement is not on hold
+- The maker-checker principle should be followed as operating practice
+
+**Q7: How do I manage Emergency Mode?**
+A: Activate at `/admin/emergency`. Set emergency values first: `emergency_max_meals_per_day` = 4, `emergency_meal_cooldown_hours` = 3, `emergency_mode_max_duration_days` = 7. Extension requires explicit action with a revised end date. Emergency Mode auto-reverts after the configured duration. All financial controls remain active.
+
+**Q8: How are configuration changes audited?**
+A: Every change is logged with the previous value, new value, actor and timestamp. There is no dedicated reason field currently.
+
+> **Planned (B-14):** Optional reason field on configuration change audit.
 
 ---
 
 ## Appendix A: Food Partner Code of Conduct
 
-Food Partners participating in the pApAmA platform commit to the following standards:
+Food Partners (shown as "Vendor" in the application interface) participating in the pApAmA platform commit to the following standards:
 
 1. **Dignity** — Serve every token holder with the same respect and courtesy as any paying customer. Do not distinguish between token-funded and cash-paying patrons in manner, seating, or speed of service.
 2. **Non-discrimination** — Serve all token holders regardless of category, appearance, gender, religion, caste, or any other characteristic. The platform does not display beneficiary categories to the Food Partner at the point of service.
 3. **Freshness** — All meals served under pApAmA tokens must be freshly prepared. Pre-packaged, reheated or stale food is not acceptable.
-4. **Approved pricing** — Charge only the prices listed in the approved menu. Do not add surcharges, service charges, or other fees beyond the configured co-pay range (₹0–₹5 via `co_contribution_max`).
-5. **Hygiene** — Maintain food safety and hygiene standards consistent with FSSAI requirements.
-6. **Audit cooperation** — Cooperate with platform audits, including settlement audits and proof reviews. Upload clear, honest proof photos after every meal served.
-7. **Privacy** — Do not photograph beneficiaries. Do not share any beneficiary information observed during the redemption process. Proof photos must show the meal, not the person.
+4. **Approved pricing** — Charge only the prices listed in the approved menu. Do not add surcharges, service charges, or other fees beyond the ₹10 beneficiary contribution (collected as an authorised pApAmA collection agent).
+5. **₹10 contribution** — Collect the ₹10 beneficiary contribution only as an authorised collection agent of pApAmA. Remit collections to the pApAmA Administration Account under the CA-approved process. If a beneficiary is unable to pay, waive the contribution — no beneficiary is ever denied food for inability to pay.
+6. **Hygiene** — Maintain food safety and hygiene standards consistent with FSSAI requirements.
+7. **Audit cooperation** — Cooperate with platform audits, including settlement audits, inspections and proof reviews. Upload clear, honest proof photos after every meal served.
+8. **Privacy** — Do not photograph beneficiaries. Do not share any beneficiary information observed during the redemption process. Proof photos must show the meal, not the person. Face images are never retained — only embeddings are computed on-device.
 
 ---
 
@@ -1136,6 +1850,7 @@ Volunteers distributing tokens on behalf of pApAmA commit to the following stand
 4. **No token misuse** — Do not redeem tokens for personal use, sell tokens, or divert them from their intended purpose.
 5. **Privacy** — Do not photograph beneficiaries during distribution. Do not share beneficiary personal information. Do not publicise the identity of people receiving tokens.
 6. **Ethical representation** — Represent pApAmA and its mission honestly. Do not make claims about the platform, the Trust, or the donor that are not authorised.
+7. **Facilitate, do not create entitlement** — The volunteer's role is to facilitate access to pApAmA assistance, not to create or alter entitlement. Volunteers shall not independently authorise, modify or override beneficiary eligibility or token parameters.
 
 ---
 
@@ -1143,12 +1858,12 @@ Volunteers distributing tokens on behalf of pApAmA commit to the following stand
 
 **Record preservation:** No donation, token or settlement record is deleted in normal platform operation. All state changes are tracked through status transitions (e.g. a token moves from `live` to `redeemed`, never deleted).
 
-**Compensating rollbacks:** When a transaction fails partway through (e.g. settlement line-item insertion fails after the header is created), the platform performs a compensating cleanup that may delete the orphaned record. These rollbacks are audit-logged.
+**Compensating rollbacks:** When a transaction fails partway through (e.g. settlement line-item insertion fails after the header is created), the platform performs a compensating cleanup that may delete the orphaned record. These rollbacks are audit-logged. The lost-token replacement flow includes a compensating rollback — if the replacement token minting fails, the original token is automatically un-blocked to restore the original state.
 
-**Audit log immutability:** Audit logs are append-only at the database level. No route, service or administrative action can edit or delete an audit log entry.
+**Audit log immutability:** Audit logs are append-only at the database level. Two PostgreSQL triggers block any update or delete operation, including by `service_role`. No route, service or administrative action can edit or delete an audit log entry.
 
-**Retention:** The `audit_log_retention_days` configuration key exists but is intentionally unset (NULL). No automated purge or retention job runs. Data accumulates indefinitely. This key should remain unset until a retention policy is formally adopted.
+**Retention:** The `audit_log_retention_days` configuration key exists but is intentionally unset (NULL). No automated purge or retention job runs. Data accumulates indefinitely. Financial, token, settlement and governance records are never deleted. This is the approved retention policy — the key should remain unset until a retention policy is formally adopted with appropriate legal and accounting advice.
 
 ---
 
-> **pApAmA — Platform Administration Guide v1.1**
+> **pApAmA — Technical Administration Guide v1.1 (Phase 1) — August 2026**
