@@ -1495,285 +1495,314 @@ The current implementation has four **beneficiary categories** (Pregnant Women, 
 
 ### 10.1 General
 
-**Q1: What is pApAmA?**
-A: pApAmA (People Against Poverty and Malnutrition) is a humanitarian meal-enablement platform. It connects donors who fund meals with beneficiaries who need them, through a network of approved Food Partners that prepare and serve fresh food. pApAmA does not cook, store or deliver food.
+**Q1: Can a beneficiary receive a meal without a smartphone?**
+A: Yes. A beneficiary does not need a smartphone. A token may be presented through a printed QR code or with the assistance of an authorised volunteer. The Food Partner (shown as "Vendor" in the application interface) scans the token and completes the redemption process. The vendor scan page (`/vendor/scan`) also accepts a pasted code as a fallback.
 
-**Q2: What is pApAmA's mission?**
-A: To ensure that no person in need is denied a meal when a donor has funded one and a Food Partner is ready to serve it.
+**Q2: Can a beneficiary receive a meal without Aadhaar or formal identification?**
+A: Yes. Aadhaar is not mandatory for receiving a pApAmA meal. The platform is designed to ensure that lack of formal identification does not automatically prevent a genuine person in need from receiving assistance. The `aadhaar_hash` field exists in the database schema but is never populated by any registration form. Face verification (via on-device-computed embedding, not photograph) is the primary identity method at redemption, and volunteer-assisted registration ensures accessibility.
 
-**Q3: Does pApAmA cook or deliver food?**
-A: No. pApAmA is a meal-enablement platform. Food is freshly cooked by approved Food Partners and served at their premises. pApAmA never cooks, stores, packages or delivers food.
+**Q3: Does pApAmA cook, store or deliver food?**
+A: No. pApAmA is a meal-enablement platform. Approved Food Partners prepare the food and serve it directly to the beneficiary. pApAmA does not cook, store or deliver food.
 
-**Q4: Can a beneficiary receive meals without a smartphone?**
-A: Yes. A volunteer can distribute a printed QR code, and the Food Partner handles the scanning. The beneficiary does not need a phone, an app or an account. The vendor scan page also accepts a pasted code as a fallback.
+**Q4: Who provides the meal?**
+A: The meal is prepared and served by an approved pApAmA Food Partner, such as a restaurant, food shop or other authorised meal provider.
 
-**Q5: Can a beneficiary receive meals without an Aadhaar card or formal ID?**
-A: Yes. Aadhaar is not collected or required by the platform. The `aadhaar_hash` field exists in the database schema but is never populated by any registration form. Face verification (via embedding, not photograph) is the primary identity method at redemption, and assisted registration via a volunteer ensures no genuine beneficiary is denied.
+**Q5: Can a beneficiary use a token at any restaurant?**
+A: No. Tokens can only be redeemed at approved pApAmA Food Partners that are active and eligible to participate in the platform.
 
-**Q6: How does face verification protect privacy?**
-A: Only a non-reversible 1024-dimension mathematical representation (face embedding) is computed on-device and transmitted. No photograph is ever transmitted to or stored on the server. The embedding cannot be reversed to reconstruct a face image. No facial-recognition database is built — the embedding is used only for transaction verification.
+**Q6: Can a token be exchanged for cash?**
+A: No. pApAmA tokens are meal-enablement vouchers. They have no cash-withdrawal value and cannot be exchanged for cash, traded, or partially redeemed for change.
 
-**Q7: What is a token worth?**
-A: A standard token is worth the `standard_token_value` configured by the admin (in ₹). A Special Care Token is worth ₹100.
+**Q7: Can a donor withdraw donated money later?**
+A: No. Once a donation has been credited as Donor Credit, it represents a commitment to fund meals and is not a withdrawable cash balance. Refunds are only processed for confirmed failed or duplicate payments.
 
-**Q8: How long is a token valid?**
-A: Tokens have a **60-day validity period** from activation. After expiry, an unused token becomes invalid and may be considered for controlled reissue by an authorised administrator. No pre-expiry reminders are sent.
+**Q8: What happens when a donor creates a token?**
+A: The donor's available Donor Credit is reduced by the token amount and a digital meal token is created with a 60-day validity period from activation. The donor can either distribute the token personally (Path A — Donor Controlled) or allow pApAmA to distribute it through its authorised volunteer network (Path B — PAPAMA Distributed).
 
-**Q9: What beneficiary categories does pApAmA support?**
-A: Four categories are currently implemented: Pregnant Women, Patients, Persons with Disabilities, and Disaster-Affected. These are hardcoded; adding a category requires a code change.
+**Q9: Can a donor give a token directly to someone in need?**
+A: Yes. Under the personal distribution pathway (Path A — Donor Controlled), the donor can share the token QR code directly with a person in need. The token can be displayed digitally or printed. The donor should share the QR discreetly — a live QR is redeemable by whoever presents it first.
 
-> **Future categories:** Children, Elderly Persons, Lactating Mothers and General Category are planned for a future phase.
+**Q10: What happens if a donor chooses "Let pApAmA distribute"?**
+A: The token enters the Admin Pool and may be allocated to an authorised volunteer, who can then distribute it to an eligible beneficiary.
 
-**Q10: What is the ₹10 beneficiary contribution?**
-A: Per the approved contribution policy, each beneficiary contributes ₹10 to pApAmA at the time of receiving a meal. This is collected by the Food Partner as an authorised collection agent and remitted to the pApAmA Administration Account. The ₹10 is a contribution to pApAmA, not Food Partner revenue. It is completely separate from the Food Partner's meal settlement. If a beneficiary is unable to pay, the contribution is waived — no beneficiary is ever denied food for inability to pay.
+> **Planned (B-32):** FIFO allocation for pool tokens.
 
-**Q11: What happens to the value of a token that expires without being redeemed?**
-A: **Approved policy:** Expired token value returns to the Meal Pool for future meals via the controlled reissue process — it is never treated as revenue. **Current behaviour:** Expired tokens receive a status flip only; the value is written off with no ledger entry.
+**Q11: What happens if a token is lost?**
+A: An authorised administrator (or the donor through the donor interface) can report the token as lost. The original token is immediately blocked (`status: "blocked"`) and a replacement is issued with the same value, linked to the original via `replacement_for_token_id`. If the replacement minting fails, the original is automatically un-blocked. The action is recorded for audit purposes.
+
+**Q12: What happens if a token expires?**
+A: Tokens have a **60-day validity period** from activation. After expiry, the unused token becomes invalid. **Approved policy:** Expired token value returns to the Meal Pool for future meals via the controlled reissue process — it is never treated as revenue. An authorised administrator may reissue an expired token, creating a new token with a new QR code and new 60-day validity, permanently linked to the original. **Current behaviour:** Expired tokens receive a status flip only; the value is written off with no ledger entry.
 
 > **Planned (B-03):** Implementation of the approved Meal Pool return policy for expired and forfeited token value.
 
-**Q12: What happens when a token is worth more than the meal?**
-A: If the token value exceeds the menu price, the difference is forfeited. **Approved policy:** Forfeited value returns to the Meal Pool for future meals. **Current behaviour:** Forfeited value is posted to the platform revenue ledger.
+**Q13: What happens if the meal costs less than the token value?**
+A: The difference between the token value and the approved meal value is recorded by the platform. **Approved policy:** Forfeited value returns to the Meal Pool for future meals. For Special Care Tokens, the surplus is credited to the Common Special Care Pool. **Current behaviour:** Forfeited value is posted to the platform revenue ledger.
 
 > **Planned (B-03):** Forfeited value will return to the Meal Pool instead of the revenue ledger.
 
-**Q13: What is the General Donation Pool?**
-A: The General Donation Pool (shown as "Guest Pool" in the application interface) accumulates credit from anonymous donations made without an account at the public `/donate` page. The admin converts this pool credit into tokens for volunteer distribution.
+**Q14: Is the beneficiary required to contribute towards the meal?**
+A: Under the approved operating policy, the beneficiary contribution is ₹10 per meal. The ₹10 is a contribution to pApAmA intended for the pApAmA Administration Account to support approved administrative and operational expenses — it is not Food Partner revenue. The contribution may be collected by the Food Partner on behalf of pApAmA as an authorised collection agent and subsequently remitted to the designated Administration Account. Approved humanitarian waivers apply where a beneficiary is unable to contribute — no beneficiary is ever denied food for inability to pay.
 
-**Q14: How does a guest donation work?**
-A: Anyone can donate at `/donate` or `/donate/qr` without creating an account. The donation is credited to the General Donation Pool. The admin then converts pool credit into tokens and allocates them to volunteers for distribution. No contact information is captured from guest donors.
+> **Planned (B-01):** Systematic contribution enforcement, waiver recording, remittance tracking and settlement-release gate within the platform. Current implementation: `co_contribution_max` is configurable (set to 10); the vendor scan UI hardcodes a ₹5 limit pending alignment. **Planned (B-10/B-20):** Hard ₹10 ceiling enforcement and UI alignment.
 
-**Q15: Where does pApAmA operate?**
-A: pApAmA tokens are **PAN INDIA** by default — redeemable at any authorised Food Partner anywhere in India. The pilot operates with city lock enabled for the operating city (e.g. Coimbatore). The approved geographic structure includes State, District, City/Town/Village/Locality and PIN Code levels.
+**Q15: Why does pApAmA ask a beneficiary to contribute ₹10?**
+A: The contribution is intended to encourage participation and dignity while helping support the administrative and operational costs of the pApAmA programme. It is not intended to make the beneficiary responsible for the cost of the meal. The Foundation provides approved exemptions or waivers in situations where the beneficiary is unable to contribute.
 
-> **Planned (B-02):** Structured geographic hierarchy with location masters and IDs. Current build uses city string + coordinates.
+**Q16: Does the Food Partner keep the ₹10 contribution?**
+A: No. Under the Foundation's approved policy, the ₹10 contribution belongs to the pApAmA Administration Account. Where the Food Partner collects it on behalf of pApAmA, the amount must subsequently be remitted and reconciled with the Foundation. The Food Partner receives the full approved meal value separately through the normal settlement process.
 
-**Q16: What is the Special Care programme?**
-A: The Special Care programme provides enhanced nutritional support through ₹100 Special Care Tokens. Donors sponsor these tokens through a dedicated flow. Where the meal costs less than ₹100, the surplus is credited to the Common Special Care Pool for future Special Care purposes. The Food Partner sees only "SPECIAL CARE TOKEN – ₹100" — never the diagnosis or specific category.
+**Q17: Does pApAmA guarantee that every token will provide exactly the same meal?**
+A: The meal must be selected from the Food Partner's approved menu and comply with the applicable pApAmA meal standards. The Foundation's Standard Meal Framework (a Trust policy document in preparation) will define the minimum requirements for meal value, portion, quality and, where applicable, nutritional standards.
 
-> **Planned (B-28):** Full Special Care programme implementation.
+**Q18: Can a beneficiary receive more than one meal in a day?**
+A: The platform applies configurable meal limits (`max_meals_per_day`) and cooldown periods (`meal_cooldown_hours`). These are intended to ensure fair distribution of donor-funded meals. Special Care or emergency provisions may permit different limits where authorised — category-specific cooldowns and Emergency Mode relaxed limits (4 meals/day, 3-hour cooldown) are supported.
 
-**Q17: What is Emergency Mode?**
-A: Emergency Mode is a temporary operating mode activated during disasters or crises. It relaxes meal-frequency and cooldown controls (4 meals/day, 3-hour cooldown, 7-day maximum) so that affected people can receive more frequent meals. Financial controls remain fully active. Emergency Mode auto-reverts after the configured duration.
+**Q19: Can Special Care beneficiaries receive additional assistance?**
+A: Yes. The approved Special Care programme provides enhanced nutritional support through **₹100 Special Care Tokens**. Donors sponsor these through a dedicated flow. Where the meal costs less than ₹100, the surplus is credited to the Common Special Care Pool for future Special Care purposes. The approved Special Care Category Master includes: Pregnant Women, Postpartum/Lactating Mothers, and Medically Vulnerable/Patients. The Food Partner sees only "SPECIAL CARE TOKEN – ₹100" — never the diagnosis or specific category.
 
-**Q18: Can the ₹10 contribution be waived during emergencies?**
-A: Yes. During an authorised Emergency Mode, the ₹10 contribution may be waived. The Food Partner continues to receive the full approved meal value through settlement. Every waiver is recorded.
+> **Planned (B-28):** Full Special Care programme implementation including ₹100 token type, category master, Common Special Care Pool ledger and donor sponsorship flow.
 
-**Q19: Is occasion-based giving supported?**
-A: Occasion-based and recurring giving (birthday meals, memorials, monthly sponsorships) are planned for a future phase. They are not implemented today.
+**Q20: What happens during a disaster or emergency?**
+A: pApAmA operates under an authorised Emergency Mode. Meal-frequency and cooldown parameters are relaxed within approved limits (4 meals/day, 3-hour cooldown, 7-day maximum duration with auto-revert). The ₹10 contribution may be waived. Financial records, token records, audit trails and fraud controls remain fully active. Emergency Mode never overrides token validity, Food Partner suspension, food-safety holds or fraud blocks.
 
-**Q20: What happens when a Food Partner is at capacity?**
-A: When `vendor_capacity_enforcement_enabled` is ON and the Food Partner has reached their daily limit, the redemption is hard-blocked with the message "vendor daily capacity reached."
+**Q21: Can a beneficiary be denied food because they do not have documents?**
+A: Lack of Aadhaar, a smartphone or formal identification does not by itself prevent a genuine beneficiary from receiving assistance, subject to the Foundation's approved verification and safeguarding procedures. During Emergency Mode, verification requirements may be further relaxed — but core token and Food Partner controls always apply.
 
-> **Planned (B-13):** Beneficiary-facing redirection to nearby open Food Partners when capacity is reached.
+**Q22: How does pApAmA prevent the same token from being used twice?**
+A: Each token has a unique identity and a QR code derived from an HMAC-SHA256 signature with a server-held secret. Its status is checked atomically during redemption. Once successfully redeemed, the token cannot be redeemed again. Additional fraud controls identify suspicious duplicate or abnormal activity.
 
-**Q21: Can guest donors receive notifications?**
-A: Not currently. No contact information is captured from guest donors, so notifications cannot be delivered.
+**Q23: How does pApAmA prevent repeated claims by the same beneficiary?**
+A: The platform applies face-embedding verification (matching against stored embeddings from prior redemptions), meal cooldowns, daily meal limits and face-hash repeat detection. Additional fraud-monitoring mechanisms identify suspicious patterns for administrative review.
 
-> **Planned (B-11):** Optional contact capture on guest donations for receipts and thank-you notifications.
+**Q24: Does pApAmA store the beneficiary's photograph?**
+A: No. The platform stores no photograph of any person in any mode. Identity verification uses only a non-reversible 1024-dimension mathematical representation (face embedding), computed on-device and transmitted to the server. No face image is ever transmitted to or stored on the server. The embedding cannot be reversed to reconstruct a face image. Proof photos (plate images) show the food, not the person, and are stored privately for audit purposes.
 
-**Q22: What notification channels are available?**
-A: Currently, **in-app only**. SMS, email and WhatsApp adapter stubs exist but skip delivery when provider API keys are not configured.
+**Q25: Can a beneficiary give feedback about the meal?**
+A: Yes. Beneficiaries can provide a star rating (1–5), a free-text comment and flag serious concerns as a complaint via a checkbox. The complaint status workflow progresses from open → investigating → resolved/dismissed.
 
-**Q23: Does pApAmA store photographs?**
-A: No. The platform stores no photograph of any person in any mode. Identity verification uses only on-device-computed mathematical representations (face embeddings). Proof photos (plate images) are stored privately for audit purposes — these show the food, not the person.
+> **Planned (B-12):** Predefined complaint categories (quality, quantity, hygiene, staff, delay, redemption, other).
 
-**Q24: How is data retained?**
-A: No donation, token, settlement or audit record is deleted in normal operation. Audit logs are append-only and immutable (DB triggers block update/delete even for service_role). The approved policy is permanent retention of financial and governance records. No automated purge job runs.
+**Q26: What happens if a beneficiary has a complaint about a Food Partner?**
+A: The complaint is recorded and reviewed by the Foundation. Depending on the nature and seriousness of the issue, the Food Partner may receive corrective guidance under the graduated framework: warning → final warning → penalty/enhanced monitoring → suspension. Serious matters such as food-safety hazards, fraud or conduct posing an immediate risk to beneficiaries may justify immediate suspension.
 
-**Q25: What geographic structure does pApAmA use?**
-A: The approved Phase 1 structure is Country → State → District → City/Town/Village/Locality with 6-digit PIN validation and unique location IDs. Current build uses city string + coordinates.
+**Q27: How are Food Partners monitored?**
+A: Food Partners are monitored through beneficiary feedback ratings, complaint rates, surprise inspections (with quality-score penalties on failure), redemption patterns, proof submissions and fraud indicators. The purpose is both accountability and continuous improvement in food quality and service.
 
-> **Planned (B-02):** Full geographic hierarchy implementation.
+**Q28: Does pApAmA reveal beneficiary information publicly?**
+A: No. Public-facing information is aggregated and does not disclose personal information relating to beneficiaries or donors. The public Transparency Dashboard (`/transparency`) shows only aggregate counts — total donations, meals served, active Food Partners and beneficiaries reached.
 
-**Q26: What categories qualify for Special Care?**
-A: The approved Special Care Category Master includes: Pregnant Women, Postpartum/Lactating Mothers, and Medically Vulnerable/Patients. These are distinct from the four beneficiary categories. The Food Partner never sees the specific category — only "SPECIAL CARE TOKEN – ₹100".
+**Q29: Can anyone donate to pApAmA?**
+A: Yes. A person can donate through the public donation facility (`/donate` or `/donate/qr`) without creating a donor account. Such donations are recorded and administered through the Foundation's General Donation Pool (shown as "Guest Pool" in the application interface).
 
-> **Planned (B-28):** Configurable Special Care Category Master.
+**Q30: What is a public or guest donation?**
+A: A public donation is a contribution made by a person who chooses to donate without creating a registered donor account. This is particularly useful for people making one-time donations, event-related contributions or donations through a publicly shared QR code. No contact information is currently captured from guest donors.
 
-**Q27: Does the `special_care_multiplier` affect token values?**
-A: No. The `special_care_multiplier` is defined in system configuration but is **never applied** in any token minting, redemption or value calculation code. It is maintained only as an internal analysis parameter within an approved range of approximately 1.5x–2x. The Special Care Token value is fixed at ₹100.
+**Q31: Will a donor receive confirmation of a public donation?**
+A: Not currently. No contact information (mobile number, email) is captured from guest donors, so acknowledgement and thank-you communications cannot be delivered. The approved policy is that where the donor provides permitted contact information, pApAmA should provide an appropriate acknowledgement and impact notification when the contribution results in a meal being redeemed.
 
-**Q28: How are Emergency Mode changes audited?**
-A: The emergency toggle (`emergency_mode_enabled`) is audit-logged via the standard config-change path with actor, timestamp and previous/new value but no dedicated reason field. Emergency overrides (time-boxed parameter changes) are logged per-override with optional reason. Auto-revert is logged as an aggregate entry only.
+> **Planned (B-11):** Optional contact capture on guest donations for receipts and thank-you notifications, subject to notification channel availability.
 
-> **Planned (B-19):** Per-override detail in auto-revert logs. **Planned (B-14):** Reason field on config changes.
+**Q32: Can pApAmA donations be made for a particular occasion?**
+A: Occasion-based giving such as birthdays, anniversaries, memorial donations, festivals, monthly giving and emergency campaigns are part of the Foundation's long-term donation model. Emergency campaigns are supported. Other occasion-based giving is planned for a future phase and is not implemented today.
 
-**Q29: What happens to surplus emergency funds?**
-A: Surplus follows this hierarchy: (1) the specific emergency's continuing needs, (2) other humanitarian needs in the same affected area, (3) the PAPAMA Emergency Response Fund. No donor refund mechanism exists for emergency contributions — this is disclosed at contribution time.
+**Q33: Can donors know what impact their donation has created?**
+A: Yes. Registered donors can track their donation and token activity through the donor interface (`/donor/dashboard`, `/donor/impact`). The Foundation also provides public aggregate impact information through the Transparency Dashboard.
 
-**Q30: Are Food Partner inspections tracked?**
-A: Yes. Administrators can record surprise inspections. Failed inspections apply a numeric quality-score deduction (`vendor_inspection_fail_penalty`). Results are audit-logged and factor into the Food Partner's composite quality score.
+**Q34: Does pApAmA provide cash assistance to beneficiaries?**
+A: No. pApAmA is designed to enable access to freshly prepared meals. Tokens are intended for meal redemption and are not cash benefits. Tokens cannot be exchanged for cash, traded, or partially redeemed.
+
+**Q35: What happens if a Food Partner is temporarily closed or cannot serve a meal?**
+A: The platform supports Food Partner availability controls: open/closed toggle (`is_open`), temporary closure with a return date (`temporary_closure_until`) and stock-exhausted status. When a Food Partner is unavailable, redemptions are hard-blocked. The beneficiary nearby list shows the current status (open, closed, temporarily closed, out of stock).
+
+> **Planned (B-13):** Beneficiary-facing redirection to nearby open Food Partners when capacity is reached or the outlet is unavailable.
+
+**Q36: What happens if there is a technical problem while redeeming a token?**
+A: Network errors are caught gracefully ("Network error — please try again."). No offline queue or retry mechanism exists. A meal is not recorded as redeemed unless the transaction is confirmed by the platform — partial commits roll back, and the token remains redeemable. The Food Partner should follow the prescribed exception procedure and should not treat an unconfirmed transaction as a completed redemption.
+
+**Q37: How is donor money protected?**
+A: pApAmA maintains transaction records, token records, redemption records, settlement records, audit logs and fraud-monitoring controls to provide traceability and accountability for donor-funded activity. Audit logs are append-only and immutable — DB triggers block update/delete even for service_role. Token QR codes use HMAC-SHA256 signatures. Proof of service is required before any Food Partner payment.
+
+**Q38: Can pApAmA operate in more than one city?**
+A: Yes. The initial pilot operates within a defined city boundary using the city lock feature (enforced at redemption only). The approved geographic structure supports: Country → State → District → City/Town/Village/Locality → PIN Code, allowing pApAmA to expand in a controlled manner while maintaining location-wise reporting and accountability. Current build uses city string + coordinates.
+
+> **Planned (B-02):** Full geographic hierarchy with State/District masters, location IDs and PIN validation. **Planned (B-15):** City lock enforcement extended to registration flows (currently gates redemption only).
+
+**Q39: What is the basic philosophy of pApAmA?**
+A: pApAmA is designed to enable meals with dignity. It connects donors, beneficiaries, Food Partners and volunteers through a controlled technology platform so that charitable contributions can be converted into freshly prepared meals for people in need. The platform creates an accountable pathway from: Donation → Donor Credit → Meal Token → Distribution → Beneficiary → Food Partner → Meal Served → Proof → Settlement → Donor Impact Notification.
 
 ### 10.2 For Donors
 
 **Q1: Can I get my money back after donating?**
-A: No. Donations become non-withdrawable Donor Credit committed to funding meals. This is by design — your contribution goes directly to feeding people. pApAmA does not offer money-back refunds. Refunds are only processed for confirmed failed or duplicate payments.
+A: No. Once a donation is successfully received and credited as Donor Credit, it is non-withdrawable and is committed to the pApAmA programme. The treatment of unused, expired or forfeited token value follows the Foundation's approved financial policy: such value returns to the Meal Pool for future meals and is never treated as revenue. Refunds are only processed for confirmed failed or duplicate payments.
 
-**Q2: Does my Donor Credit expire?**
-A: No. Donor Credit does not expire — this is Trust policy, unless required by future statutory or regulatory provisions.
+> **Planned (B-03):** Implementation of the approved Meal Pool return policy.
 
-**Q3: What is the difference between Path A and Path B?**
-A: **Path A (Donor Controlled)** — you distribute the token yourself (you choose who gets the meal). The token goes `live` immediately with a QR code you can share. **Path B (PAPAMA Distributed)** — you hand the token to pApAmA, and they distribute it through volunteers to people in need using FIFO allocation.
+**Q2: What is Donor Credit?**
+A: Donor Credit is the non-withdrawable balance representing the donor's committed funds within pApAmA. It increases when the donor makes a donation and decreases when the donor mints a token. The donor can see the credit balance and relevant transaction history at `/donor/credit`.
 
-**Q4: If I choose Path A, can anyone redeem my token?**
-A: Yes. A Path A token can be redeemed by **whoever presents the QR code first**. There is no binding to a named recipient. Share the QR code discreetly and only with the intended person. Do not post it publicly.
+**Q3: Does Donor Credit expire?**
+A: No. Donor Credit does not expire. It remains available to the donor until it is used to mint a token, subject to the applicable platform and Foundation policies. This is Trust policy, unless required by future statutory or regulatory provisions.
 
-**Q5: What happens if I lose a token I was distributing?**
-A: You can report a lost token through the donor interface. The system blocks the old token immediately and mints a replacement with the same value, linked to the original. If the replacement fails, the original is automatically un-blocked. You can also ask an administrator to report the loss.
+**Q4: What is the difference between Path A and Path B?**
+A: **Path A — Donor Controlled:** the donor personally decides whom to give the token to and shares it directly with the intended beneficiary. The token goes `live` immediately with a QR code. **Path B — PAPAMA Distributed:** the donor entrusts the token to pApAmA, which places it in the Admin Pool for allocation through authorised volunteers. Path B is preferable where the donor does not personally know a beneficiary or wishes pApAmA to identify and assist someone in need.
 
-**Q6: Can I cancel a token I've minted?**
-A: No. There is no donor-side cancellation mechanism. Once minted, a token follows its lifecycle. An administrator can revoke a token that is held by a volunteer (returning it to the Admin Pool), but this is an administrative action, not a donor-initiated one.
+> **Planned (B-32):** FIFO allocation for pool tokens.
 
-**Q7: How will my token be reissued if it expires?**
-A: If your token expires without being redeemed, an authorised administrator may reissue it — creating a new token with a new QR code and new 60-day validity, permanently linked to the original. The original remains expired. This is a controlled process with recorded reasons, not automatic.
+**Q5: Is a Path A token transferable?**
+A: A donor-distributed token can be presented by whoever possesses the valid QR code, subject to the platform's redemption controls. Donors should therefore not post or publicly circulate a token unless they intentionally want it to be accessible to anyone who obtains it. Share the QR discreetly and only with the intended person.
 
-**Q8: When do I get notified about my token?**
-A: You receive an in-app notification when your token is redeemed. Per the approved privacy policy, the notification contains only: the type of token, the redemption location at City and State level (e.g. "Mumbai, Maharashtra"), and a thank-you message. No beneficiary personal information is disclosed.
+**Q6: Can I cancel a token after creating it?**
+A: There is no donor-side cancellation mechanism. Once minted, a token follows its lifecycle (active → redeemed or expired). An administrator can revoke a token that is currently held by a volunteer (`assigned_to_volunteer` status), returning it to the Admin Pool for reallocation. The token value is preserved in the system — it is not returned to the donor's credit balance.
 
-**Q9: What information do I see about the beneficiary?**
-A: Per the approved Beneficiary Privacy and Donor Communication policy: nothing identifying. You do not see the beneficiary's name, photograph, health status, category, address or any personal information. Donor reporting uses anonymised or aggregated information.
+**Q7: What happens if my token is lost?**
+A: You can report a lost token through the donor interface (`/donor/tokens`). The system immediately blocks the original token and issues a replacement with the same value. The original and replacement tokens are permanently linked via `replacement_for_token_id` for audit purposes. If the replacement minting fails, the original is automatically un-blocked. You can also ask an administrator to report the loss.
 
-> **Planned (B-29):** Full privacy framework implementation including notification whitelist filter and role-based access tiers.
+**Q8: What happens when my token is redeemed?**
+A: You receive an in-app notification confirming that the token has been redeemed and that a meal has been served. Per the approved privacy policy, the notification contains: the type of token, the redemption location at City and State level (e.g. "Mumbai, Maharashtra"), and a thank-you message. **Current behaviour:** Notifications also include the Food Partner name, meal item, value and beneficiary category. The notification content will be aligned to the approved templates.
 
-**Q10: How do I track my impact?**
-A: Your donor dashboard (`/donor/dashboard`) shows total donated, credit balance, tokens minted, meals served and monthly trends. The impact page (`/donor/impact`) provides a per-donor impact summary connecting your contributions to humanitarian outcomes.
+> **Planned (B-29):** Notification whitelist filter and template alignment with approved content.
 
-**Q11: Is occasion-based giving available?**
-A: Occasion-based giving (birthday meals, memorials, anniversary sponsorships) and recurring monthly giving are planned for a future phase. They are not implemented today.
+**Q9: Will I know who received my meal?**
+A: Per the approved Beneficiary Privacy and Donor Communication policy, donors receive appropriate impact information without exposure to the beneficiary's personal information. You do not see the beneficiary's name, photograph, health status, Special Care category, address or any identifying information. The identity and privacy of beneficiaries is protected. Donor reporting uses anonymised or aggregated information.
 
-**Q12: What is a Special Care Token?**
-A: A Special Care Token is a ₹100 token that provides enhanced nutritional support. Donors may sponsor these through a dedicated flow. Surplus value (meal cost less than ₹100) is credited to the Common Special Care Pool for future Special Care purposes.
+**Q10: What happens if my token expires without being used?**
+A: Tokens have a **60-day validity period** from activation. **Approved policy:** Expired token value returns to the Meal Pool for future meals via the controlled reissue process. An authorised administrator may reissue the token — creating a new token with a new QR code and new 60-day validity, permanently linked to the original. The original remains expired. **Current behaviour:** Expired tokens receive a status flip only; the value is written off.
 
-> **Planned (B-28):** Full Special Care Token donor sponsorship flow.
+> **Planned (B-03):** Meal Pool return implementation. **Planned (B-23):** Full controlled reissue model.
 
-**Q13: What happens to forfeited value from my token?**
-A: **Approved policy:** Forfeited value (when the token is worth more than the meal) returns to the Meal Pool. **Current behaviour:** Forfeited value is posted to the platform revenue ledger.
+**Q11: What happens if the meal costs less than my token value?**
+A: The difference is recorded by the platform. **Approved policy:** Forfeited value returns to the Meal Pool for future meals (for Special Care Tokens, to the Common Special Care Pool). This treatment is transparent to donors and consistent in accounting and reporting. **Current behaviour:** Forfeited value is posted to the platform revenue ledger.
 
 > **Planned (B-03):** Meal Pool return implementation.
 
-**Q14: Can I choose where my token is redeemed?**
-A: Tokens are PAN INDIA by default — redeemable at any authorised Food Partner.
+**Q12: Can I choose the value of my token?**
+A: A donation creates Donor Credit. When sufficient credit is available (at least `standard_token_value`), the donor mints a token from the Tokens page (`/donor/tokens`). The token amount must be at least the standard token value and cannot exceed the available credit balance. The standard token value is configured by the Foundation.
 
-> **Planned (B-23):** Donor-selected geographic restriction at token creation (PAN INDIA / State / District / City / PIN).
+**Q13: Can I donate without creating an account?**
+A: Yes. The Public Donation facility (`/donate` or `/donate/qr`) allows a person to make a donation without registering as a donor. No contact information is currently captured from guest donors.
 
-**Q15: How is my donation secured?**
-A: Every donation, token, redemption and settlement is recorded and auditable. Audit logs are immutable. Token QR codes use HMAC-SHA256 signatures. Proof of service is required before any Food Partner payment.
+> **Planned (B-11):** Optional contact capture (mobile/email) on guest donations for acknowledgement and thank-you communications.
 
-**Q16: What notification channels are available?**
-A: Currently in-app only. SMS, email and WhatsApp channels have adapter stubs but are not active.
+**Q14: Will a public donor receive a meal-redemption notification?**
+A: Not currently. No contact information is captured from guest donors, so notifications cannot be delivered. Where a donor provides valid contact information and the applicable notification channel is enabled, the donor should receive an appropriate notification when the contribution results in a meal being redeemed. This is an important part of the donor-impact journey.
 
-**Q17: What privacy protections exist for donors?**
-A: Donor information is used only for platform operations. Your personal details are not shared with Food Partners or beneficiaries. Beneficiary information is not disclosed to donors beyond aggregated impact statistics.
+> **Planned (B-11):** Guest contact capture and notification delivery.
 
-**Q18: Can I see the meal photo?**
-A: Currently, the meal-photo notification includes a 30-day signed URL to the plate photo. The approved notification templates above do not include a photo — the notification content will be aligned to the approved templates.
+**Q15: Can I make a donation for a particular occasion?**
+A: Emergency relief campaigns are supported through Emergency Mode. Other occasion-based giving — monthly giving, birthday sponsorships, anniversary donations, memorial donations, festival campaigns — is part of the Foundation's long-term model and is planned for a future phase. It is not implemented today.
 
-> **Planned (B-29):** Notification content alignment with approved templates.
+**Q16: Can I donate through a birthday, wedding or other event instead of receiving gifts?**
+A: The long-term model envisions allowing a celebrant to request that guests donate to pApAmA instead of giving gifts, with a dedicated QR code or campaign identifier. This functionality is planned for a future phase and is not implemented today.
 
-**Q19: How do tokens work during emergencies?**
-A: Emergency tokens follow the same lifecycle but with relaxed meal limits (4/day, 3-hour cooldown) for up to 7 days. The ₹10 contribution may be waived. Financial controls remain active.
+**Q17: Can I see the impact of all my donations?**
+A: Yes. Registered donors can view their donation history, Donor Credit balance, tokens created and meals served through the donor interface (`/donor/dashboard`, `/donor/impact`). The public Transparency Dashboard (`/transparency`) additionally provides aggregate platform-level impact without revealing personal information.
 
-**Q20: What happens to my emergency donation surplus?**
-A: Surplus follows the hierarchy: specific emergency needs → same-area humanitarian needs → PAPAMA Emergency Response Fund. No refund is available — this is disclosed at the time of contribution.
+**Q18: Is my donation used only for food?**
+A: Donor funds credited as Donor Credit are committed to minting meal tokens. The ₹10 beneficiary contribution supports the Foundation's approved administrative and operational expenses and is accounted for separately. Expired or forfeited token value is, under the approved policy, returned to the Meal Pool for future meals rather than being treated as revenue. The Foundation maintains transparent records of all fund flows.
+
+> **Planned (B-03):** Meal Pool return implementation for expired and forfeited value.
+
+**Q19: Can I donate again after my token has been redeemed?**
+A: Yes. A donor may make additional donations at any time. The donor's impact history continues to accumulate over time.
+
+**Q20: What is the main difference between donating and sponsoring a meal?**
+A: A donation places funds into the pApAmA system as Donor Credit, while token creation converts the donor's available credit into a defined meal entitlement (a token) that can subsequently be distributed and redeemed for a freshly prepared meal. The complete journey is: Donation → Donor Credit → Mint Token → Distribute → Meal Redeemed → Donor Notified → Impact Tracked.
 
 ### 10.3 For Food Partners
 
 **Q1: Why is my payment locked?**
-A: Payment is locked until you upload proof of service (plate photo) and the admin approves it. This ensures accountability — every meal payment is backed by verified proof.
+A: Payment remains locked until the required proof of service is submitted and the applicable approval process is completed. This protects both the Food Partner (shown as "Vendor" in the application interface) and pApAmA by ensuring that payments are supported by evidence of the meal served. The payment is not permanently withheld; it moves through the defined approval and settlement process.
 
-**Q2: What if my proof is rejected?**
-A: You'll see the rejection reason on your Redemptions page (the reviewer must provide a reason — it is the only mandatory-reason action in the system). Fix the issue (e.g., take a clearer photo) and re-upload. There is no deadline for resubmission. Payment stays locked until proof is approved.
+**Q2: What proof do I need to submit?**
+A: The required proof includes a plate/meal photograph showing the food served. The photograph should be clear and sufficiently legible for verification. Photos must show the meal, not the beneficiary. Proof photos are write-once — once uploaded, they cannot be altered or deleted.
 
-**Q3: How often do I get paid?**
-A: The admin runs settlement cycles — daily, twice weekly, or weekly. You can see your settlement status at `/vendor/settlements`. The Foundation's operating target is payment within 7 working days of settlement reconciliation.
+**Q3: What if my proof is rejected?**
+A: You will see the rejection reason on your Redemptions page — proof rejection is the only action in the platform that enforces a mandatory reason at the server level. Fix the issue (e.g. take a clearer photo) and re-upload. There is no deadline for resubmission. Payment stays locked until proof is approved.
 
-**Q4: What is the settlement lifecycle?**
-A: Settlements progress through: **pending** (meals awaiting settlement) → **locked** (prepared for review) → **approved** (reviewed and approved) → **reconciled** (pre-payment reconciliation complete) → **paid** (funds transferred). A settlement can be placed on hold at any point before payment.
+**Q4: Why does pApAmA require proof of service?**
+A: Proof protects all parties: donor funds are protected; Food Partners have evidence supporting their payment claim; beneficiary meals can be verified; fraudulent or duplicate claims can be identified; the Foundation maintains an auditable record of every meal served.
 
-**Q5: What does "on hold" mean for my settlement?**
-A: A held settlement is suspended pending further review. The admin investigates and either releases the hold (allowing payment to proceed) or escalates. The hold reason and responsible person are recorded in the audit trail.
+**Q5: How often will I be paid?**
+A: Settlement cycles may be daily, twice weekly or weekly, depending on the Foundation's configured operating policy. You can view the status of your settlements at `/vendor/settlements`. The Foundation's operating target is Food Partner payment within 7 working days of settlement reconciliation.
 
-**Q6: Can a paid settlement be changed?**
-A: No. Once marked as paid, a settlement record is final. Corrections are recorded as separate adjustment/recovery records.
+**Q6: What do the settlement statuses mean?**
+A: **Pending** — approved meals awaiting settlement. **Locked** — settlement prepared and locked for review. **Approved** — reviewed and approved by the checker. **Reconciled** — pre-payment reconciliation complete (including ₹10 contribution verification). **Paid** — payment transferred to the Food Partner. A settlement can be placed **on hold** at any stage before payment for further review.
 
-> **Planned (B-07):** Auditable settlement adjustment records.
+> **Planned (B-24):** System-enforced maker-checker — the person who prepares (locks) a settlement cannot be the same person who approves it.
 
-**Q7: How does the ₹10 beneficiary contribution affect my payment?**
-A: It does not affect your settlement payment at all. You receive the **full approved meal value** (`min(token_value, menu_value)`) via settlement. The ₹10 is collected by you as an authorised collection agent of pApAmA and remitted to the pApAmA Administration Account. These are completely separate transactions.
+**Q7: Does the Food Partner receive the full approved meal value?**
+A: Yes. Under the approved Foundation policy, the Food Partner receives the full approved meal value (`min(token_value, menu_value)`) through the normal settlement process. The beneficiary's ₹10 contribution is treated separately and is intended for the pApAmA Administration Account. Where the Food Partner collects the ₹10 on behalf of pApAmA, the amount must be remitted to the designated Administration Account and reconciled separately. These are completely separate financial transactions.
 
-**Q8: What if the beneficiary cannot pay the ₹10?**
-A: The contribution is waived. You serve the meal regardless — no beneficiary is ever denied food for inability to pay. The waiver is recorded against the redemption transaction. You still receive the full meal value via settlement.
+**Q8: Why does the beneficiary pay ₹10?**
+A: The ₹10 contribution is intended to support the pApAmA Administration and operational account. It is not intended to reduce the Food Partner's approved meal payment. The contribution is a separate financial transaction from the Food Partner's meal settlement.
 
-**Q9: How do I remit the collected ₹10 contributions?**
-A: Contributions are remitted to the pApAmA Administration Account under the CA-approved process, initially on a daily cycle. Remittance and reconciliation records are maintained.
+**Q9: What happens if the beneficiary cannot pay the ₹10?**
+A: The contribution is waived under the Foundation's approved humanitarian waiver policy. A genuine beneficiary is never denied food solely because they are unable to make the contribution. The waiver is recorded against the relevant redemption transaction and included in settlement and emergency reconciliation. The Food Partner continues to receive the full approved meal value via settlement.
 
-> **Planned (B-01):** Systematic remittance tracking and reconciliation within the platform.
+> **Planned (B-01):** Systematic waiver recording, contribution reconciliation, remittance tracking and settlement-release gate within the platform.
 
-**Q10: What is the ₹10 contribution report?**
-A: The contribution report tracks: expected contributions, collected, remitted, received and reconciled, outstanding, waived, and finally settled. This provides a complete audit trail for every ₹10.
+**Q10: Can I charge the beneficiary more than ₹10?**
+A: No. The Food Partner must not impose any additional charge on a beneficiary beyond the amount authorised by pApAmA. The beneficiary receives the approved meal without being pressured to make any additional payment.
 
-> **Planned (B-01):** Automated contribution reporting.
+**Q11: Can I serve any meal I want?**
+A: No. Only meals/items approved through the pApAmA menu process (`/vendor/menu`) may be offered for token redemption. The Food Partner selects the menu item served from their approved list — the beneficiary does not choose. Menu items must be approved by an administrator or vendor manager before they are available for redemptions.
 
-**Q11: What is the graduated corrective-action process?**
-A: The Foundation operates a graduated discipline framework: warning → final warning → penalty/enhanced monitoring → suspension. Immediate suspension is reserved for food-safety hazards, fraud or risk to beneficiaries. The `vendor_auto_suspend_enabled` setting remains OFF — the ladder governs operationally through administrative practice.
+**Q12: Can I change my menu or prices?**
+A: Food Partners may propose changes through the menu-management process at `/vendor/menu`. Changes to meal items or prices require administrative review and approval before they can be used for pApAmA redemptions. Note that menu price edits overwrite the previous value — no price history is maintained.
 
-**Q12: How do inspections work?**
-A: Administrators conduct surprise inspections recorded in the system. A failed inspection applies a numeric quality-score deduction (`vendor_inspection_fail_penalty`). Results are audit-logged. Inspection outcomes feed into the composite quality score alongside ratings and complaint rates.
+**Q13: What is the pApAmA Standard Meal Framework?**
+A: The Standard Meal Framework will define the Foundation's minimum expectations regarding meal value, portion, quality and, where applicable, nutritional standards. This is a Trust policy document in preparation. Food Partners should comply with the approved framework once it is formally adopted.
 
-**Q13: How is my quality score calculated?**
-A: Your quality score is a composite of beneficiary feedback ratings, complaint rate (`is_complaint=true` count / total feedback) and inspection outcomes. The exact formula is in `lib/services/vendorRating.ts`.
+**Q14: Can I temporarily close my Food Partner outlet?**
+A: Yes. Set a `temporary_closure_until` date/time via your availability page (`/vendor/availability`). Redemptions are hard-blocked until the specified time passes. The beneficiary nearby list shows "Temporarily closed".
 
-**Q14: What happens if I temporarily close?**
-A: Set a `temporary_closure_until` date/time via your availability page. Redemptions are hard-blocked until the specified time passes. The beneficiary nearby list shows "Temporarily closed".
+**Q15: What happens if I reach my daily meal capacity?**
+A: If capacity enforcement is enabled (`vendor_capacity_enforcement_enabled` = ON) and you reach your configured `daily_meal_capacity`, further redemptions are hard-blocked until the limit resets. This protects meal quality and prevents Food Partners from accepting more meals than they can properly serve.
 
-**Q15: What happens when I reach daily capacity?**
-A: When `vendor_capacity_enforcement_enabled` is ON and you reach your `daily_meal_capacity`, redemptions are hard-blocked. Beneficiaries see the capacity status.
+> **Planned (B-13):** Beneficiary-facing redirection to nearby open Food Partners when capacity is reached.
 
-> **Planned (B-13):** Automatic redirection to nearby open Food Partners.
+**Q16: Can I refuse a valid pApAmA token?**
+A: A Food Partner should not refuse a valid token without a legitimate operational reason. Where the token is invalid, expired, already redeemed or fails an applicable platform rule, the Food Partner should follow the system's prescribed process rather than attempting to bypass it. All token holders are served with equal dignity.
 
-**Q16: Can I mark individual menu items as unavailable?**
-A: No. The `vendor_menus` table has no per-item availability flag. You manage availability at the establishment level (open/closed, temporary closure, stock exhausted).
+**Q17: Can the same token be redeemed twice?**
+A: No. Once a token has been successfully redeemed, it cannot be redeemed again. Duplicate scan attempts are detected and blocked. Any suspicious duplicate activity should be reported through the appropriate platform process.
 
-**Q17: What does the settlement audit involve?**
-A: 10% of settlements are randomly sampled for audit review. Selected settlements receive enhanced scrutiny. The audit verifies the full chain: token → Food Partner → contribution/waiver → settlement → payment. The ₹10 contribution reconciliation receives special attention.
+**Q18: What happens if there is a technical problem during redemption?**
+A: Network errors are caught gracefully ("Network error — please try again."). No offline queue exists. The Food Partner should follow the platform's approved exception procedure and should not treat an unsuccessful or unconfirmed transaction as a completed redemption unless the system or an authorised administrator confirms it. A partially committed redemption rolls back and the token remains redeemable.
 
-**Q18: What triggers an immediate suspension?**
-A: Food-safety hazards, fraud or risk to beneficiaries. These bypass the normal graduated ladder.
+**Q19: How are Food Partners monitored?**
+A: Monitoring includes beneficiary feedback ratings, complaint rates, surprise inspections (failed inspections apply a numeric quality-score deduction via `vendor_inspection_fail_penalty`), redemption patterns, proof submissions and fraud indicators. The purpose is not merely enforcement but also continuous improvement in food quality and service.
 
-**Q19: Do I see the beneficiary's category?**
-A: No. The platform does not display the beneficiary's category to the Food Partner at the point of service. For Special Care tokens, you see only "SPECIAL CARE TOKEN – ₹100" — never the diagnosis or specific category.
+**Q20: What happens if I receive complaints?**
+A: Complaints are investigated fairly. The Foundation follows a graduated corrective-action process: warning → final warning → penalty/enhanced monitoring → suspension. Serious matters such as food-safety hazards, fraud or conduct posing an immediate risk to beneficiaries may justify immediate suspension. The `vendor_auto_suspend_enabled` setting remains OFF — the ladder governs operationally through administrative practice.
 
-**Q20: Can I dispute a settlement?**
-A: There is no Food Partner-side dispute or query mechanism. Food Partners have read-only access to their settlement status. If you have concerns, contact pApAmA administration.
+**Q21: Can my Food Partner registration be suspended?**
+A: Yes, where justified under the Foundation's Food Partner governance policy. Suspension may result from serious or repeated quality issues, fraud, food-safety concerns, regulatory non-compliance or other material violations.
 
-**Q21: What is the proof review process?**
-A: After you upload a plate photo, the admin reviews it within the 24-hour operating target. If approved, payment is released. If rejected with a reason, you can re-upload — there is no resubmission deadline.
+**Q22: Can a suspended Food Partner be reinstated?**
+A: Where the Foundation's policy permits reinstatement, the Food Partner may be reinstated after the identified deficiencies have been corrected and the required review has been completed.
 
-**Q22: What is duplicate-media detection?**
-A: The system computes a perceptual hash of proof photos. If two photos are too similar (per `proof_phash_dup_distance`), a flag is raised and related settlements are held for review. A flag is not proof of fraud — it is a signal for investigation.
+**Q23: What happens if my settlement contains an error?**
+A: The Food Partner should raise the discrepancy through the prescribed support or settlement-review process. The transaction remains traceable, and any correction is recorded as a separate record rather than altering the historical transaction. Once a settlement is marked as paid, the record is final.
 
-**Q23: What is the maker-checker process for settlements?**
-A: The person who prepares a settlement should not be the same person who approves it. This is currently an operating procedure enforced through administrative practice.
+> **Planned (B-07):** Auditable settlement adjustment and recovery records.
 
-> **Planned (B-24):** System-enforced maker-checker segregation.
-
-**Q24: Can individual line items within a settlement be held?**
-A: Not currently. Holds apply to the entire settlement.
+**Q24: Can pApAmA withhold an entire settlement because of one disputed transaction?**
+A: The settlement process follows the Foundation's approved financial-control policy. Currently, holds apply to the entire settlement. The approved approach is that only the disputed amount should be placed on hold while undisputed amounts proceed through normal settlement, to protect Food Partner cash flow while maintaining financial controls.
 
 > **Planned (B-08):** Line-item settlement hold.
 
-**Q25: What happens during Emergency Mode?**
-A: Meal limits and cooldowns are relaxed (4/day, 3-hour cooldown). The ₹10 contribution may be waived. You continue to receive the full meal value via settlement. All other controls (token validity, your authorisation status, food safety, settlement process) remain active.
+**Q25: Why does pApAmA need photographs of the meal?**
+A: The meal photograph provides evidence that the claimed meal was actually prepared and served. The purpose is accountability and fraud prevention, not unnecessary monitoring of Food Partners. Photos show the food, not the person.
 
-**Q26: How do I handle the ₹10 during an emergency?**
-A: If an emergency-period ₹10 waiver is in effect, you serve the meal without collecting the contribution. Record the waiver against the transaction. You still receive the full meal value via settlement.
+**Q26: Can the same photograph be used for another redemption?**
+A: No. Reusing the same or substantially similar proof photograph for multiple transactions triggers a duplicate-media flag (via perceptual hash comparison at `proof_phash_dup_distance`). Related settlements are automatically placed on hold for review. A flag is not proof of fraud — it is a signal for administrative investigation.
 
-**Q27: What are my obligations regarding beneficiary privacy?**
-A: Do not photograph beneficiaries. Do not share any beneficiary information observed during service. Proof photos show the meal, not the person. You never retain face images — the device computes embeddings only.
+**Q27: Will pApAmA publish my Food Partner information?**
+A: Only information authorised for operational, transparency or public-facing purposes is published (e.g. name and availability on the beneficiary nearby list). Sensitive KYC documents and financial information are stored in private buckets with role-restricted access and short-lived signed URLs.
 
-**Q28: What menu pricing rules apply?**
-A: Charge only the prices listed in your approved menu. Do not add surcharges, service charges or fees beyond the configured contribution amount. Menu price edits overwrite the previous value — no price history is maintained.
+**Q28: What is expected from a pApAmA Food Partner?**
+A: The fundamental responsibility is: serve a safe, hygienic, approved and appropriately portioned meal to the eligible beneficiary with dignity, record the transaction accurately and provide the required evidence for settlement. Collect the ₹10 contribution where applicable, remit it to the pApAmA Administration Account, and cooperate with platform audits and inspections.
 
 ### 10.4 For Administrators
 

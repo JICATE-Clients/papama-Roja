@@ -464,6 +464,34 @@ This changelog records every substantive change in the v1.1 rewrite, grouped by 
 
 ---
 
+## Section 10.1–10.3 FAQ Alignment to Client Drafts
+
+- §10.1 General: replaced 30 reconstructed FAQs with 39 questions using client's verbatim drafted wording as base [client-FAQ]
+- §10.1 Q12 (token expires): answer rewritten — 60-day validity, Meal Pool return policy, controlled reissue model [client-FAQ] [DECISION-2A] [B-03 planned]
+- §10.1 Q13 (meal costs less than token): answer updated — Meal Pool return + Special Care Pool for surplus [client-FAQ] [B-03 planned]
+- §10.1 Q14–Q16 (₹10 contribution): answers aligned to D-1 four principles — contribution to pApAmA, collection agent, settlement gate, waiver [client-FAQ] [DECISION-1] [B-01 planned] [B-10/B-20 planned]
+- §10.1 Q19 (Special Care): answer rewritten — ₹100 Special Care Token model, category master, Common Pool [client-FAQ] [DECISION-8] [B-28 planned]
+- §10.1 Q24 (photographs): answer expanded per V-04 — embeddings only, no photo ever stored in any mode [client-FAQ] [V-04]
+- §10.1 Q31 (public donation confirmation): answer corrected — contact not captured today, Planned B-11 [client-FAQ] [V-05] [B-11 planned]
+- §10.1 Q32 (occasion-based giving): answer distinguishes emergency campaigns (supported) from other occasions (future) [client-FAQ]
+- §10.1 Q35 (Food Partner closed): answer updated — availability controls documented, redirection Planned B-13 [client-FAQ] [V-08] [B-13 planned]
+- §10.1 Q38 (multiple cities): answer aligned to D-2 Phase 1 structure, current build noted, Planned B-02/B-15 [client-FAQ] [DECISION-2] [B-02 planned] [B-15 planned]
+- §10.2 For Donors: replaced 20 reconstructed FAQs with 20 questions using client's drafted wording as base [client-FAQ]
+- §10.2 Q1 (refund): client's refined wording adopted — non-withdrawable, Meal Pool return policy stated [client-FAQ] [B-03 planned]
+- §10.2 Q3 (credit expiry): answer confirmed — Donor Credit does not expire (decided 4 Aug) [client-FAQ] [DECISION: 4 Aug]
+- §10.2 Q6 (cancel token): answer explains — no donor-side cancellation, admin revocation to Admin Pool, value preserved [client-FAQ] [V-18]
+- §10.2 Q10 (token expires): answer rewritten — 60-day validity, reissue model, Planned B-03/B-23 [client-FAQ] [DECISION-2A] [B-03 planned] [B-23 planned]
+- §10.2 Q11 (meal costs less): answer updated — Meal Pool + Special Care Pool return, Planned B-03 [client-FAQ] [B-03 planned]
+- §10.2 Q13/Q14 (public donation): answers corrected — no contact captured today, Planned B-11 [client-FAQ] [V-05] [B-11 planned]
+- §10.2 Q15/Q16 (occasion giving): answers distinguish implemented (emergency) from future (other occasions) [client-FAQ]
+- §10.2 Q8 (redemption notification): notification templates aligned to D-10 City+State convention, current behaviour noted [client-FAQ] [DECISION-10] [B-29 planned]
+- §10.3 For Food Partners: replaced 28 reconstructed FAQs with 28 questions using client's drafted wording as base [client-FAQ]
+- §10.3 Q6 (settlement statuses): answer expanded with full lifecycle incl. locked/approved stages per D-4 mapping [client-FAQ] [DECISION-4] [B-24 planned]
+- §10.3 Q7–Q10 (₹10): answers aligned to D-1 four principles — full meal value via settlement, ₹10 separate, waiver recording [client-FAQ] [DECISION-1] [B-01 planned]
+- §10.3 Q9 (waiver): humanitarian waiver policy stated, Planned B-01 for systematic recording [client-FAQ] [DECISION-1] [B-01 planned]
+- §10.3 Q20 (complaints): graduated ladder per D-3 stated [client-FAQ] [DECISION-3]
+- §10.3 Q24 (line-item hold): current whole-settlement hold noted, Planned B-08 [client-FAQ] [B-08 planned]
+
 ## Cross-Cutting Changes
 
 - Token revalidation feature description REMOVED throughout; replaced by controlled reissue model [DECISION-2A]
