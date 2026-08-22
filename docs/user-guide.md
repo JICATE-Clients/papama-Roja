@@ -46,7 +46,7 @@ Donor donates money
       ↓
 Money becomes "Donor Credit" (non-withdrawable, never expires)
       ↓
-Donor mints a "Token" (digital meal voucher, 60-day validity)
+Donor mints a "Token" (digital meal voucher, 60-day validity from activation)
       ↓
 Token reaches a beneficiary:
   Path A (Donor Controlled) — donor distributes directly
@@ -154,7 +154,7 @@ Before the platform goes into production, every setting below must be reviewed a
 | `max_meals_per_day` | Mandatory | Set the daily meal limit per beneficiary. If NULL, no daily limit is enforced. |
 | `token_redemption_radius_km` | Mandatory | Set the maximum distance (km) between a Food Partner and a beneficiary for redemption. |
 | `max_tokens_per_volunteer` | Mandatory | Set the concurrent holding limit for volunteers. If NULL, no limit is enforced — exposure is unbounded. |
-| `token_expiry_days` | Mandatory | Set to **60** per approved policy (60-day validity from activation). |
+| `token_expiry_days` | Mandatory | Set to **60** per approved policy (60-day validity from activation — activation date varies by distribution mode: creation for Donor Controlled, distribution event for PAPAMA Distributed). |
 | `co_contribution_max` | Mandatory | Set to **10** (₹10 beneficiary contribution). Current system accepts any non-negative value; the ₹10 hard ceiling is not yet code-enforced. |
 | `vendor_max_complaint_rate` | Recommended | Set the complaint-ratio threshold for auto-suspension flagging (e.g. 0.15). |
 | `vendor_auto_suspend_enabled` | Review | Default OFF. The graduated corrective-action ladder governs Food Partner discipline operationally; auto-suspend remains available but OFF. |
@@ -253,16 +253,27 @@ Per the approved token model, a pApAmA token is **PAN INDIA** by default and may
 
 > **Planned (B-23):** Donor-selected geographic restriction (PAN INDIA / State / District / City / PIN) stored as a token attribute and checked at redemption against the actual service location. Token face content (type, value, geographic eligibility, activation date, expiry date) for physical and digital tokens.
 
-Every token has a **60-day validity period** from its activation date. After expiry, an unused token becomes invalid and may be considered for **controlled reissue** by an authorised administrator (see below). The `token_expiry_days` configuration is set to 60.
+Every token has a **60-day validity period** from its activation date. The activation date depends on the distribution mode (confirmed 18 Aug):
+
+| Distribution mode | Activation date | Rationale |
+|---|---|---|
+| **Donor Controlled** (Path A) | Date of token creation/issue to the donor | The donor holds and distributes the token; the 60-day clock starts when the token is minted. |
+| **PAPAMA Distributed** (Path B) | Date the token is actually distributed/assigned to the beneficiary | The token may sit in the Admin Pool or with a volunteer before reaching a beneficiary; the 60-day clock starts only when it is distributed, not when it was created. FIFO continues to govern pool allocation order. |
+
+A PAPAMA Distributed token that remains undistributed past its expiry period goes through the controlled reissue mechanism — a new token is created, permanently linked to the original, and the original QR becomes permanently non-redeemable.
+
+After expiry, an unused token becomes permanently invalid and may be considered for **controlled reissue** by an authorised administrator (see below). The `token_expiry_days` configuration is set to 60.
+
+> **Planned (B-23):** Implementation of the per-mode activation-date rule. Current code uses a single activation date; the distribution-event trigger for Path B tokens is unbuilt.
 
 **Distribution Mode:**
 
 Tokens are created with one of two distribution modes, fixed at creation:
 
-| Mode | Path | Description |
-|------|------|-------------|
-| **PAPAMA Distributed** | Path B | Token enters the Admin Pool for volunteer allocation. |
-| **Donor Controlled** | Path A | Token goes `live` immediately for the donor to distribute personally. |
+| Mode | Path | Description | 60-day activation starts |
+|------|------|-------------|------------------------|
+| **PAPAMA Distributed** | Path B | Token enters the Admin Pool for volunteer allocation. | At distribution/assignment to beneficiary (confirmed 18 Aug) |
+| **Donor Controlled** | Path A | Token goes `live` immediately for the donor to distribute personally. | At creation/issue to donor (confirmed 18 Aug) |
 
 > **Planned (B-32):** FIFO (First-In-First-Out) allocation for pool tokens including the Special Care distribution pool. Donor-controlled tokens never enter FIFO — this is architecturally guaranteed by the distribution mode attribute.
 
@@ -301,7 +312,7 @@ This controlled reissue implements the approved policy that expired token value 
 
 > **Planned (B-03):** Expired token value returning to the Meal Pool via the reissue mechanism. Current behaviour: expired tokens receive a status flip to `expired` only — no refund, no pool return, no ledger entry. The value is written off.
 
-> **Planned (B-23):** The controlled reissue model as described above. The existing `token_revalidation_allowed` configuration key and associated code remain in the codebase but are being retired in favour of the reissue model.
+> **Planned (B-23):** The controlled reissue model as described above. The existing `token_revalidation_allowed` configuration key and associated code remain in the codebase but are **confirmed retired** (client confirmation 18 Aug) in favour of the reissue model — expired tokens are permanently non-redeemable and may only be reissued through the authorised reissue process.
 
 **Report a token as lost:**
 
@@ -679,7 +690,7 @@ During an authorised Emergency Mode, pApAmA Administration may waive the ₹10 b
 
 **Emergency ID and governance:**
 
-> **Planned (B-26):** Full Emergency Response Framework — unique Emergency ID (e.g., TN-FLOOD-2026-001) with authorised activation, reason, geographic scope, beneficiary scope, period and complete audit trail. Emergency Appeal workflow with approved templates and authorised dispatch. Emergency-ID tagging of donations and tokens. Closure reconciliation (funds received/utilised/committed; tokens issued/redeemed/unused; surplus; utilisation decision; approver; closure date) as a permanent record.
+> **Planned (B-26):** Full Emergency Response Framework — unique Emergency ID (e.g., TN-FLOOD-2026-001) with authorised activation, reason, geographic scope, beneficiary scope, period and complete audit trail. Emergency Appeal workflow with approved templates and authorised dispatch. Emergency-ID tagging of donations and tokens. Closure reconciliation (funds received/utilised/committed; tokens issued/redeemed/unused; surplus; utilisation decision; approver; closure date) as a permanent record. **Channel-extensibility requirement (confirmed 18 Aug):** The Phase 1 appeal architecture must be designed so that Phase 2 channels (SMS via DLT registration, WhatsApp via Business API) can be integrated later without fundamental redesign of the dispatch, template or tracking infrastructure.
 
 **Surplus hierarchy (approved policy):**
 
@@ -843,9 +854,9 @@ When a donor donates, the payment becomes **Donor Credit** — a non-withdrawabl
 
 Once a donor's credit balance reaches the `standard_token_value` (set by the admin), the donor can mint a token — a digital meal voucher.
 
-**What a token represents:** A token is a one-time entitlement to a freshly prepared meal at any approved Food Partner. Per the approved model, it is PAN INDIA by default — redeemable at any authorised pApAmA Food Partner anywhere in India. It carries a rupee value, a QR code, an activation date and a 60-day expiry date.
+**What a token represents:** A token is a one-time entitlement to a freshly prepared meal at any approved Food Partner. Per the approved model, it is PAN INDIA by default — redeemable at any authorised pApAmA Food Partner anywhere in India. It carries a rupee value, a QR code, an activation date and a 60-day expiry date. The activation date is mode-dependent (confirmed 18 Aug): **Donor Controlled** tokens activate at creation; **PAPAMA Distributed** tokens activate when actually distributed/assigned to the beneficiary.
 
-> **Planned (B-23):** Donor-selected geographic restriction (PAN INDIA / State / District / City / PIN) at token creation; token face content showing type, value, geographic eligibility, activation date and expiry date.
+> **Planned (B-23):** Donor-selected geographic restriction (PAN INDIA / State / District / City / PIN) at token creation; token face content showing type, value, geographic eligibility, activation date and expiry date. Per-mode activation-date rule implementation.
 
 No reminder is sent to anyone before a token expires, and the expire sweep is triggered manually by an administrator rather than running automatically.
 
@@ -1170,9 +1181,16 @@ The volunteer does not improvise. There is no offline mode during normal operati
 Both distribution and redemption require connectivity. Face capture at redemption has no fallback. This is a real operational constraint.
 
 **Situation 6 — No connectivity during Emergency Mode:**
-During an authorised Emergency Mode, controlled offline emergency transactions may be permitted.
+During an authorised Emergency Mode, controlled offline emergency transactions may be permitted. **Two capture routes are confirmed (18 Aug):**
 
-> **Planned (B-30):** Controlled offline emergency transaction capability — offline transaction record (offline txn ID, token ID, volunteer ID, Food Partner ID, beneficiary identifier, Emergency ID, date/time, token/meal type, waiver status, device reference), synchronisation with full normal validation ("Pending Offline Validation"), configured limits (max pending per volunteer/device, max sync window), cross-batch duplicate-token detection with exception-queue routing, and admin visibility of unsynchronised transactions. This is emergency-only — normal operations have no offline path.
+| Route | Role | Usage |
+|---|---|---|
+| **Food Partner redemption screen** | Primary | The Food Partner's scan page records the offline transaction at their premises. |
+| **Volunteer App** | Secondary | For field situations where no connected Food Partner is available. |
+
+Both routes are emergency-only, subject to identical controls. **Every offline transaction must record its source** (Food Partner or Volunteer) as a mandatory field, enabling separate post-emergency review by source.
+
+> **Planned (B-30):** Controlled offline emergency transaction capability — offline transaction record (offline txn ID, token ID, volunteer ID, Food Partner ID, beneficiary identifier, Emergency ID, date/time, token/meal type, waiver status, **transaction source** (Food Partner / Volunteer), device reference), synchronisation with full normal validation ("Pending Offline Validation"), configured limits (max pending per volunteer/device, max sync window), cross-batch duplicate-token detection with exception-queue routing, and admin visibility of unsynchronised transactions. This is emergency-only — normal operations have no offline path.
 
 **Situation 7 — Immediate safety risk:**
 Safety first. If the volunteer encounters an unsafe situation, they should prioritise their own safety and the beneficiary's safety. Escalate to the administrator. Never force a transaction in an unsafe environment. Volunteer safety and food-safety requirements apply at all times.
@@ -1378,7 +1396,7 @@ These settings are managed by an authorised administrator at `/admin/system-conf
 | Key | Type | Classification | What it controls | NULL meaning | Default | Business implication |
 |-----|------|---------------|-----------------|-------------|---------|---------------------|
 | `standard_token_value` | Number (₹) | **Mandatory** | Minimum and pool-mint token value | Tokens cannot be minted | Must be set | Determines the rupee value of every standard meal token |
-| `token_expiry_days` | Number | **Mandatory** | Days before an unused token expires from activation | No expiry — tokens live indefinitely | NULL | Set to **60** per approved policy. Unset = unbounded token liability. |
+| `token_expiry_days` | Number | **Mandatory** | Days before an unused token expires from activation (activation = creation for Donor Controlled; distribution event for PAPAMA Distributed — confirmed 18 Aug) | No expiry — tokens live indefinitely | NULL | Set to **60** per approved policy. Unset = unbounded token liability. |
 | `max_tokens_per_volunteer` | Number | **Mandatory** | Maximum undistributed tokens a volunteer can hold at once | No holding limit — exposure unbounded | NULL | Caps risk if a volunteer becomes unreachable |
 
 ### 9.2 Meal and Redemption Settings
@@ -1519,7 +1537,7 @@ A: No. pApAmA tokens are meal-enablement vouchers. They have no cash-withdrawal 
 A: No. Once a donation has been credited as Donor Credit, it represents a commitment to fund meals and is not a withdrawable cash balance. Refunds are only processed for confirmed failed or duplicate payments.
 
 **Q8: What happens when a donor creates a token?**
-A: The donor's available Donor Credit is reduced by the token amount and a digital meal token is created with a 60-day validity period from activation. The donor can either distribute the token personally (Path A — Donor Controlled) or allow pApAmA to distribute it through its authorised volunteer network (Path B — PAPAMA Distributed).
+A: The donor's available Donor Credit is reduced by the token amount and a digital meal token is created with a 60-day validity period from activation. The activation date depends on the distribution mode: **Donor Controlled** tokens activate at creation; **PAPAMA Distributed** tokens activate when actually distributed to the beneficiary (confirmed 18 Aug). The donor can either distribute the token personally (Path A — Donor Controlled) or allow pApAmA to distribute it through its authorised volunteer network (Path B — PAPAMA Distributed).
 
 **Q9: Can a donor give a token directly to someone in need?**
 A: Yes. Under the personal distribution pathway (Path A — Donor Controlled), the donor can share the token QR code directly with a person in need. The token can be displayed digitally or printed. The donor should share the QR discreetly — a live QR is redeemable by whoever presents it first.
@@ -1533,7 +1551,7 @@ A: The token enters the Admin Pool and may be allocated to an authorised volunte
 A: An authorised administrator (or the donor through the donor interface) can report the token as lost. The original token is immediately blocked (`status: "blocked"`) and a replacement is issued with the same value, linked to the original via `replacement_for_token_id`. If the replacement minting fails, the original is automatically un-blocked. The action is recorded for audit purposes.
 
 **Q12: What happens if a token expires?**
-A: Tokens have a **60-day validity period** from activation. After expiry, the unused token becomes invalid. **Approved policy:** Expired token value returns to the Meal Pool for future meals via the controlled reissue process — it is never treated as revenue. An authorised administrator may reissue an expired token, creating a new token with a new QR code and new 60-day validity, permanently linked to the original. **Current behaviour:** Expired tokens receive a status flip only; the value is written off with no ledger entry.
+A: Tokens have a **60-day validity period** from activation — activation at creation for Donor Controlled tokens, at distribution to the beneficiary for PAPAMA Distributed tokens (confirmed 18 Aug). After expiry, the token is **permanently non-redeemable** (token revalidation retirement confirmed 18 Aug); only authorised reissue is permitted. **Approved policy:** Expired token value returns to the Meal Pool for future meals via the controlled reissue process — it is never treated as revenue. An authorised administrator may reissue an expired token, creating a new token with a new QR code and new 60-day validity, permanently linked to the original. **Current behaviour:** Expired tokens receive a status flip only; the value is written off with no ledger entry.
 
 > **Planned (B-03):** Implementation of the approved Meal Pool return policy for expired and forfeited token value.
 
@@ -1668,9 +1686,9 @@ A: You receive an in-app notification confirming that the token has been redeeme
 A: Per the approved Beneficiary Privacy and Donor Communication policy, donors receive appropriate impact information without exposure to the beneficiary's personal information. You do not see the beneficiary's name, photograph, health status, Special Care category, address or any identifying information. The identity and privacy of beneficiaries is protected. Donor reporting uses anonymised or aggregated information.
 
 **Q10: What happens if my token expires without being used?**
-A: Tokens have a **60-day validity period** from activation. **Approved policy:** Expired token value returns to the Meal Pool for future meals via the controlled reissue process. An authorised administrator may reissue the token — creating a new token with a new QR code and new 60-day validity, permanently linked to the original. The original remains expired. **Current behaviour:** Expired tokens receive a status flip only; the value is written off.
+A: Tokens have a **60-day validity period** from activation — activation at creation for Donor Controlled tokens, at distribution to the beneficiary for PAPAMA Distributed tokens (confirmed 18 Aug). After expiry, the token is permanently non-redeemable (revalidation retired — confirmed 18 Aug); only authorised reissue is permitted. **Approved policy:** Expired token value returns to the Meal Pool for future meals via the controlled reissue process. An authorised administrator may reissue the token — creating a new token with a new QR code and new 60-day validity, permanently linked to the original. The original remains expired. **Current behaviour:** Expired tokens receive a status flip only; the value is written off.
 
-> **Planned (B-03):** Meal Pool return implementation. **Planned (B-23):** Full controlled reissue model.
+> **Planned (B-03):** Meal Pool return implementation. **Planned (B-23):** Full controlled reissue model including per-mode activation-date rule.
 
 **Q11: What happens if the meal costs less than my token value?**
 A: The difference is recorded by the platform. **Approved policy:** Forfeited value returns to the Meal Pool for future meals (for Special Care Tokens, to the Common Special Care Pool). This treatment is transparent to donors and consistent in accounting and reporting. **Current behaviour:** Forfeited value is posted to the platform revenue ledger.

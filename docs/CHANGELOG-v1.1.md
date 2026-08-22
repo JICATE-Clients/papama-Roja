@@ -511,3 +511,52 @@ This changelog records every substantive change in the v1.1 rewrite, grouped by 
 - §10.3 Q6 "Reconciled" status: removed parenthetical "(including ₹10 contribution verification)" — this behaviour is Planned (B-01/B-24), not current; the body text in §3.8 already carries the correct Planned (B-01) marker [audit] [V-11] [B-01 planned]
 - §3.3 Managing Tokens: added "Run Scheduled-Redemption Reminder Sweep" paragraph documenting the existing `/api/admin/scheduled-reminders/sweep` endpoint (7-day pre-redemption reminder, `reminded` status flip) — last of 10 undocumented features from register §5 now covered [audit] [VERIFICATION-REPORT #15] [register §5]
 - §2 Registration and Approval Flow + §6.1 Registering as a Volunteer: replaced "face photo" with "face capture" / "Capture your face" and added on-device embedding clarification, aligning to the D-7 documentation correction and the terminology used in §7.1 [audit] [DECISION-7] [V-04]
+
+---
+
+## Client's 18 Aug Final Confirmations [client-18Aug]
+
+### user-guide.md
+
+- §3.3 Managing Tokens: added per-mode activation-date table — Donor Controlled activates at creation, PAPAMA Distributed activates at distribution/assignment to beneficiary; undistributed pool tokens past expiry go through controlled reissue [client-18Aug] [Q1 confirmed]
+- §3.3 Distribution Mode table: added "60-day activation starts" column with per-mode dates [client-18Aug] [Q1 confirmed]
+- §3.3 Controlled Reissue: strengthened Planned (B-23) note — revalidation retirement changed from "being retired" to "confirmed retired (client confirmation 18 Aug)" [client-18Aug] [Q3 confirmed]
+- §3.3 Planned (B-23): added note that per-mode activation-date rule is unbuilt (current code uses single activation date) [client-18Aug] [Q1 confirmed]
+- §3.11 Planned (B-26): added channel-extensibility requirement — Phase 1 architecture must support Phase 2 SMS/WhatsApp without fundamental redesign [client-18Aug] [Emergency Appeal split confirmed]
+- §6.3 Situation 6: added confirmed two-route table (Food Partner screen primary, Volunteer App secondary) with mandatory source identification per transaction for separate post-emergency review [client-18Aug] [Q2 confirmed]
+- §6.3 Planned (B-30): added transaction source (Food Partner / Volunteer) as mandatory field in offline record [client-18Aug] [Q2 confirmed]
+- §4.3 Minting a Token: added per-mode activation-date note to token description and Planned (B-23) [client-18Aug] [Q1 confirmed]
+- Go-Live Checklist: updated `token_expiry_days` to note per-mode activation-date rule [client-18Aug] [Q1 confirmed]
+- §9.1 `token_expiry_days`: business implication updated with per-mode activation-date rule [client-18Aug] [Q1 confirmed]
+- §10.1 Q8: added per-mode activation-date explanation [client-18Aug] [Q1 confirmed]
+- §10.1 Q12: updated with per-mode activation, strengthened revalidation retirement to "permanently non-redeemable (confirmed 18 Aug)" [client-18Aug] [Q1/Q3 confirmed]
+- §10.2 Q10: same per-mode and revalidation-retirement updates as Q12 [client-18Aug] [Q1/Q3 confirmed]
+
+### pApAmA-Client-Decisions-2026-08.md
+
+- Header: "Pending sub-points" struck through and replaced with "ALL CONFIRMED 18 Aug 2026" [client-18Aug]
+- D-2A: Q1 activation-date marked CONFIRMED with full per-mode rule [client-18Aug]
+- D-2A: Q3 revalidation retirement marked CONFIRMED [client-18Aug]
+- D-4: Q4 status-name retention marked CONFIRMED with approval/payment separation [client-18Aug]
+- D-6: Emergency Appeal split marked CONFIRMED with channel-extensibility requirement [client-18Aug]
+- D-9: Q2 offline recording marked CONFIRMED — both routes, mandatory source field [client-18Aug]
+- D-3: closure confirmed 18 Aug (graduated corrective action) [client-18Aug]
+- D-11: closure confirmed 18 Aug (80G preconditions) [client-18Aug]
+- D-12: closure confirmed 18 Aug (§3.13 rewrite approach) [client-18Aug]
+- Carried decisions: Foundation-documents timeline appended (Standard Meal Framework 25 Aug, Special Care Meal Guidelines 28 Aug, Food Partner Eligibility 31 Aug, Complaints Policy 31 Aug, Institution Framework 5 Sep) [client-18Aug]
+- Carried decisions: client directive appended — proceed v1.1 + lane-wise development; maker-checker demo date to be proposed by JICATE [client-18Aug]
+
+### pApAmA-Review-Register-v2-Internal.md
+
+- §12 header: marked "✅ ALL ANSWERED 18 Aug 2026" [client-18Aug]
+- §12 items 1–5: replaced open questions with confirmed one-line outcomes [client-18Aug]
+- §11 B-23: added per-mode activation date (confirmed 18 Aug), revalidation retirement confirmed [client-18Aug]
+- §11 B-26: added channel-extensibility requirement (c′) [client-18Aug]
+- §11 B-30: added two capture routes, mandatory source field, recording-device question answered [client-18Aug]
+
+### pApAmA-Developer-Work-Order.md (new file — staged from ~/Downloads)
+
+- Card A-2: updated with per-mode activation-date rule (Donor Controlled at creation, PAPAMA Distributed at distribution); revalidation retirement confirmed; added acceptance test for pool-token expiry calculation [client-18Aug]
+- Card E-4: updated with both capture routes (Food Partner primary, Volunteer App secondary), mandatory source field, separate post-emergency review by source [client-18Aug]
+- Card E-6: updated with channel-extensibility requirement — dispatch interface must be channel-abstract [client-18Aug]
+- Client-pending-defaults section: replaced with confirmed answers, Foundation-documents timeline and client directive [client-18Aug]

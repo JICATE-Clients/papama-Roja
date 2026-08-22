@@ -3,7 +3,7 @@
 **Status:** Agreed requirements for Version 1.1 and Phase 1 system logic.
 **Sources:** Client (Mr. Ramesh Bafna, Papama Trust) replies of 4–5 Aug and 14–16 Aug 2026 to JICATE's decisions letters. JICATE consolidated confirmation reply drafted 17 Aug.
 **How to use:** The rewrite prompt (`pApAmA-v1.1-Rewrite-Prompt.md`) treats this file as the authoritative answer to every `[DECISION-n]` slot. Text inside blockquotes is the client's **verbatim policy wording** and is to be adopted in v1.1 substantially as drafted, corrected only where it conflicts with code-verified behaviour (in which case describe the approved policy and mark unbuilt behaviour `> **Planned (B-nn)**`).
-**Pending sub-points:** Four design questions and the Emergency Appeal Phase 1/2 split await client confirmation (JICATE reply of 17 Aug). Fallbacks are noted per decision; none blocks the rewrite.
+**Pending sub-points:** ~~Four design questions and the Emergency Appeal Phase 1/2 split await client confirmation (JICATE reply of 17 Aug). Fallbacks are noted per decision; none blocks the rewrite.~~ **ALL CONFIRMED 18 Aug 2026** — see per-decision notes below and the Foundation-documents timeline at the end of this file.
 
 ---
 
@@ -40,7 +40,7 @@ Waiver: token presented → beneficiary unable to contribute → authorised waiv
 
 ## D-3 — Food Partner Graduated Corrective Action
 
-**Outcome:** Accepted as proposed (no dedicated reply; client's own §9.3 framework; referenced as settled in his audit email). Ladder: warning → final warning → penalty/enhanced monitoring → suspension; immediate suspension reserved for food-safety hazards, fraud, or risk to beneficiaries. `vendor_auto_suspend_enabled` remains OFF; the ladder governs operationally. Audit finding severities (D-5) link to this framework. *Pending explicit closure in client's reply to JICATE's 17 Aug confirmation.*
+**Outcome:** Accepted as proposed (no dedicated reply; client's own §9.3 framework; referenced as settled in his audit email). Ladder: warning → final warning → penalty/enhanced monitoring → suspension; immediate suspension reserved for food-safety hazards, fraud, or risk to beneficiaries. `vendor_auto_suspend_enabled` remains OFF; the ladder governs operationally. Audit finding severities (D-5) link to this framework. **CONFIRMED 18 Aug** as documented.
 
 ---
 
@@ -54,8 +54,8 @@ Waiver: token presented → beneficiary unable to contribute → authorised waiv
 > Every token shall have a 60-day validity period from its activation date. The activation date and expiry date shall be clearly printed on physical tokens and displayed on digital tokens. After expiry, an unused token shall automatically become invalid and may be considered for controlled reissue by an authorised pApAmA administrator, with the original and reissued tokens permanently linked for audit purposes.
 
 **Specifics:** donor-selected restriction options PAN INDIA / State / District / City / PIN, stored as token attributes, checked automatically at redemption against the **actual service location**; token face shows value, token type, geographic eligibility, activation date, expiry date (client supplied example layouts); QR carries the token ID only — backend is final authority; reissue = admin review → approval with reason → NEW token (new ID, QR, dates) linked via reference to the original, which remains permanently expired.
-**Consequences:** `token_expiry_days = 60`; existing revalidation feature retired in favour of reissue (Question 3 to client, recommended and expected); reissue implements the 4-Aug decision that expired value returns to the Meal Pool (B-03).
-**Open (Question 1):** activation-date definition for PAPAMA-distributed tokens (JICATE recommends creation date). Fallback: document activation at creation for both modes, noting the point is under confirmation.
+**Consequences:** `token_expiry_days = 60`; existing revalidation feature **retired — CONFIRMED 18 Aug** (Question 3) — expired tokens are permanently non-redeemable, authorised reissue only; reissue implements the 4-Aug decision that expired value returns to the Meal Pool (B-03).
+**CONFIRMED (18 Aug — Question 1):** Donor Controlled tokens — 60-day validity from creation/issue to the donor (as recommended). PAPAMA Distributed tokens — 60-day validity commences from the date the token is actually distributed/assigned to the beneficiary (NOT creation; overrides the recommended default). FIFO continues to govern pool allocation. A token that remains undistributed past its expiry period goes through the controlled reissue mechanism (new token, permanently linked, original QR permanently non-redeemable).
 
 ---
 
@@ -94,7 +94,7 @@ Waiver: token presented → beneficiary unable to contribute → authorised waiv
 > Any surplus funds or unused token value remaining after the specific emergency requirements have been adequately met shall not be subject to a normal donor refund or return process. The surplus shall first be considered for other genuine and continuing humanitarian needs in the affected area, with PAPAMA Administration determining the appropriate utilisation based on prevailing need and PAPAMA's mission and approved policies. Where no appropriate continuing need exists in the affected area, the surplus may be transferred to the PAPAMA Emergency Response Fund or another approved humanitarian purpose. All such utilisation shall be documented, accounted for and appropriately reported."
 
 **Governance:** unique Emergency ID (e.g., TN-FLOOD-2026-001) with authorised activation, reason, geographic scope, beneficiary scope where applicable, period, complete audit trail; extension only by explicit authorised action + reason + revised end date; no indefinite Emergency Mode; activation restricted to authorised administrators. Emergency Mode never overrides: token expiry, donor geographic restriction, token validity/value, Food Partner suspension, food-safety/FSSAI/compliance holds, fraud blocks. Closure reconciliation (funds received/utilised/committed; tokens issued/redeemed/unused; surplus; utilisation decision; approver; closure date) as a permanent record; Emergency Impact Report for major/CSR donors. Unused emergency tokens: retained with full attributes, resolved through the controlled reissue process (new token linked to original). Surplus hierarchy: (1) the specific emergency → (2) continuing humanitarian needs in the same affected area → (3) PAPAMA Emergency Response Fund. **No donor refund mechanism**; policy disclosed at contribution time. Administration discretion within approved policy, documented.
-**Emergency Appeal (JICATE Phase split proposed 17 Aug, pending confirmation):** Phase 1 — approved templates, authorised review/approval (incl. pre-approved instant template with post-send review), delivery via in-app + email (official account dependency), Emergency-ID donation tagging, basic individual/CSR segmentation. Phase 2 — SMS (DLT registration) and WhatsApp (Business API), fine-grained segmentation, delivery analytics, CSR Emergency Impact Report. Communication preferences, consent, delivery status, opt-out maintained.
+**Emergency Appeal (CONFIRMED 18 Aug — Phase split + channel-extensibility):** Phase 1 — approved templates, authorised review/approval (incl. pre-approved instant template with post-send review), delivery via in-app + email (official account dependency), Emergency-ID donation tagging, basic individual/CSR segmentation. **Added requirement:** the Phase 1 appeal architecture must be designed so Phase 2 channels (SMS via DLT registration, WhatsApp via Business API) can be integrated later WITHOUT fundamental redesign. Phase 2 — SMS, WhatsApp, fine-grained segmentation, delivery analytics, CSR Emergency Impact Report. Communication preferences, consent, delivery status, opt-out maintained.
 
 ---
 
@@ -146,7 +146,7 @@ Waiver: token presented → beneficiary unable to contribute → authorised waiv
 **Five Phase 1 essentials (client's list):** official printed-QR support; controlled offline emergency transaction capability; ₹10 waiver within offline transactions; clear no-phone-no-token procedure; strict prohibition on volunteers creating or overriding entitlement.
 **Offline controls:** offline transaction record (offline txn ID, token ID, volunteer ID, Food Partner ID, beneficiary identifier where available, Emergency ID, date/time, token/meal type, waiver status, status, device reference); sync → full normal validation ("Pending Offline Validation"); expiry/geography/status never bypassed; max pending per volunteer/device; max sync window; alerts; cross-batch duplicate-token detection (exception queue, never silent accept/delete); admin visibility of unsynchronised transactions; limits configurable post-pilot. Emergency-only: "Emergency Mode + No Connectivity = Controlled Emergency Offline Procedure"; normal operations have no offline path.
 **Also:** volunteer safety provisions (never required to enter unsafe locations); minimal paper records, secure transfer, approved disposal; food safety never bypassed; volunteer incident reporting — 11 one-tap categories (no phone / no token / partner closed / partner refusing valid token / no food / connectivity failure / token problem / urgent need / food-safety concern / safety concern / other) feeding an admin queue.
-**Open (Question 2):** recording device for offline transactions — JICATE recommends Food Partner screen primary, Volunteer App secondary. Fallback: document the procedure device-neutrally.
+**CONFIRMED (18 Aug — Question 2):** BOTH routes — Food Partner redemption screen as primary; Volunteer App as secondary for field situations. Both emergency-only, subject to identical controls, and EVERY offline transaction must record its source (Food Partner vs Volunteer) for separate post-emergency review.
 
 ---
 
@@ -176,20 +176,32 @@ Waiver: token presented → beneficiary unable to contribute → authorised waiv
 > "Where a donor authorises PAPAMA to distribute a sponsored token, the token shall enter the PAPAMA distribution pool and may be allocated to an eligible beneficiary on a First-In-First-Out basis, subject to the donor's geographic restriction, if any. The donor shall receive a redemption notification when the token is actually redeemed. Where a donor elects to retain, print or personally distribute the token, the token shall remain outside the PAPAMA distribution pool and shall not be allocated through FIFO. The system shall record the distribution mode and subsequent redemption separately."
 
 **Specifics:** Distribution Mode (PAPAMA Distributed / Donor Controlled) fixed at creation; distribution authority and geographic scope fully independent attributes; FIFO for pool tokens incl. the Special Care distribution pool; donor-controlled tokens never enter FIFO (architecturally guaranteed); allocation ≠ utilisation — notification on actual redemption (allocation alerts optional, not Phase 1); donor-controlled lifecycle Created → Donor Controlled/Printed → Redeemed or Expired, with "Expired – Not Redeemed" display; 60-day validity applies to both modes; donor notification preference; token master fields per the client's list (ID, type, value, distribution mode, geographic scope, status, donor, activation, expiry, redemption date/time, redemption City/District/State, Food Partner, Emergency ID, Special Care category restricted from donor visibility, notification preference); Common Special Care Pool (financial) distinct from Special Care distribution pool (token queue).
-**Status vocabulary (Question 4):** retain internal names with documented mapping to Created / Available / FIFO Pool / Donor Controlled / Allocated / Redeemed / Expired / Reissued.
+**Status vocabulary (CONFIRMED 18 Aug — Question 4):** Existing status names retained with documented mapping to Created / Available / FIFO Pool / Donor Controlled / Allocated / Redeemed / Expired / Reissued. Approval and payment remain separate recorded events; pre-payment vs post-payment reconciliation clearly identifiable.
 
 ---
 
 ## D-11 — 80G Certificates
 
-**Outcome:** Accepted as proposed (no dedicated reply). Feature remains OFF until (a) the Foundation's 80G registration number is available and (b) the client's Chartered Accountant approves the certificate format and eligibility rules. Generation build = B-16 (Phase 2, behind those preconditions). *Pending explicit closure in client's reply.*
+**Outcome:** Accepted as proposed (no dedicated reply). Feature remains OFF until (a) the Foundation's 80G registration number is available and (b) the client's Chartered Accountant approves the certificate format and eligibility rules. Generation build = B-16 (Phase 2, behind those preconditions). **CONFIRMED 18 Aug** — 80G preconditions as documented.
 
 ## D-12 — Section 3.13
 
-**Outcome:** No separate review will be awaited; §3.13 (System Configuration) is rewritten applying the client's Section 9 and Section 10.4 comments, which cover the same ground. Noted in the v1.1 changelog. *Pending explicit closure in client's reply.*
+**Outcome:** No separate review will be awaited; §3.13 (System Configuration) is rewritten applying the client's Section 9 and Section 10.4 comments, which cover the same ground. Noted in the v1.1 changelog. **CONFIRMED 18 Aug** — §3.13 rewrite approach as documented.
 
 ---
 
 ## Carried decisions of 4–5 Aug (first cycle — unchanged, restated for completeness)
 
-Title "pApAmA Technical Administration Guide" v1.1; "Food Partner" and "General Donation Pool" terminology (UI may lag with explanatory notes); four implemented beneficiary categories current, others future; Donor Credit never expires; unspent value (token-vs-meal difference AND expired value) returns to the Meal Pool, never revenue (B-03; the D-2A reissue mechanism and D-8 Special Care Pool are its implementations by token type); revoked tokens → Admin Pool (as built); SLAs — proof approval ≤ 24 h, reconciliation ≤ 48 h, Food Partner payment ≤ 7 working days, complaint acknowledgement ≤ 24 h, resolution ≤ 7 working days (configurable operating parameters); permanent audit retention; two-register model; simplified Public User Guide deferred; five Foundation documents to be authored by the client (Standard Meal Framework, Special Care meal guidelines, Food Partner eligibility criteria, complaint categories/escalation/timelines, institution framework) — **timeline still awaited** (re-requested 17 Aug).
+Title "pApAmA Technical Administration Guide" v1.1; "Food Partner" and "General Donation Pool" terminology (UI may lag with explanatory notes); four implemented beneficiary categories current, others future; Donor Credit never expires; unspent value (token-vs-meal difference AND expired value) returns to the Meal Pool, never revenue (B-03; the D-2A reissue mechanism and D-8 Special Care Pool are its implementations by token type); revoked tokens → Admin Pool (as built); SLAs — proof approval ≤ 24 h, reconciliation ≤ 48 h, Food Partner payment ≤ 7 working days, complaint acknowledgement ≤ 24 h, resolution ≤ 7 working days (configurable operating parameters); permanent audit retention; two-register model; simplified Public User Guide deferred; five Foundation documents to be authored by the client.
+
+**Foundation Documents Timeline (client's tentative targets, confirmed 18 Aug):**
+
+| Document | Target date |
+|----------|------------|
+| Standard Meal Framework | 25 Aug 2026 |
+| Special Care Meal Guidelines | 28 Aug 2026 |
+| Food Partner Eligibility & Selection Criteria | 31 Aug 2026 |
+| Complaint Categories/Escalation/Timelines Policy | 31 Aug 2026 |
+| Institution Framework | 5 Sep 2026 |
+
+**Client's directive (18 Aug):** Proceed with v1.1 and lane-wise development (data architecture → financial controls → emergency+offline → privacy); design-first milestones honoured; maker-checker demonstration date to be proposed by JICATE.
