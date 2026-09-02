@@ -16,7 +16,7 @@
     "@supabase/supabase-js": "^2.108.2",
     "@vladmandic/human": "^3.3.6",
     "html5-qrcode": "^2.3.8",
-    "nanoid": "^5.1.15",
+    "nanoid": "^5.1.16",
     "next": "16.2.12",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
