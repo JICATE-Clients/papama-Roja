@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { X } from "@phosphor-icons/react/dist/ssr/X";
 import {
     createContext,
     useCallback,
@@ -106,23 +107,37 @@ export function useRowAction(apiPath: string, reload: () => Promise<void>) {
     return { run, busyId, actionError };
 }
 
-/** Page title + subtitle + (when ready) a row count, matching the vendors header. */
+/**
+ * Page title + subtitle + (when ready) a row count, matching the vendors header.
+ * `action` is a right-aligned slot for the page's one primary control (e.g. the
+ * vendors "Add vendor" toggle); on a phone the header stacks, so it lands under
+ * the subtitle rather than squeezing the title.
+ */
 export function AdminPageHeader({
     title,
     subtitle,
     count,
+    action,
 }: {
     title: string;
     subtitle: string;
     count?: number;
+    action?: ReactNode;
 }) {
     return (
-        <div className="mb-6 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-                <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{title}</h1>
-                <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+        <div className="mb-5 flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+                <div className="flex items-baseline gap-2.5">
+                    <h1 className="text-[22px] font-semibold tracking-tight text-slate-900">{title}</h1>
+                    {count != null && (
+                        <span className="rounded-full bg-slate-200/70 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-slate-600">
+                            {count}
+                        </span>
+                    )}
+                </div>
+                <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-slate-500">{subtitle}</p>
             </div>
-            {count != null && <span className="text-sm text-slate-400">{count} total</span>}
+            {action && <div className="shrink-0">{action}</div>}
         </div>
     );
 }
@@ -152,11 +167,59 @@ export function SectionHeading({
     );
 }
 
-/** Card shell around a `<table>`, identical chrome to the vendors table. */
-export function TableShell({ children }: { children: ReactNode }) {
+/**
+ * One labelled figure in a summary row. Lifted out of the analytics page when
+ * the ledgers page needed the same tile — a second private copy is how two
+ * summary rows start drifting apart.
+ */
+export function StatTile({
+    label,
+    value,
+    small,
+    tone,
+}: {
+    label: string;
+    value: string;
+    /** Long values (money) need the smaller size to stay on one line. */
+    small?: boolean;
+    /** `alert` for a figure that means something is wrong. */
+    tone?: "alert";
+}) {
     return (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-            <table className="w-full min-w-[640px] text-left text-sm">{children}</table>
+        <div
+            className={`rounded-2xl p-4 shadow-sm ring-1 ${
+                tone === "alert" ? "bg-red-50 ring-red-200" : "bg-white ring-slate-900/[0.06]"
+            }`}
+        >
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+            <p
+                className={`mt-1 font-semibold tabular-nums ${small ? "text-lg" : "text-2xl"} ${
+                    tone === "alert" ? "text-red-700" : "text-slate-900"
+                }`}
+            >
+                {value}
+            </p>
+        </div>
+    );
+}
+
+/** Card shell around a `<table>`, identical chrome to the vendors table. */
+export function TableShell({
+    children,
+    hideCols,
+}: {
+    children: ReactNode;
+    /** 1-based column positions to drop below `md` (see pa-tcol-hide-* in globals.css). */
+    hideCols?: number[];
+}) {
+    const hide = (hideCols ?? []).map((n) => `pa-tcol-hide-${n}`).join(" ");
+    return (
+        <div className="pa-admin-tablewrap overflow-x-auto rounded-2xl bg-white shadow-sm ring-1 ring-slate-900/[0.06]">
+            <table
+                className={`w-full border-collapse text-left text-[13.5px] md:min-w-[680px] ${hide}`.trim()}
+            >
+                {children}
+            </table>
         </div>
     );
 }
@@ -164,10 +227,13 @@ export function TableShell({ children }: { children: ReactNode }) {
 /** Uppercase column-header row; pass the labels in order. */
 export function TableHead({ columns }: { columns: string[] }) {
     return (
-        <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr>
+        <thead className="bg-slate-50">
+            <tr className="border-b border-slate-200">
                 {columns.map((c) => (
-                    <th key={c} className="px-4 py-3 font-medium">
+                    <th
+                        key={c}
+                        className="whitespace-nowrap px-2 py-2.5 text-[11px] font-bold uppercase tracking-[0.1em] text-slate-400 md:px-4"
+                    >
                         {c}
                     </th>
                 ))}
@@ -212,12 +278,14 @@ const BADGE_TONES: Record<string, string> = {
 };
 
 /** Capitalised, underscores-to-spaces status pill, tone keyed off the value. */
-export function StatusBadge({ value }: { value: string }) {
+export function StatusBadge({ value }: { value: string | null | undefined }) {
+    if (!value) return <Dash>{null}</Dash>;
     const tone = BADGE_TONES[value] ?? "bg-slate-100 text-slate-600 ring-slate-500/20";
     return (
         <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ring-1 ring-inset ${tone}`}
+            className={`inline-flex items-center gap-1.5 rounded-md px-2 py-[3px] text-[12px] font-medium capitalize ring-1 ring-inset ${tone}`}
         >
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-70" />
             {value.replace(/_/g, " ")}
         </span>
     );
@@ -261,17 +329,20 @@ export function Notice({
     title,
     children,
 }: {
-    tone: "info" | "warn" | "error";
+    // `ok` is for a check that PASSED — the ledgers page leads with one, and a
+    // passing invariant reported in neutral grey reads as "no data yet".
+    tone: "info" | "ok" | "warn" | "error";
     title: string;
     children: ReactNode;
 }) {
     const tones = {
-        info: "border-slate-200 bg-white text-slate-600",
-        warn: "border-amber-200 bg-amber-50 text-amber-800",
-        error: "border-red-200 bg-red-50 text-red-800",
+        info: "bg-white text-slate-600 ring-slate-900/[0.06]",
+        ok: "bg-green-50 text-green-800 ring-green-200",
+        warn: "bg-amber-50 text-amber-800 ring-amber-200",
+        error: "bg-red-50 text-red-800 ring-red-200",
     } as const;
     return (
-        <div className={`rounded-xl border p-6 text-sm ${tones[tone]}`}>
+        <div className={`rounded-2xl p-6 text-sm ring-1 ${tones[tone]}`}>
             <p className="font-medium">{title}</p>
             <p className="mt-1 opacity-90">{children}</p>
         </div>
@@ -373,7 +444,7 @@ export function RunJobBar({
     }
 
     return (
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-900/[0.06]">
             <span className="text-sm font-medium text-slate-700">{label}</span>
             {children}
             <button
@@ -536,9 +607,7 @@ export function DetailDrawer({
                         aria-label="Close"
                         className="shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                     >
-                        <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-                            <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                        </svg>
+                        <X size={20} weight="bold" aria-hidden />
                     </button>
                 </div>
 
@@ -617,9 +686,9 @@ export function FilterBar({
     onTab,
 }: FilterBarProps) {
     return (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
             {tabs && tabs.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap items-center gap-0.5 rounded-xl bg-white p-1 shadow-sm ring-1 ring-slate-900/[0.06]">
                     {tabs.map((t) => {
                         const active = t.value === activeTab;
                         return (
@@ -627,15 +696,17 @@ export function FilterBar({
                                 key={t.value}
                                 type="button"
                                 onClick={() => onTab?.(t.value)}
-                                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                                className={`rounded-md px-2.5 py-1 text-[12.5px] font-medium capitalize transition ${
                                     active
-                                        ? "bg-slate-900 text-white"
-                                        : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                                        ? "bg-[#0B7A55] text-white"
+                                        : "text-slate-600 hover:bg-slate-100"
                                 }`}
                             >
                                 {t.label}
                                 {t.count != null && (
-                                    <span className={`ml-1.5 ${active ? "text-slate-300" : "text-slate-400"}`}>
+                                    <span
+                                        className={`ml-1.5 tabular-nums ${active ? "text-white/70" : "text-slate-400"}`}
+                                    >
                                         {t.count}
                                     </span>
                                 )}
@@ -649,7 +720,7 @@ export function FilterBar({
                 value={search}
                 onChange={(e) => onSearch(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-slate-600 focus:ring-1 focus:ring-slate-600 sm:w-64"
+                className="w-full max-w-xs rounded-xl bg-white px-3 py-[7px] shadow-sm ring-1 ring-slate-900/[0.06] text-[13px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-[#0B7A55]/40 sm:w-72"
             />
         </div>
     );
@@ -813,7 +884,7 @@ export function ToastHost({ children }: { children: ReactNode }) {
     return (
         <ToastContext.Provider value={api}>
             {children}
-            <div className="pointer-events-none fixed bottom-4 right-4 z-[60] flex w-full max-w-sm flex-col gap-2">
+            <div className="pointer-events-none fixed bottom-4 right-4 z-[60] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2">
                 {toasts.map((t) => (
                     <div
                         key={t.id}

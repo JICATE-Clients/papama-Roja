@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { inr, shortDateTime } from "@/lib/format";
 
 import {
   useVendorFetch,
@@ -34,7 +35,7 @@ interface Redemption {
 function fmtDate(v: string | null) {
   if (!v) return null;
   const d = new Date(v);
-  return isNaN(d.getTime()) ? v : d.toLocaleString();
+  return isNaN(d.getTime()) ? v : shortDateTime(v);
 }
 
 export default function VendorRedemptionsPage() {
@@ -60,13 +61,13 @@ export default function VendorRedemptionsPage() {
         resourceLabel="redemptions"
         emptyHint="Redemptions appear here after you scan a token and serve a meal."
       >
-        <TableShell>
+        <TableShell hideCols={[2]}>
           <TableHead columns={["Redemption", "Meal", "When", "Payment", "Proof"]} />
           <tbody>
             {rows.map((r) => (
               <tr key={r.id} className="border-b border-slate-100 align-top last:border-0">
                 <td className="px-4 py-3 font-mono text-xs text-slate-600">{r.id.slice(0, 8)}…</td>
-                <td className="px-4 py-3 text-slate-900">₹{r.menu_value_inr}</td>
+                <td className="px-4 py-3 text-slate-900">{inr(r.menu_value_inr)}</td>
                 <td className="px-4 py-3 text-xs text-slate-500">
                   <Dash>{fmtDate(r.redeemed_at)}</Dash>
                 </td>

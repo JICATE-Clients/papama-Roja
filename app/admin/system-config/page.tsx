@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 import { useCan } from "@/components/auth/AppUserProvider";
 import type { SystemConfigRow } from "@/lib/validation/schemas";
@@ -34,6 +34,33 @@ export default function AdminSystemConfigPage() {
 
 /** A config row tagged with a derived display category (drives the tab filter). */
 type TaggedConfigRow = SystemConfigRow & { category: string };
+
+/**
+ * A config key rendered with a wrap opportunity after every underscore.
+ *
+ * snake_case has no natural break point, so `beneficiary_registration_auto_approve`
+ * is one unbreakable word to the browser and holds the Key column at 282px inside
+ * a 342px card on a phone. `<wbr>` lets it wrap at the underscores instead — and
+ * unlike a zero-width space it contributes no character, so copying the key still
+ * yields exactly what is in the database.
+ */
+function ConfigKeyName({ value }: { value: string }) {
+    const parts = value.split("_");
+    return (
+        <>
+            {parts.map((part, i) => (
+                <Fragment key={i}>
+                    {i > 0 && (
+                        <>
+                            _<wbr />
+                        </>
+                    )}
+                    {part}
+                </Fragment>
+            ))}
+        </>
+    );
+}
 
 /** Group a config key into a human category for the tab bar. */
 function categoryOf(key: string): string {
@@ -114,7 +141,7 @@ function SystemConfigInner() {
                 resourceLabel="config rows"
                 emptyHint="Configuration rows will appear here once they are seeded."
                 table={
-                    <TableShell>
+                    <TableShell hideCols={[3, 4, 5]}>
                         <TableHead columns={columns} />
                         <tbody className="divide-y divide-slate-100">
                             {table.rows.map((c) => (
@@ -188,8 +215,10 @@ function ConfigRow({
 
     return (
         <tr className="hover:bg-slate-50">
-            <td className="px-4 py-3 font-mono text-xs font-medium text-slate-900">{row.key}</td>
-            <td className="px-4 py-3 text-slate-700">
+            <td className="px-2 md:px-4 py-3 font-mono text-xs font-medium text-slate-900">
+                <ConfigKeyName value={row.key} />
+            </td>
+            <td className="px-2 md:px-4 py-3 text-slate-700">
                 {editing ? (
                     <ValueEditor row={row} draft={draft} setDraft={setDraft} disabled={saving} />
                 ) : row.value == null ? (
@@ -198,15 +227,15 @@ function ConfigRow({
                     <span className="font-medium">{row.value}</span>
                 )}
             </td>
-            <td className="px-4 py-3 text-slate-500">{row.value_type}</td>
-            <td className="px-4 py-3 text-slate-600">
+            <td className="px-2 md:px-4 py-3 text-slate-500">{row.value_type}</td>
+            <td className="px-2 md:px-4 py-3 text-slate-600">
                 <Dash>{row.description}</Dash>
             </td>
-            <td className="px-4 py-3 text-slate-500">
+            <td className="px-2 md:px-4 py-3 text-slate-500">
                 {new Date(row.updated_at).toLocaleDateString()}
             </td>
             {canManage && (
-                <td className="px-4 py-3">
+                <td className="px-2 md:px-4 py-3">
                     {editing ? (
                         <div className="flex flex-wrap gap-1.5">
                             <ActionButton tone="primary" disabled={saving} onClick={() => save(false)}>

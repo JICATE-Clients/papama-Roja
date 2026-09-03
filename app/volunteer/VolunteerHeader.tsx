@@ -1,56 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+
+import { SectionIcon } from "@/components/nav/SectionIcon";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { ConsoleSidebar, type ConsoleNavItem } from "@/components/nav/ConsoleSidebar";
 import { MobileTabBar } from "@/components/ui/MobileTabBar";
 import { createClient } from "@/lib/supabase/client";
 
-const NAV = [
-  { href: "/volunteer", label: "Home" },
+const NAV: ConsoleNavItem[] = [
+  { href: "/volunteer", label: "Dashboard", exact: true },
   { href: "/volunteer/beneficiaries", label: "Register beneficiary" },
 ];
 
-type VolIcon = "home" | "register" | "signout";
-
-// Inline stroke icons for the mobile bottom bar; color inherits via currentColor.
-function VolIconGlyph({ name }: { name: VolIcon }) {
-  const common = {
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 2,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    className: "h-5 w-5",
-  };
-  switch (name) {
-    case "home":
-      return (
-        <svg {...common}>
-          <path d="M3 9.5 12 3l9 6.5M5 10v10h14V10" />
-        </svg>
-      );
-    case "register":
-      return (
-        <svg {...common}>
-          <path d="M18 7.5v6m3-3h-6m-2.25-2.625a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
-        </svg>
-      );
-    case "signout":
-      return (
-        <svg {...common}>
-          <path d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
-        </svg>
-      );
-  }
-}
-
-/** Volunteer top bar: brand, nav links, and a sign-out action. Client component. */
+/**
+ * Volunteer chrome.
+ *
+ * Desktop (md+): the same left sidebar as vendor and admin. Three links is
+ * sparse for a 236px column, but a volunteer moving between consoles should
+ * not have to relearn where navigation lives.
+ *
+ * Mobile: unchanged — slim top bar plus the bottom tab bar, with "Register
+ * beneficiary" as the centre action.
+ */
 export function VolunteerHeader() {
   const router = useRouter();
-  const pathname = usePathname();
   const [signingOut, setSigningOut] = useState(false);
 
   async function signOut() {
@@ -62,33 +38,15 @@ export function VolunteerHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2 sm:flex-none sm:flex-nowrap sm:gap-6">
-            <Link href="/volunteer" className="flex shrink-0 items-baseline gap-3 transition hover:opacity-80">
-              <span className="bg-gradient-to-r from-slate-900 to-slate-500 bg-clip-text text-xl font-bold tracking-tight text-transparent">pApAmA</span>
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Volunteer</span>
-            </Link>
-            {/* Desktop nav strip — the mobile bottom bar replaces it below md. */}
-            <nav className="hidden flex-wrap items-center gap-1 md:flex">
-              {NAV.map((item) => {
-                const active = pathname === item.href || pathname.startsWith(item.href + "/");
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                      active
-                        ? "bg-slate-900 text-white"
-                        : "text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
+      <ConsoleSidebar panel="volunteer" badge="Volunteer" home="/volunteer" items={NAV} />
+
+      {/* Mobile only — the sidebar carries the brand and sign-out on md+. */}
+      <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur-md md:hidden">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <Link href="/volunteer" className="flex shrink-0 items-baseline gap-3 transition hover:opacity-80">
+            <span className="text-xl font-extrabold tracking-tight text-[var(--app-accent)]">pApAmA</span>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Volunteer</span>
+          </Link>
           <button
             onClick={signOut}
             disabled={signingOut}
@@ -105,11 +63,11 @@ export function VolunteerHeader() {
         fab={{
           href: "/volunteer/beneficiaries",
           label: "Register beneficiary",
-          icon: <VolIconGlyph name="register" />,
+          icon: <SectionIcon href="/volunteer/beneficiaries" size={22} />,
         }}
         tabs={[
-          { href: "/volunteer", label: "Home", icon: <VolIconGlyph name="home" /> },
-          { label: "Sign out", icon: <VolIconGlyph name="signout" />, onClick: signOut },
+          { href: "/volunteer", label: "Home", icon: <SectionIcon href="/volunteer" size={22} /> },
+          { label: "Sign out", icon: <SectionIcon name="signout" size={22} color="#7c7367" />, onClick: signOut },
         ]}
       />
     </>

@@ -130,7 +130,7 @@ export default function AdminVendorMenusPage() {
                 emptyHint="Menu items proposed by vendors will appear here for review."
                 table={
                     <>
-                        <TableShell>
+                        <TableShell hideCols={[1, 4, 5]}>
                             <TableHead columns={columns} />
                             <tbody className="divide-y divide-slate-100">
                                 {table.rows.map((m) => (
@@ -139,30 +139,30 @@ export default function AdminVendorMenusPage() {
                                         onClick={() => drawer.openRow(m)}
                                         className="cursor-pointer hover:bg-slate-50"
                                     >
-                                        <td className="px-4 py-3 font-medium text-slate-900">
+                                        <td className="px-2 md:px-4 py-3 font-medium text-slate-900">
                                             <Dash>{m.vendor_name}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-800">
+                                        <td className="px-2 md:px-4 py-3 text-slate-800">
                                             <Dash>{m.item_name}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             {m.price != null ? `₹${m.price}` : "—"}
                                         </td>
-                                        <td className="px-4 py-3 capitalize text-slate-700">
+                                        <td className="px-2 md:px-4 py-3 capitalize text-slate-700">
                                             <Dash>{m.nutrition_category?.replace(/_/g, " ")}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-xs text-slate-500">
+                                        <td className="px-2 md:px-4 py-3 text-xs text-slate-500">
                                             {m.is_special_care_equivalent
                                                 ? m.special_care_equivalent_approved
                                                     ? "equiv ✓ approved"
                                                     : "equiv (pending)"
                                                 : "—"}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={m.approval_status} />
                                         </td>
                                         {canManage && (
-                                            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                            <td className="px-2 md:px-4 py-3" onClick={(e) => e.stopPropagation()}>
                                                 {m.approval_status === "pending" ? (
                                                     <DecisionButtons
                                                         id={m.id}

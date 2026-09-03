@@ -1,5 +1,6 @@
 "use client";
 
+import { shortDateTime } from "@/lib/format";
 import type { AuditLogResponse } from "@/lib/validation/schemas";
 
 import {
@@ -29,6 +30,14 @@ function renderValue(v: unknown): string {
 }
 
 /** Admin audit-logs — append-only, immutable action trail; rows expand to full metadata. */
+/** "24 Aug" — the phone-width stamp; the full one returns at md. */
+function dayMonth(iso: string): string {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime())
+        ? "—"
+        : d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+}
+
 export default function AdminAuditLogsPage() {
     const { items, state, errorMsg } = useAdminList<AuditRow>(
         "/api/admin/audit-logs",
@@ -79,7 +88,7 @@ export default function AdminAuditLogsPage() {
                 emptyHint="Audit entries will appear here as admin actions are recorded."
                 table={
                     <>
-                        <TableShell>
+                        <TableShell hideCols={[2, 3, 4]}>
                             <TableHead columns={["Action", "Actor role", "Entity", "Summary", "When"]} />
                             <tbody className="divide-y divide-slate-100">
                                 {table.rows.map((a) => (
@@ -88,15 +97,22 @@ export default function AdminAuditLogsPage() {
                                         onClick={() => drawer.openRow(a)}
                                         className="cursor-pointer hover:bg-slate-50"
                                     >
-                                        <td className="px-4 py-3 font-medium text-slate-900">{a.action}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 py-3 font-medium text-slate-900 md:px-4">
+                                            <span className="break-words">{a.action}</span>
+                                            {a.summary && (
+                                                <span className="mt-0.5 block font-normal leading-snug text-slate-500 md:hidden">
+                                                    {a.summary}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-2 md:px-4 py-3">
                                             {a.actor_role ? (
                                                 <StatusBadge value={a.actor_role} />
                                             ) : (
                                                 <span className="text-xs text-slate-400">system</span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             {a.entity_table}
                                             {a.entity_id && (
                                                 <span className="ml-1 font-mono text-xs text-slate-400">
@@ -104,11 +120,14 @@ export default function AdminAuditLogsPage() {
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             <Dash>{a.summary}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-500">
-                                            {new Date(a.created_at).toLocaleString()}
+                                        <td className="whitespace-nowrap px-2 py-3 text-slate-500 md:whitespace-normal md:px-4">
+                                            <span className="md:hidden">{dayMonth(a.created_at)}</span>
+                                            <span className="hidden md:inline">
+                                                {shortDateTime(a.created_at)}
+                                            </span>
                                         </td>
                                     </tr>
                                 ))}

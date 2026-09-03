@@ -121,6 +121,8 @@ Then open the donor portal:
 
 Project reference docs live in [`/docs`](./docs):
 
+- `project-spec.md` — **start here.** Full project specification & team onboarding:
+  what pApAmA is, the core flows, architecture, data model, config, and current status
 - `token-flow.md` — authoritative token lifecycle & distribution
 - `prd.md` — Phase 1 scope (titled "pApAmA — Phase 1 Specification")
 - `papama-owner-scope.md` — redemption / proof / settlement / fraud rules

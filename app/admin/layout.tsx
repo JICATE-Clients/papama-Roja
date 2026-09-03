@@ -9,7 +9,8 @@ import { getAppUser } from "@/lib/auth";
 import { isAdminConsoleRole } from "@/lib/permissions";
 
 import { AdminBottomNav } from "./AdminBottomNav";
-import { AdminHeader } from "./AdminHeader";
+import { AdminSidebar } from "./AdminSidebar";
+import { AdminTopBar } from "./AdminHeader";
 import { ToastHost } from "./_ui";
 
 /**
@@ -35,13 +36,28 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     return (
         <AppUserProvider user={user}>
             <BugReporterWrapper>
-                <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100/60">
-                    <AdminHeader />
-                    {/* Mounted once here so every admin page's useToast() works
-                        without a per-page <ToastHost> wrapper. */}
-                    <ToastHost>
-                        <main className="mx-auto max-w-6xl px-6 py-8 pb-24 md:pb-8">{children}</main>
-                    </ToastHost>
+                {/* `pa-app` re-points Tailwind's slate/white/green theme
+                    variables to the shared console palette (see app/globals.css).
+                    Every slate-* utility inside resolves through it, so all four
+                    consoles retint from one place. */}
+                <div className="pa-app pa-app-root min-h-screen">
+                    <AdminSidebar />
+
+                    {/* Cleared by the fixed sidebar on md+; full width below it,
+                        where <AdminBottomNav/> takes over instead. */}
+                    <div className="pa-admin-main">
+                        <AdminTopBar />
+                        {/* Mounted once here so every admin page's useToast() works
+                            without a per-page <ToastHost> wrapper. */}
+                        <ToastHost>
+                            {/* Wider than the old max-w-6xl: the console is tables, and
+                                a 1152px cap wasted a third of a modern display. */}
+                            <main className="mx-auto max-w-[1600px] px-6 py-7 pb-24 md:px-8 md:pb-10">
+                                {children}
+                            </main>
+                        </ToastHost>
+                    </div>
+
                     <AdminBottomNav />
                 </div>
             </BugReporterWrapper>
@@ -51,7 +67,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
 function AccessDenied({ role }: { role: string }) {
     return (
-        <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+        <main className="pa-admin flex min-h-screen items-center justify-center bg-slate-50 px-4">
             <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
                 <h1 className="text-xl font-semibold text-slate-900">Access denied</h1>
                 <p className="mt-2 text-sm text-slate-500">

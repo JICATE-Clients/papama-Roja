@@ -121,7 +121,7 @@ export default function BeneficiaryRegistrationsPage() {
                 emptyHint="Submit a registration above to start the approval queue."
                 table={
                     <>
-                        <TableShell>
+                        <TableShell hideCols={[2, 3, 4, 6]}>
                             <TableHead columns={columns} />
                             <tbody className="divide-y divide-slate-100">
                                 {table.rows.map((r) => (
@@ -130,28 +130,28 @@ export default function BeneficiaryRegistrationsPage() {
                                         onClick={() => drawer.openRow(r)}
                                         className="cursor-pointer hover:bg-slate-50"
                                     >
-                                        <td className="px-4 py-3 text-slate-800">
+                                        <td className="px-2 md:px-4 py-3 text-slate-800">
                                             <Dash>{r.full_name}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 capitalize text-slate-700">
+                                        <td className="px-2 md:px-4 py-3 capitalize text-slate-700">
                                             {r.category.replace(/_/g, " ")}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             <Dash>{r.contact}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-xs text-slate-500">
+                                        <td className="px-2 md:px-4 py-3 text-xs text-slate-500">
                                             {r.face_hash_present ? "face ✓" : "no face"}
                                             {r.aadhaar_present ? " · aadhaar ✓" : ""}
                                             {r.document_count > 0 ? ` · ${r.document_count} doc(s)` : ""}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={r.status} />
                                         </td>
-                                        <td className="px-4 py-3 text-slate-500">
+                                        <td className="px-2 md:px-4 py-3 text-slate-500">
                                             {new Date(r.created_at).toLocaleDateString()}
                                         </td>
                                         {canManage && (
-                                            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                            <td className="px-2 md:px-4 py-3" onClick={(e) => e.stopPropagation()}>
                                                 {r.status === "pending" ? (
                                                     <DecisionButtons id={r.id} onDone={reload} />
                                                 ) : (

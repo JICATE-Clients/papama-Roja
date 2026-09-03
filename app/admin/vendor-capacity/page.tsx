@@ -89,7 +89,7 @@ export default function AdminVendorCapacityPage() {
                 emptyHint="Approved vendors will appear here with their availability and daily usage."
                 table={
                     <>
-                        <TableShell>
+                        <TableShell hideCols={[3, 4, 5, 6]}>
                             <TableHead
                                 columns={[
                                     "Vendor",
@@ -104,23 +104,23 @@ export default function AdminVendorCapacityPage() {
                             <tbody className="divide-y divide-slate-100">
                                 {table.rows.map((r) => (
                                     <tr key={r.vendor_id} className="hover:bg-slate-50">
-                                        <td className="px-4 py-3 font-medium text-slate-900">
+                                        <td className="px-2 md:px-4 py-3 font-medium text-slate-900">
                                             <Dash>{r.name}</Dash>
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={r.status} />
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={availabilityLabel(r)} />
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <BoolBadge value={r.is_open} yes="Open" no="Closed" />
                                         </td>
-                                        <td className="px-4 py-3 text-slate-700">
+                                        <td className="px-2 md:px-4 py-3 text-slate-700">
                                             {r.daily_meal_capacity != null ? r.daily_meal_capacity : "—"}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-700">{r.served_today}</td>
-                                        <td className="px-4 py-3 text-slate-700">
+                                        <td className="px-2 md:px-4 py-3 text-slate-700">{r.served_today}</td>
+                                        <td className="px-2 md:px-4 py-3 text-slate-700">
                                             {r.remaining_today != null ? r.remaining_today : "—"}
                                         </td>
                                     </tr>

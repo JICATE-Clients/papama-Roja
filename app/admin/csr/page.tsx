@@ -90,20 +90,20 @@ export default function AdminCsrPage() {
                                 const totals = (r.summary?.totals ?? {}) as Record<string, number>;
                                 return (
                                     <tr key={r.id} className="hover:bg-slate-50">
-                                        <td className="px-4 py-3 font-medium text-slate-900">
+                                        <td className="px-2 md:px-4 py-3 font-medium text-slate-900">
                                             <Dash>{r.title}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             {r.period_start || r.period_end
                                                 ? `${r.period_start ?? "…"} → ${r.period_end ?? "…"}`
                                                 : "All time"}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-700">{totals.companies ?? 0}</td>
-                                        <td className="px-4 py-3 text-slate-700">
+                                        <td className="px-2 md:px-4 py-3 text-slate-700">{totals.companies ?? 0}</td>
+                                        <td className="px-2 md:px-4 py-3 text-slate-700">
                                             {(totals.total_inr ?? 0).toLocaleString()}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-700">{totals.tokens_funded ?? 0}</td>
-                                        <td className="px-4 py-3 text-slate-500">
+                                        <td className="px-2 md:px-4 py-3 text-slate-700">{totals.tokens_funded ?? 0}</td>
+                                        <td className="px-2 md:px-4 py-3 text-slate-500">
                                             {new Date(r.created_at).toLocaleDateString()}
                                         </td>
                                     </tr>

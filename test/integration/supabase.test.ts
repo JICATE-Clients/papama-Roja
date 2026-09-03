@@ -1,9 +1,17 @@
 /**
- * Integration tests against the REAL Supabase instance.
+ * Integration tests against a REAL Supabase instance.
  *
- * Run with:  npx vitest run test/integration/supabase.test.ts
+ * Run with:  PAPAMA_ALLOW_INTEGRATION_WRITES=1 npx vitest run test/integration/supabase.test.ts
  *
- * All test data is tagged with "_test_integration_" and is NOT cleaned up.
+ * ⚠️ These tests WRITE, and they do NOT clean up — every row they create is
+ * tagged "_test_integration_" and left behind. Pointed at production that is
+ * not a test suite, it is a data-entry job: on 2026-08-21 a plain
+ * `npx vitest run` had left 123 tagged rows in the live database, including
+ * every row of `fraud_flags`, `ngo_partners` and `consent_records`, plus 18
+ * fake vendors visible in the admin console.
+ *
+ * Hence the opt-in below. `npm run test` no longer touches the database by
+ * accident; you have to say so.
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { describe, it, expect, beforeAll } from "vitest";
@@ -16,6 +24,27 @@ const SERVICE_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4ZHhlZm9mZXlrenZlZ3lraXR0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTU3NzY1OCwiZXhwIjoyMDk3MTUzNjU4fQ.pS_wcNvJGEmDozHphkgrZNmIXU_BCau8-Bpg97PLSV0";
 const ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4ZHhlZm9mZXlrenZlZ3lraXR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1Nzc2NTgsImV4cCI6MjA5NzE1MzY1OH0.t3ETvCrCvTHhvSfmQQDK-oEFHkC6a0hEXOCnB28X-HI";
+
+/**
+ * Opt-in guard.
+ *
+ * Without PAPAMA_ALLOW_INTEGRATION_WRITES=1 the whole file is skipped, so a
+ * bare `npm run test` or `npx vitest run` can never write to the database. The
+ * unit suite (30 files, ~2400 tests) is unaffected and still runs.
+ *
+ * Set the variable deliberately, and preferably against a scratch project
+ * rather than the ref hardcoded above.
+ */
+const WRITES_ALLOWED = process.env.PAPAMA_ALLOW_INTEGRATION_WRITES === "1";
+
+const describeIntegration = WRITES_ALLOWED ? describe : describe.skip;
+
+if (!WRITES_ALLOWED) {
+    console.warn(
+        "\n[integration] SKIPPED — these tests write to a live Supabase project and do not clean up.\n" +
+            "[integration] Set PAPAMA_ALLOW_INTEGRATION_WRITES=1 to run them.\n"
+    );
+}
 
 const admin: SupabaseClient = createClient(SUPABASE_URL, SERVICE_KEY);
 const anon: SupabaseClient = createClient(SUPABASE_URL, ANON_KEY);
@@ -63,7 +92,7 @@ const EXPECTED_TABLES = [
 // ╔═════════════════════════════════════════════════════════════════════════╗
 // ║  1. Connection & Schema (5 tests)                                      ║
 // ╚═════════════════════════════════════════════════════════════════════════╝
-describe("1 — Connection & Schema", () => {
+describeIntegration("1 — Connection & Schema", () => {
   it("connects with service role key", { timeout: T }, async () => {
     const { data, error } = await admin
       .from("system_config")
@@ -119,8 +148,8 @@ describe("1 — Connection & Schema", () => {
 // ╔═════════════════════════════════════════════════════════════════════════╗
 // ║  2. System Config — spec §7 values (10 tests)                         ║
 // ╚═════════════════════════════════════════════════════════════════════════╝
-describe("2 — System Config (spec §7)", () => {
-  let configMap: Record<string, string | null> = {};
+describeIntegration("2 — System Config (spec §7)", () => {
+  const configMap: Record<string, string | null> = {};
 
   beforeAll(async () => {
     const { data, error } = await admin
@@ -230,7 +259,7 @@ describe("2 — System Config (spec §7)", () => {
 // ╔═════════════════════════════════════════════════════════════════════════╗
 // ║  3. CRUD operations with service role (8 tests)                        ║
 // ╚═════════════════════════════════════════════════════════════════════════╝
-describe("3 — CRUD with service role", () => {
+describeIntegration("3 — CRUD with service role", () => {
   let testVendorId: string;
 
   it("inserts a test vendor row and reads it back", { timeout: T }, async () => {
@@ -427,7 +456,7 @@ describe("3 — CRUD with service role", () => {
 // ╔═════════════════════════════════════════════════════════════════════════╗
 // ║  4. RLS policy smoke tests (8 tests)                                   ║
 // ╚═════════════════════════════════════════════════════════════════════════╝
-describe("4 — RLS policy smoke tests (anon client)", () => {
+describeIntegration("4 — RLS policy smoke tests (anon client)", () => {
   it("anon CANNOT read users table", { timeout: T }, async () => {
     const { data, error } = await anon.from("users").select("*").limit(5);
     const blocked = error !== null || (data ?? []).length === 0;
@@ -512,7 +541,7 @@ describe("4 — RLS policy smoke tests (anon client)", () => {
 // ╔═════════════════════════════════════════════════════════════════════════╗
 // ║  5. Foreign key constraints (5 tests)                                  ║
 // ╚═════════════════════════════════════════════════════════════════════════╝
-describe("5 — Foreign key constraints", () => {
+describeIntegration("5 — Foreign key constraints", () => {
   const BOGUS_UUID = "00000000-0000-0000-0000-000000000001";
 
   it("inserting a token with non-existent donor_id fails (FK violation)", { timeout: T }, async () => {
@@ -600,7 +629,7 @@ describe("5 — Foreign key constraints", () => {
 // ╔═════════════════════════════════════════════════════════════════════════╗
 // ║  6. Data integrity (5 tests)                                           ║
 // ╚═════════════════════════════════════════════════════════════════════════╝
-describe("6 — Data integrity", () => {
+describeIntegration("6 — Data integrity", () => {
   const VALID_USER_ROLES = [
     "admin",
     "donor",

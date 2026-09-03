@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { DashboardResponse, TokenItem } from "@/lib/donor/types/contract";
+import { inr, shortDate } from "@/lib/format";
+import { SectionIcon } from "@/components/nav/SectionIcon";
 
 interface DashboardOverviewProps {
   dashboard: DashboardResponse;
@@ -27,90 +29,30 @@ export default function DashboardOverview({
   const stats = [
     {
       name: "Total Donated Amount",
-      value: `₹${dashboard.total_donations}`,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth="2.5"
-          stroke="currentColor"
-          className="h-5 w-5 text-emerald-600 dark:text-emerald-400"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5h16.5M4.5 9h15M5.25 13.5h13.5m-11.25 5.25h9"
-          />
-        </svg>
-      ),
-      color: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+      value: inr(dashboard.total_donations),
+      icon: <SectionIcon name="heart" color="#C98A15" size={20} />,
+      color: "bg-[#C98A15]/12",
       description: `${dashboard.total_tokens} lifetime tokens minted`,
     },
     {
       name: "Meals Sponsored",
       value: dashboard.meals_sponsored,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth="2.5"
-          stroke="currentColor"
-          className="h-5 w-5 text-amber-600 dark:text-amber-400"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-.778.099-1.533.284-2.253"
-          />
-        </svg>
-      ),
-      color: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+      icon: <SectionIcon name="menu" color="#D4643C" size={20} />,
+      color: "bg-[#D4643C]/12",
       description: "Direct beneficiary meals funded",
     },
     {
       name: "Token Redemption Rate",
       value: `${redemptionRate}%`,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth="2.5"
-          stroke="currentColor"
-          className="h-5 w-5 text-blue-600 dark:text-blue-400"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v5.25c0 .621-.504 1.125-1.125 1.125h-2.25A1.125 1.125 0 013 18.375v-5.25zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125v-9.75zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v14.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
-          />
-        </svg>
-      ),
-      color: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
+      icon: <SectionIcon name="impact" color="#0B7A55" size={20} />,
+      color: "bg-[#0B7A55]/12",
       description: `${redeemedTokens} of ${totalTokens} tokens redeemed`,
     },
     {
       name: "Available Credits",
-      value: `₹${dashboard.total_credit}`,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth="2.5"
-          stroke="currentColor"
-          className="h-5 w-5 text-teal-600 dark:text-teal-400"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3"
-          />
-        </svg>
-      ),
-      color: "bg-teal-500/10 text-teal-700 dark:text-teal-300",
+      value: inr(dashboard.total_credit),
+      icon: <SectionIcon name="wallet" color="#B8860B" size={20} />,
+      color: "bg-[#B8860B]/12",
       description: "Non-withdrawable credits balance",
     },
   ];
@@ -120,28 +62,28 @@ export default function DashboardOverview({
       name: "Live",
       count: liveTokens,
       color: "bg-blue-500",
-      textColor: "text-blue-600 dark:text-blue-400",
+      textColor: "text-blue-600 ",
       description: "Ready to be redeemed",
     },
     {
       name: "Redeemed",
       count: redeemedTokens,
       color: "bg-emerald-500",
-      textColor: "text-emerald-600 dark:text-emerald-400",
+      textColor: "text-emerald-600 ",
       description: "Successfully claimed at partner canteens",
     },
     {
       name: "In Distribution",
       count: inFlightTokens,
       color: "bg-amber-500",
-      textColor: "text-amber-600 dark:text-amber-400",
+      textColor: "text-amber-600 ",
       description: "In the admin pool or with a volunteer",
     },
     {
       name: "Expired",
       count: expiredTokens,
       color: "bg-red-500",
-      textColor: "text-red-500 dark:text-red-400",
+      textColor: "text-red-500 ",
       description: "Expired before canteen scanning",
     },
   ];
@@ -149,8 +91,8 @@ export default function DashboardOverview({
   return (
     <div className="space-y-8">
       {/* Welcome Hero */}
-      <div className="rounded-2xl bg-gradient-to-r from-emerald-800 to-teal-700 p-6 text-white shadow-xl dark:from-emerald-950 dark:to-teal-900 md:p-8">
-        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+      <div className="rounded-2xl bg-gradient-to-r from-emerald-800 to-teal-700 p-6 text-white shadow-xl md:p-8">
+        <h1 className="text-2xl sm:text-3xl font-medium tracking-tight">
           Welcome back!
         </h1>
         <p className="mt-2 max-w-xl text-emerald-100/80 text-sm md:text-base font-medium leading-relaxed">
@@ -159,13 +101,13 @@ export default function DashboardOverview({
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             href="/donor/donate"
-            className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-emerald-800 shadow transition hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-1 focus-visible:ring-offset-emerald-800 active:scale-[.98]"
+            className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-emerald-800 shadow transition hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-1 focus-visible:ring-offset-emerald-800 active:scale-[.98]"
           >
             Donate Money
           </Link>
           <Link
             href="/donor/credit"
-            className="inline-flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-1 focus-visible:ring-offset-emerald-800 active:scale-[.98]"
+            className="inline-flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-1 focus-visible:ring-offset-emerald-800 active:scale-[.98]"
           >
             Manage & Convert Credit
           </Link>
@@ -177,19 +119,19 @@ export default function DashboardOverview({
         {stats.map((stat) => (
           <div
             key={stat.name}
-            className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900/40"
+            className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm "
           >
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
+            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+              <span className="text-sm font-medium text-zinc-500 ">
                 {stat.name}
               </span>
               <div className={`rounded-xl p-2.5 ${stat.color}`}>{stat.icon}</div>
             </div>
             <div className="mt-4">
-              <span className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+              <span className="text-3xl font-bold tracking-tight text-zinc-900 ">
                 {stat.value}
               </span>
-              <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+              <p className="mt-1 text-xs text-zinc-400 ">
                 {stat.description}
               </p>
             </div>
@@ -200,8 +142,8 @@ export default function DashboardOverview({
       {/* Charts & Breakdown */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Token Status Breakdown */}
-        <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900/40 lg:col-span-1">
-          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+        <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm lg:col-span-1">
+          <h2 className="text-base font-medium text-zinc-900 ">
             Token Status Breakdown
           </h2>
           <p className="text-zinc-400 text-xs mt-1">
@@ -216,21 +158,21 @@ export default function DashboardOverview({
                   : 0;
               return (
                 <div key={status.name} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs font-semibold">
-                    <span className="text-zinc-700 dark:text-zinc-300">
+                  <div className="flex items-center justify-between text-xs font-medium">
+                    <span className="text-zinc-700 ">
                       {status.name}
                     </span>
-                    <span className={`font-bold ${status.textColor}`}>
+                    <span className={`font-semibold ${status.textColor}`}>
                       {status.count} ({percentage}%)
                     </span>
                   </div>
-                  <div className="h-2 w-full rounded-full bg-zinc-100 dark:bg-zinc-800">
+                  <div className="h-2 w-full rounded-full bg-zinc-100 ">
                     <div
                       className={`h-full rounded-full ${status.color}`}
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
-                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                  <p className="text-[11px] text-zinc-400 ">
                     {status.description}
                   </p>
                 </div>
@@ -240,10 +182,10 @@ export default function DashboardOverview({
         </div>
 
         {/* Live Token Activity Feed */}
-        <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900/40 lg:col-span-2">
-          <div className="flex items-center justify-between">
+        <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm lg:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
             <div>
-              <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+              <h2 className="text-base font-medium text-zinc-900 ">
                 Recent Generated Tokens
               </h2>
               <p className="text-zinc-400 text-xs mt-1">
@@ -252,7 +194,7 @@ export default function DashboardOverview({
             </div>
             <Link
               href="/donor/tokens"
-              className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+              className="shrink-0 whitespace-nowrap text-xs font-medium text-emerald-600 hover:underline"
             >
               View Token Registry
             </Link>
@@ -267,7 +209,7 @@ export default function DashboardOverview({
               tokens.slice(0, 3).map((token) => (
                 <div
                   key={token.token_id}
-                  className="flex items-start justify-between rounded-xl border border-zinc-150/60 p-4 transition-colors hover:bg-zinc-50/50 dark:border-zinc-800/40 dark:hover:bg-zinc-900/20"
+                  className="flex items-start justify-between rounded-xl border border-zinc-200/60 p-4 transition-colors hover:bg-zinc-50/50 "
                 >
                   <div className="flex items-start gap-3">
                     <div
@@ -285,56 +227,60 @@ export default function DashboardOverview({
                       <div className="flex items-center gap-2">
                         <Link
                           href={`/donor/tokens/${token.token_id || ''}`}
-                          className="font-mono text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:text-emerald-600"
+                          className="font-mono text-xs font-semibold text-zinc-700 hover:text-emerald-600"
                         >
-                          {token.qr_payload
-                            ? token.qr_payload.substring(0, 18)
+                          {/* The donor-facing reference is the serial number.
+                              This used to print `qr_payload` — the value a
+                              vendor scans to redeem the token — which is both
+                              unreadable and not something to list on screen. */}
+                          {token.serial_number
+                            ? token.serial_number
                             : token.token_id
-                            ? token.token_id.substring(0, 18)
-                            : 'TOKEN'}...
+                            ? `${token.token_id.substring(0, 8)}…`
+                            : 'TOKEN'}
                         </Link>
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${
                             token.status === "live"
-                              ? "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400"
+                              ? "bg-blue-50 text-blue-700 "
                               : token.status === "redeemed"
-                              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                              ? "bg-emerald-50 text-emerald-700 "
                               : token.status === "expired"
-                              ? "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400"
-                              : "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
+                              ? "bg-red-50 text-red-700 "
+                              : "bg-amber-50 text-amber-700 "
                           }`}
                         >
                           {token.status.replace(/_/g, " ")}
                         </span>
                       </div>
-                      <p className="mt-1 text-xs font-bold text-zinc-900 dark:text-zinc-50">
-                        {token.type ? token.type.replace("_", " ").toUpperCase() : "STANDARD"} TOKEN · Value ₹{token.value || 50}
+                      <p className="mt-1 text-xs font-semibold text-zinc-900 ">
+                        {token.type ? token.type.replace("_", " ").toUpperCase() : "STANDARD"} TOKEN · Value {inr(token.value || 50)}
                       </p>
                       {token.status === "redeemed" && token.vendor_name && (
-                        <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400 leading-normal">
+                        <p className="mt-1 text-[11px] text-zinc-500 leading-normal">
                           Meal ({token.meal_info || "Food"}) was served at <strong>{token.vendor_name}</strong> in {token.location || "Unknown location"}.
                         </p>
                       )}
                       {token.status === "redeemed" && !token.vendor_name && (
-                        <p className="mt-1 text-[11px] text-zinc-400 dark:text-zinc-500">
-                          Redeemed on {token.redeemed_at ? new Date(token.redeemed_at).toLocaleDateString() : "Unknown date"}
+                        <p className="mt-1 text-[11px] text-zinc-400 ">
+                          Redeemed on {token.redeemed_at ? shortDate(token.redeemed_at) : "Unknown date"}
                         </p>
                       )}
                       {token.status === "live" && (
                         <p className="mt-1 text-[11px] text-zinc-400">
-                          Issued on {token.issued_at ? new Date(token.issued_at).toLocaleDateString() : "Recently"}
+                          Issued on {token.issued_at ? shortDate(token.issued_at) : "Recently"}
                         </p>
                       )}
                       {token.is_special_care && token.special_instructions && (
-                        <p className="mt-1 text-[10px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-50/20 dark:bg-rose-950/5 p-1.5 rounded">
+                        <p className="mt-1 text-[11px] font-medium text-rose-600 bg-rose-50/20 p-1.5 rounded">
                           Instruction: {token.special_instructions}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  <span className="text-[10px] text-zinc-400 font-semibold">
-                    {token.issued_at ? new Date(token.issued_at).toLocaleDateString() : "Unknown"}
+                  <span className="text-[11px] text-zinc-400 font-medium">
+                    {token.issued_at ? shortDate(token.issued_at) : "Unknown"}
                   </span>
                 </div>
               ))
@@ -344,10 +290,10 @@ export default function DashboardOverview({
       </div>
 
       {/* Recent Donation History Section */}
-      <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900/40">
-        <div className="flex items-center justify-between">
+      <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm ">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <div>
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+            <h2 className="text-base font-medium text-zinc-900 ">
               Recent Financial Donations
             </h2>
             <p className="text-zinc-400 text-xs mt-1">
@@ -356,7 +302,7 @@ export default function DashboardOverview({
           </div>
           <Link
             href="/donor/history"
-            className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+            className="shrink-0 whitespace-nowrap text-xs font-medium text-emerald-600 hover:underline"
           >
             View Full History
           </Link>
@@ -370,29 +316,29 @@ export default function DashboardOverview({
           ) : (
             <table className="w-full text-left text-xs font-medium">
               <thead>
-                <tr className="border-b border-zinc-150/60 text-[10px] font-bold uppercase text-zinc-400 dark:border-zinc-800/30">
-                  <th className="pb-3 pr-4">Donation ID</th>
+                <tr className="border-b border-zinc-200/60 text-[11px] font-semibold uppercase text-zinc-400 ">
+                  <th className="hidden pb-3 pr-4 sm:table-cell">Donation ID</th>
                   <th className="pb-3 px-4">Amount Donated</th>
                   <th className="pb-3 px-4">Allocated Status</th>
                   <th className="pb-3 pl-4 text-right">Timestamp</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100/50 dark:divide-zinc-800/20">
+              <tbody className="divide-y divide-zinc-100/50 ">
                 {dashboard.donation_history.slice(0, 3).map((item) => (
-                  <tr key={item.id} className="text-zinc-700 dark:text-zinc-300">
-                    <td className="py-3 pr-4 font-mono font-bold text-zinc-500 uppercase">
+                  <tr key={item.id} className="text-zinc-700 ">
+                    <td className="hidden py-3 pr-4 font-mono font-semibold text-zinc-500 uppercase sm:table-cell">
                       {item.id.substring(0, 8)}...
                     </td>
-                    <td className="py-3 px-4 font-bold text-emerald-600 dark:text-emerald-400">
-                      ₹{item.amount}
+                    <td className="py-3 px-4 font-semibold text-emerald-600 ">
+                      {inr(item.amount)}
                     </td>
                     <td className="py-3 px-4">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ">
                         SUCCESS
                       </span>
                     </td>
                     <td className="py-3 pl-4 text-right text-zinc-400">
-                      {new Date(item.at).toLocaleString()}
+                      {shortDate(item.at)}
                     </td>
                   </tr>
                 ))}
@@ -403,8 +349,8 @@ export default function DashboardOverview({
       </div>
 
       {/* Monthly Summary Section */}
-      <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900/40">
-        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+      <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm ">
+        <h2 className="text-base font-medium text-zinc-900 ">
           Monthly Summary
         </h2>
         <p className="text-zinc-400 text-xs mt-1">
@@ -419,22 +365,22 @@ export default function DashboardOverview({
           ) : (
             <table className="w-full text-left text-xs font-medium">
               <thead>
-                <tr className="border-b border-zinc-150/60 text-[10px] font-bold uppercase text-zinc-400 dark:border-zinc-800/30">
+                <tr className="border-b border-zinc-200/60 text-[11px] font-semibold uppercase text-zinc-400 ">
                   <th className="pb-3 pr-4">Month</th>
                   <th className="pb-3 px-4 text-right">Donated</th>
                   <th className="pb-3 pl-4 text-right">Meals</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100/50 dark:divide-zinc-800/20">
+              <tbody className="divide-y divide-zinc-100/50 ">
                 {dashboard.monthly_summary.map((m) => (
-                  <tr key={m.month} className="text-zinc-700 dark:text-zinc-300">
-                    <td className="py-3 pr-4 font-bold text-zinc-700 dark:text-zinc-200">
+                  <tr key={m.month} className="text-zinc-700 ">
+                    <td className="py-3 pr-4 font-semibold text-zinc-700 ">
                       {m.month}
                     </td>
-                    <td className="py-3 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400">
-                      ₹{m.donated}
+                    <td className="py-3 px-4 text-right font-semibold text-emerald-600 ">
+                      {inr(m.donated)}
                     </td>
-                    <td className="py-3 pl-4 text-right text-zinc-500 dark:text-zinc-400">
+                    <td className="py-3 pl-4 text-right text-zinc-500 ">
                       {m.meals}
                     </td>
                   </tr>

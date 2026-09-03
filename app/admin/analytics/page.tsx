@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { AdminPageHeader, ListStates, TableHead, TableShell } from "../_ui";
+import { AdminPageHeader, ListStates, StatTile, TableHead, TableShell } from "../_ui";
 
 /**
  * Admin analytics dashboard (addon2 A1) — meals served, donation trends, vendor
@@ -167,17 +167,19 @@ function Dashboard({ a }: { a: Analytics }) {
                     {a.top_vendors.length === 0 ? (
                         <p className="text-sm text-slate-500">No redemptions yet.</p>
                     ) : (
-                        <TableShell>
+                        // Rating and Quality are both scores; Quality is the one that
+                        // drops below md so the mini table fits a phone card.
+                        <TableShell hideCols={[4]}>
                             <TableHead columns={["Vendor", "Redemptions", "Rating", "Quality"]} />
                             <tbody className="divide-y divide-slate-100">
                                 {a.top_vendors.map((v) => (
                                     <tr key={v.vendor_id} className="hover:bg-slate-50">
-                                        <td className="px-4 py-2.5 text-slate-800">{v.name}</td>
-                                        <td className="px-4 py-2.5 text-slate-700">{v.redemptions}</td>
-                                        <td className="px-4 py-2.5 text-slate-600">
+                                        <td className="px-2 md:px-4 py-2.5 text-slate-800">{v.name}</td>
+                                        <td className="px-2 md:px-4 py-2.5 text-slate-700">{v.redemptions}</td>
+                                        <td className="px-2 md:px-4 py-2.5 text-slate-600">
                                             {v.rating_avg != null ? `${v.rating_avg}★` : "—"}
                                         </td>
-                                        <td className="px-4 py-2.5 text-slate-600">
+                                        <td className="px-2 md:px-4 py-2.5 text-slate-600">
                                             {v.quality_score != null ? v.quality_score : "—"}
                                         </td>
                                     </tr>
@@ -191,18 +193,12 @@ function Dashboard({ a }: { a: Analytics }) {
     );
 }
 
-function StatTile({ label, value, small }: { label: string; value: string; small?: boolean }) {
-    return (
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-            <p className={`mt-1 font-semibold text-slate-900 ${small ? "text-lg" : "text-2xl"}`}>{value}</p>
-        </div>
-    );
-}
-
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
     return (
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
+        // min-w-0: a grid item is min-width:auto by default, so the mini table
+        // below propagated its min-content up and widened the whole column past
+        // the viewport on a 360px phone. Let the card shrink; the table scrolls.
+        <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-5">
             <h3 className="mb-4 text-sm font-semibold text-slate-800">{title}</h3>
             {children}
         </div>

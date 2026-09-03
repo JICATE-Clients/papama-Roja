@@ -1,18 +1,28 @@
 import { z } from "zod";
 
 import { BadRequestError, defineRoute, parseQuery } from "@/lib/api/handler";
-import { getLedgerBalance, getLedgerEntriesForReference, type LedgerName } from "@/lib/services/ledger";
+import {
+    getLedgerBalance,
+    getLedgerEntriesForReference,
+    listLedgerEntries,
+    type LedgerName,
+} from "@/lib/services/ledger";
 import { createClient } from "@/lib/supabase/server";
 
 /**
  * GET /api/admin/ledgers — triple-ledger trail (spec §3.1 F-10, addon #18).
  *
- * Gated by `financial_ledgers_reconciliation/read` (admin/compliance: all;
- * vendor: own `vendor_payable` rows only). Runs on the SESSION (RLS) client —
- * NOT the service-role client — so the `ledger_entries_select_vendor_own`
- * policy does the real ownership enforcement; a vendor's query is naturally
- * scoped to their own `vendor_payable` rows without this route hand-rolling
- * that check (and without risk of it drifting from the RLS policy).
+ * Gated by `financial_ledgers_reconciliation/read` at scope "all", which in
+ * practice means admin + compliance: the matrix gives a vendor `read: "own"`,
+ * and an "own"-scoped role fails an "all" assertion, so a vendor is refused here
+ * before RLS is ever consulted. The `ledger_entries_select_vendor_own` policy is
+ * therefore unreachable through THIS route — a vendor-facing payable view would
+ * be a route under /api/vendor. (The comment here used to claim a vendor's query
+ * was "naturally scoped"; it never reaches the query.)
+ *
+ * Still runs on the SESSION (RLS) client, NOT the service-role client, so the
+ * policies remain the enforcement point and this handler never hand-rolls an
+ * ownership check that could drift from them.
  *
  * Two modes:
  *   - `?reference_type=&reference_id=` — trace one transaction end-to-end.
@@ -42,7 +52,12 @@ export const GET = defineRoute(
 
         if (!q.ledger) throw new BadRequestError("pass either 'ledger' or a reference pair");
         const ledger = q.ledger as LedgerName;
-        const balance = await getLedgerBalance(supabase, ledger);
-        return { ledger, balance };
+        // Balance and entries together: a running total with no rows behind it
+        // cannot be checked, and every caller that wants one wants the other.
+        const [balance, entries] = await Promise.all([
+            getLedgerBalance(supabase, ledger),
+            listLedgerEntries(supabase, ledger),
+        ]);
+        return { ledger, balance, entries };
     }
 );

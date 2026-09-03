@@ -122,7 +122,7 @@ function MealWindowsInner() {
                     resourceLabel="meal windows"
                     emptyHint="No serving windows configured yet. Create one above to get started."
                     table={
-                        <TableShell>
+                        <TableShell hideCols={[2, 4]}>
                             <TableHead columns={columns} />
                             <tbody className="divide-y divide-slate-100">
                                 {table.rows.map((w) => (
@@ -345,8 +345,20 @@ function WindowRow({
 
     return (
         <tr className="hover:bg-slate-50">
-            <td className="px-4 py-3 font-medium capitalize text-slate-900">{row.meal_type}</td>
-            <td className="px-4 py-3 text-slate-700">
+            <td className="px-2 md:px-4 py-3 font-medium capitalize text-slate-900">
+                {row.meal_type}
+                {/* Status is an 80px badge column; the window times and the
+                    edit controls are what this page is for, so the badge moves
+                    under the meal name below md. */}
+                <span className="mt-1 block font-normal normal-case md:hidden">
+                    {row.is_active ? (
+                        <StatusBadge value="active" />
+                    ) : (
+                        <BoolBadge value={false} yes="Active" no="Inactive" />
+                    )}
+                </span>
+            </td>
+            <td className="px-2 md:px-4 py-3 text-slate-700">
                 {row.vendor_id ? (
                     <span>
                         {row.vendor_name ?? "Vendor"}{" "}
@@ -356,7 +368,7 @@ function WindowRow({
                     <span className="text-slate-500">Global</span>
                 )}
             </td>
-            <td className="px-4 py-3 text-slate-700">
+            <td className="px-2 md:px-4 py-3 text-slate-700">
                 {editing ? (
                     <span className="flex items-center gap-1.5">
                         <input
@@ -381,7 +393,7 @@ function WindowRow({
                     </span>
                 )}
             </td>
-            <td className="px-4 py-3">
+            <td className="px-2 md:px-4 py-3">
                 {row.is_active ? (
                     <StatusBadge value="active" />
                 ) : (
@@ -389,7 +401,7 @@ function WindowRow({
                 )}
             </td>
             {canManage && (
-                <td className="px-4 py-3">
+                <td className="px-2 md:px-4 py-3">
                     <div className="flex flex-wrap gap-1.5">
                         {editing ? (
                             <>

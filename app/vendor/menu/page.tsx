@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { PageHeader, Notice, TableShell, TableHead, StatusBadge, Dash, SkeletonTable } from "../_ui";
+import { inr } from "@/lib/format";
 
 interface MenuItem {
   id: string;
@@ -341,7 +342,7 @@ export default function VendorMenuPage() {
       )}
 
       {state === "ready" && items.length > 0 && (
-        <TableShell>
+        <TableShell hideCols={[3, 5]}>
           <TableHead columns={["Item", "Price", "Category", "Approval", "Special care", "Actions"]} />
           <tbody>
             {items.map((item) => {
@@ -428,7 +429,7 @@ export default function VendorMenuPage() {
                         <Dash>{item.item_name}</Dash>
                       </td>
                       <td className="px-4 py-3 text-slate-700">
-                        {item.price != null ? `₹${item.price}` : <Dash>{null}</Dash>}
+                        {item.price != null ? inr(item.price) : <Dash>{null}</Dash>}
                       </td>
                       <td className="px-4 py-3 text-slate-600">
                         <Dash>{item.nutrition_category}</Dash>

@@ -63,6 +63,30 @@ export interface LedgerEntryRow {
     created_at: string;
 }
 
+/**
+ * One ledger's entries, newest first. Capped rather than paged: the trail is
+ * append-only and read for spot-checking and tracing, not bulk export (the
+ * reports module owns that), and an unbounded read of a table that only ever
+ * grows is a slow query waiting to happen.
+ *
+ * Pass the SESSION client, not the service-role one — the RLS policies are what
+ * scope a vendor to their own `vendor_payable` rows.
+ */
+export async function listLedgerEntries(
+    client: SupabaseClient,
+    ledger: LedgerName,
+    limit = 200
+): Promise<LedgerEntryRow[]> {
+    const { data, error } = await client
+        .from("ledger_entries")
+        .select("id, ledger, amount, reference_type, reference_id, description, created_at")
+        .eq("ledger", ledger)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+    if (error) throw new Error(error.message);
+    return (data ?? []) as LedgerEntryRow[];
+}
+
 export async function getLedgerEntriesForReference(
     admin: SupabaseClient,
     referenceType: string,

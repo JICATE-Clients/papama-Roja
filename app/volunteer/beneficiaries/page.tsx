@@ -1,6 +1,7 @@
 "use client";
 
 import BeneficiaryRegisterForm from "@/components/beneficiary/BeneficiaryRegisterForm";
+import { shortDate } from "@/lib/format";
 
 import {
     Dash,
@@ -60,7 +61,7 @@ export default function VolunteerBeneficiariesPage() {
                 resourceLabel="registrations"
                 emptyHint="Submit a registration above — it will appear here pending admin review."
             >
-                <TableShell>
+                <TableShell hideCols={[5]}>
                     <TableHead columns={["Name", "Category", "Identity", "Status", "Submitted"]} />
                     <tbody className="divide-y divide-slate-100">
                         {items.map((r) => (
@@ -79,7 +80,7 @@ export default function VolunteerBeneficiariesPage() {
                                     <StatusBadge value={r.status} />
                                 </td>
                                 <td className="px-4 py-3 text-slate-500">
-                                    {new Date(r.created_at).toLocaleDateString()}
+                                    {shortDate(r.created_at)}
                                 </td>
                             </tr>
                         ))}

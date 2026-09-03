@@ -73,7 +73,10 @@ export interface TokenItem {
   type: 'standard' | 'special_care';
   status: TokenStatus;
   qr_payload: string;
-  value: number; // value in paise (e.g. 5000 = ₹50)
+  // Rupees, not paise. The live route (app/api/donor/tokens/route.ts)
+  // passes `value_inr` straight through; this comment used to claim paise
+  // and the fixture written from it rendered every token as ₹5000.
+  value: number;
   issued_at: string;
   expires_at: string;
   redeemed_at: string | null;
@@ -158,4 +161,33 @@ export interface NotificationItem {
 
 export interface NotificationsResponse {
   notifications: NotificationItem[];
+}
+
+/**
+ * One of the donor's own failed/duplicated payments that has no refund request
+ * against it yet (GET /api/donor/refund-request).
+ */
+export interface DonorPaymentFailure {
+  id: string;
+  amount_inr: number;
+  reason: string;
+  status: string;
+  created_at: string;
+}
+
+/** One refund the donor has raised, at whatever stage it has reached. */
+export interface DonorRefund {
+  id: string;
+  payment_failure_id: string;
+  amount_inr: number;
+  reason: string;
+  status: string;
+  decided_at: string | null;
+  decision_note: string | null;
+  created_at: string;
+}
+
+export interface RefundOverview {
+  payment_failures: DonorPaymentFailure[];
+  refunds: DonorRefund[];
 }

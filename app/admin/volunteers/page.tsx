@@ -134,7 +134,7 @@ export default function AdminVolunteersPage() {
                 emptyHint="Volunteers will appear here once they are registered."
                 table={
                     <>
-                        <TableShell>
+                        <TableShell hideCols={[2, 3, 5]}>
                             <TableHead columns={columns} />
                             <tbody className="divide-y divide-slate-100">
                                 {table.rows.map((v) => (
@@ -143,25 +143,25 @@ export default function AdminVolunteersPage() {
                                         onClick={() => drawer.openRow(v)}
                                         className="cursor-pointer hover:bg-slate-50"
                                     >
-                                        <td className="px-4 py-3 font-medium text-slate-900">
+                                        <td className="px-2 md:px-4 py-3 font-medium text-slate-900">
                                             <Dash>{v.full_name}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             <Dash>{v.email}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             <Dash>{v.phone}</Dash>
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={v.status} />
                                         </td>
-                                        <td className="px-4 py-3 text-slate-500">
+                                        <td className="px-2 md:px-4 py-3 text-slate-500">
                                             {new Date(v.created_at).toLocaleDateString()}
                                         </td>
                                         {canManage && (
                                             // Stop row-open when clicking an action.
                                             <td
-                                                className="px-4 py-3"
+                                                className="px-2 md:px-4 py-3"
                                                 onClick={(e) => e.stopPropagation()}
                                             >
                                                 <VolunteerActions
@@ -622,26 +622,32 @@ function VolunteerRequestsSection({
                 resourceLabel="token requests"
                 emptyHint="Volunteer token requests will appear here once they are submitted."
                 table={
-                    <TableShell>
+                    <TableShell hideCols={[3, 4, 5]}>
                         <TableHead columns={columns} />
                         <tbody className="divide-y divide-slate-100">
                             {items.map((r) => (
                                 <tr key={r.id} className="hover:bg-slate-50">
-                                    <td className="px-4 py-3 font-medium text-slate-900">
+                                    <td className="px-2 md:px-4 py-3 font-medium text-slate-900">
                                         <Dash>{r.volunteer_name}</Dash>
+                                        {/* Status is a 94px badge column; who / how many / the decide
+                                            buttons are what this page is for, so the badge moves under
+                                            the name below md rather than the count or the actions. */}
+                                        <span className="mt-1 block font-normal md:hidden">
+                                            <StatusBadge value={r.status} />
+                                        </span>
                                     </td>
-                                    <td className="px-4 py-3 text-slate-700">{r.requested_count}</td>
-                                    <td className="px-4 py-3 text-slate-700">
+                                    <td className="px-2 md:px-4 py-3 text-slate-700">{r.requested_count}</td>
+                                    <td className="px-2 md:px-4 py-3 text-slate-700">
                                         <Dash>{r.decided_count != null ? r.decided_count : null}</Dash>
                                     </td>
-                                    <td className="px-4 py-3">
+                                    <td className="px-2 md:px-4 py-3">
                                         <StatusBadge value={r.status} />
                                     </td>
-                                    <td className="px-4 py-3 text-slate-500">
+                                    <td className="px-2 md:px-4 py-3 text-slate-500">
                                         {new Date(r.created_at).toLocaleDateString()}
                                     </td>
                                     {canManage && (
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <RequestActions
                                                 request={r}
                                                 busy={decide.busyId === r.id}

@@ -1,23 +1,31 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowLeft } from "@phosphor-icons/react/dist/ssr/ArrowLeft";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useMemo, useRef, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 
 import { clearDonorCache } from "@/lib/donor/auth";
 import { createClient } from "@/lib/supabase/client";
+import { C } from "@/components/landing/theme";
+import { mealImages } from "@/components/landing/mealImages";
 
 /**
- * Unified pApAmA login — one pastel, tabbed screen serving every portal
+ * Unified pApAmA login — one tabbed screen serving every portal
  * (donor / vendor / volunteer / admin). All portals authenticate with the same
  * Supabase email+password call; the *role* lives in public.users, so the tab is
  * cosmetic (copy + signup link only). On success we honour a same-origin
  * ?redirect, otherwise we hand off to /post-login which resolves the real role
  * server-side and lands the user in the right area.
  *
- * Ported from the `public/pApAmA Login.dc` mockup. Keyframes are inlined as a
- * <style> tag rather than added to globals.css because Tailwind v4's Lightning
- * CSS strips unknown `pa-*` keyframes (same pattern as app/page.tsx).
+ * The visual layer matches the public site: ivory canvas, warm aurora, and the
+ * food photography carrying the colour. It replaced a mint split-screen with a
+ * hand-built coin→seed→plant→token animation — that version is in git history
+ * at the commit before this one if it is ever wanted back.
+ *
+ * Keyframes are inlined as a <style> tag rather than added to globals.css
+ * because Tailwind v4's Lightning CSS strips unknown `pa-*` keyframes (same
+ * pattern as app/page.tsx).
  */
 
 // Google OAuth is not wired yet (the Supabase Google provider is unconfigured —
@@ -98,87 +106,52 @@ function isPortal(v: string | null): v is Portal {
     return v === "donor" || v === "vendor" || v === "volunteer" || v === "admin";
 }
 
-const mono: React.CSSProperties = { fontFamily: "var(--font-mono), monospace" };
+/**
+ * The brand panel is a wall of photographs rather than a small mosaic with
+ * whitespace around it. 4 columns x 5 rows fills any realistic panel shape, and
+ * `grid-auto-rows: 1fr` means it stretches to the panel rather than the panel
+ * stretching to it — so the photo wall can never push the page past one screen.
+ */
+const MOSAIC = mealImages(480).slice(0, 20);
 
-// Inlined keyframes + focus/hover + responsive rules (see file header note).
 const PA_LOGIN_CSS = `
 .pa-login *{ box-sizing:border-box; }
-@keyframes pa-grad { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
-@keyframes pa-floatA { 0%,100%{transform:translate(0,0) rotate(0deg)} 50%{transform:translate(18px,-26px) rotate(8deg)} }
-@keyframes pa-floatC { 0%,100%{transform:translate(0,0)} 50%{transform:translate(14px,22px)} }
-@keyframes pa-blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
-@keyframes pa-give {
-  0% { opacity:0; transform:translate(-90px,-50px) rotate(-8deg); }
-  3% { opacity:1; transform:translate(0,0) rotate(0deg); }
-  8% { transform:translate(4px,8px) rotate(16deg); }
-  13% { transform:translate(0,0) rotate(0deg); }
-  17%,33% { opacity:0; transform:translate(-90px,-50px) rotate(-8deg); }
-  36% { opacity:1; transform:translate(0,0) rotate(0deg); }
-  41% { transform:translate(4px,8px) rotate(16deg); }
-  46% { transform:translate(0,0) rotate(0deg); }
-  50%,66% { opacity:0; transform:translate(-90px,-50px) rotate(-8deg); }
-  69% { opacity:1; transform:translate(0,0) rotate(0deg); }
-  74% { transform:translate(4px,8px) rotate(16deg); }
-  79% { transform:translate(0,0) rotate(0deg); }
-  83%,100% { opacity:0; transform:translate(-90px,-50px) rotate(-8deg); }
+@keyframes pa-aurora-drift {
+  0%   { transform: translate3d(0,0,0) scale(1); }
+  50%  { transform: translate3d(2%,-1.5%,0) scale(1.06); }
+  100% { transform: translate3d(-1.5%,2%,0) scale(1.03); }
 }
-@keyframes pa-drop {
-  0%,7% { opacity:0; transform:translateY(-8px); }
-  9% { opacity:1; transform:translateY(0); }
-  14% { opacity:1; transform:translateY(88px); }
-  16%,40% { opacity:0; transform:translateY(-8px); }
-  42% { opacity:1; transform:translateY(0); }
-  47% { opacity:1; transform:translateY(88px); }
-  49%,73% { opacity:0; transform:translateY(-8px); }
-  75% { opacity:1; transform:translateY(0); }
-  80% { opacity:1; transform:translateY(88px); }
-  82%,100% { opacity:0; transform:translateY(-8px); }
+@keyframes pa-tile-in {
+  from { opacity: 0; transform: translateY(14px) scale(.96); }
+  to   { opacity: 1; transform: none; }
 }
-@keyframes pa-grow1 {
-  0%,14% { opacity:1; transform:scaleY(0); }
-  19% { opacity:1; transform:scaleY(1.12); }
-  22% { opacity:1; transform:scaleY(1); }
-  45% { opacity:1; }
-  49%,100% { opacity:0; transform:scaleY(1); }
+.pa-login-aurora {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(34% 30% at 10% 8%,  rgba(240,168,48,0.46), transparent 70%),
+    radial-gradient(30% 26% at 92% 20%, rgba(212,100,60,0.36), transparent 70%),
+    radial-gradient(38% 32% at 84% 84%, rgba(76,157,120,0.40), transparent 72%);
+  animation: pa-aurora-drift 30s ease-in-out infinite alternate;
 }
-@keyframes pa-grow2 {
-  0%,47% { opacity:0; transform:scale(0); }
-  52% { opacity:1; transform:scale(1.08); }
-  55% { opacity:1; transform:scale(1); }
-  78% { opacity:1; }
-  82%,100% { opacity:0; transform:scale(1); }
-}
-@keyframes pa-grow3 {
-  0%,78% { opacity:0; transform:scale(0); }
-  83% { opacity:1; transform:scale(1.06); }
-  86% { opacity:1; transform:scale(1); }
-  90% { opacity:1; transform:scale(1); }
-  94%,100% { opacity:0; transform:scale(0.12); }
-}
-@keyframes pa-fruit {
-  0%,84% { opacity:0; transform:scale(0); }
-  87% { opacity:1; transform:scale(1.25); }
-  89% { opacity:1; transform:scale(1); }
-  92%,100% { opacity:0; transform:scale(0.8); }
-}
-@keyframes pa-token-final {
-  0%,92% { opacity:0; transform:scale(0) rotate(-40deg); }
-  95% { opacity:1; transform:scale(1.18) rotate(6deg); }
-  97% { opacity:1; transform:scale(1) rotate(0deg); }
-  99% { opacity:1; transform:scale(1) rotate(0deg); }
-  100% { opacity:0; transform:scale(0.8) rotate(0deg); }
-}
-@keyframes pa-token-ring {
-  0%,93% { opacity:0; transform:scale(0.4); }
-  96% { opacity:0.6; transform:scale(1); }
-  100% { opacity:0; transform:scale(1.8); }
-}
-.pa-btn { transition: transform .2s ease, box-shadow .3s ease; cursor:pointer; }
-.pa-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(47,107,81,0.22); }
-.pa-input:focus { outline:none; border-color:#4c9d78 !important; box-shadow:0 0 0 3px rgba(76,157,120,0.18); }
-@media (max-width: 880px) {
+.pa-mosaic img { animation: pa-tile-in .6s cubic-bezier(.22,1,.36,1) both; }
+.pa-mosaic img:nth-child(4n+2){animation-delay:.06s}
+.pa-mosaic img:nth-child(4n+3){animation-delay:.12s}
+.pa-mosaic img:nth-child(4n+4){animation-delay:.18s}
+.pa-mosaic img:nth-child(n+9){animation-delay:.24s}
+.pa-mosaic img:nth-child(n+17){animation-delay:.32s}
+
+.pa-btn { transition: transform .2s ease, box-shadow .3s ease, background .2s ease; cursor:pointer; }
+.pa-btn:hover { transform: translateY(-2px); }
+.pa-input { transition: border-color .2s ease, box-shadow .2s ease; }
+.pa-input:focus { outline:none; border-color:${C.accent} !important; box-shadow:0 0 0 3px rgba(11,122,85,0.16); }
+
+@media (max-width: 900px) {
   .pa-login-grid { grid-template-columns: 1fr !important; }
+  /* The brand panel is the first thing to go on a phone: the form is the job,
+     and 98% of this traffic is mobile. The wordmark moves into the form column
+     so the page still identifies itself. */
   .pa-brand { display: none !important; }
+  .pa-login-mobilebrand { display: flex !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   .pa-login *, .pa-login *::before, .pa-login *::after { animation: none !important; }
@@ -208,14 +181,6 @@ function LoginForm() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
-    const stageRef = useRef<HTMLDivElement | null>(null);
-    const replay = () => {
-        const el = stageRef.current;
-        if (el && "getAnimations" in el) {
-            el.getAnimations({ subtree: true }).forEach((a) => (a.currentTime = 0));
-        }
-    };
-
     const d = PORTAL_DEFS[portal];
 
     async function onSubmit(e: React.FormEvent) {
@@ -242,138 +207,118 @@ function LoginForm() {
     return (
         <div
             className="pa-login"
-            style={{ fontFamily: "var(--font-sans), sans-serif", color: "#33463c" }}
+            style={{ fontFamily: "var(--font-sans), sans-serif", color: C.ink, background: C.ivory, position: "relative", isolation: "isolate", minHeight: "100svh" }}
         >
             <style dangerouslySetInnerHTML={{ __html: PA_LOGIN_CSS }} />
+            <div aria-hidden="true" className="pa-login-aurora" />
+
             <div
                 className="pa-login-grid"
-                style={{ minHeight: "100vh", display: "grid", gridTemplateColumns: "1fr 1fr" }}
+                style={{ minHeight: "100svh", display: "grid", gridTemplateColumns: "1fr 1fr" }}
             >
-                {/* LEFT: animated brand panel */}
+                {/* LEFT: brand panel. The photographs are the colour here, same as
+                    the landing page — no abstract shapes. */}
                 <div
                     className="pa-brand"
                     style={{
                         position: "relative",
                         overflow: "hidden",
-                        background:
-                            "linear-gradient(140deg, #dff2e6, #c4e5d2, #d9f0e2, #cfeadb)",
-                        backgroundSize: "300% 300%",
-                        animation: "pa-grad 18s ease infinite",
                         display: "flex",
                         flexDirection: "column",
                         justifyContent: "space-between",
-                        padding: "48px 56px",
+                        gap: 24,
+                        padding: "clamp(30px, 4vw, 52px)",
+                        background: C.sand,
+                        borderRight: `1px solid ${C.hairline}`,
                     }}
                 >
-                    <div style={{ position: "absolute", top: "12%", right: "10%", width: 130, height: 130, borderRadius: "50%", background: "rgba(255,255,255,0.5)", animation: "pa-floatA 10s ease-in-out infinite" }} />
-                    <div style={{ position: "absolute", bottom: "18%", left: "8%", width: 70, height: 70, borderRadius: "50%", border: "2px solid rgba(60,138,104,0.25)", animation: "pa-floatC 11s ease-in-out infinite" }} />
-                    <div style={{ position: "absolute", top: "48%", right: "22%", width: 40, height: 40, borderRadius: 12, background: "rgba(140,200,168,0.35)", animation: "pa-floatA 8s ease-in-out infinite" }} />
+                    {/* Photo wall, edge to edge. */}
+                    <div className="pa-mosaic" aria-hidden="true" style={{ position: "absolute", inset: 0, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gridAutoRows: "1fr", gap: 4 }}>
+                        {MOSAIC.map((m) => (
+                            /* eslint-disable-next-line @next/next/no-img-element -- remote Unsplash CDN, intentionally not routed through next/image */
+                            <img key={m.src} src={m.src} alt="" loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", background: C.sand }} />
+                        ))}
+                    </div>
 
+                    {/* Scrim. Strong where the copy sits, thinning toward the
+                        bottom-right so the photographs still read as photographs. */}
+                    <div
+                        aria-hidden="true"
+                        style={{
+                            position: "absolute",
+                            inset: 0,
+                            pointerEvents: "none",
+                            background:
+                                /* Even base wash so the whole wall reads as photographs, */
+                                "linear-gradient(148deg, rgba(250,242,228,0.66) 0%, rgba(250,242,228,0.60) 55%, rgba(250,242,228,0.52) 100%)," +
+                                /* plus a soft lift up the left edge, which is where the copy sits. */
+                                " linear-gradient(95deg, rgba(250,242,228,0.66) 0%, rgba(250,242,228,0.30) 46%, rgba(250,242,228,0) 78%)",
+                        }}
+                    />
                     <Link
                         href="/"
-                        style={{ position: "relative", fontSize: 28, fontWeight: 800, letterSpacing: "-0.02em", color: "#2f6b51", textDecoration: "none" }}
+                        style={{ position: "relative", display: "inline-flex", alignSelf: "flex-start", alignItems: "center", minHeight: 44, fontSize: 26, fontWeight: 800, letterSpacing: "-0.02em", color: C.accent, textDecoration: "none" }}
                     >
                         pApAmA
                     </Link>
 
                     <div style={{ position: "relative" }}>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: 9, background: "rgba(255,255,255,0.65)", ...mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", padding: "8px 16px", borderRadius: 999, marginBottom: 24, color: "#2f6b51" }}>
-                            <span style={{ width: 8, height: 8, background: "#4c9d78", borderRadius: 999, display: "inline-block", animation: "pa-blink 1.6s ease-in-out infinite" }} />
+                        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: C.accent, marginBottom: 16 }}>
                             Transparent food giving
                         </div>
-                        <div style={{ fontSize: 44, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.1, color: "#264434", maxWidth: 420 }}>
+                        <h1 style={{ fontSize: "clamp(28px, 3vw, 42px)", fontWeight: 800, letterSpacing: "-0.033em", lineHeight: 1.08, color: C.ink, margin: 0, maxWidth: 480 }}>
                             Every gift traced to the plate it becomes.
-                        </div>
-                        <p style={{ fontSize: 16, lineHeight: 1.6, color: "#4f6a5c", maxWidth: 400, margin: "18px 0 0" }}>
-                            Sign in to your portal to donate, redeem tokens, coordinate deliveries, or run the programme.
+                        </h1>
+                        <p style={{ fontSize: 15.5, lineHeight: 1.6, color: C.inkSoft, maxWidth: 440, margin: "16px 0 0" }}>
+                            Sign in to your portal to donate, redeem tokens, coordinate deliveries, or run the
+                            programme.
                         </p>
-
-                        {/* small amount, big impact: coin → seed → plant → tree → token */}
-                        <div
-                            ref={stageRef}
-                            onClick={replay}
-                            title="Click to replay"
-                            style={{ position: "relative", width: 400, height: 218, marginTop: 30, cursor: "pointer" }}
-                        >
-                            <div style={{ position: "absolute", left: "50%", top: 0, width: 560, height: 300, marginLeft: -280, transform: "scale(0.714)", transformOrigin: "top center" }}>
-                                {/* soil */}
-                                <div style={{ position: "absolute", left: 220, top: 224, width: 120, height: 26, background: "rgba(255,255,255,0.65)", borderRadius: 999 }} />
-
-                                {/* giving hand + coin */}
-                                <div style={{ position: "absolute", left: 140, top: 52, animation: "pa-give 13s ease-in-out infinite" }}>
-                                    <div style={{ position: "relative", width: 120, height: 64 }}>
-                                        <svg width="120" height="64" viewBox="0 0 120 64" fill="none">
-                                            <rect x="0" y="26" width="30" height="26" rx="7" fill="#2f6b51" />
-                                            <path d="M26 30 C26 24 32 21 38 21 L84 21 C88 21 91 24 91 27 C91 30 88 33 84 33 L70 33 L86 33 C90 33 93 36 93 39 C93 42 90 45 86 45 L70 45 L82 45 C85.5 45 88 47.5 88 50 C88 52.5 85.5 55 82 55 L48 55 C36 55 26 48 26 38 Z" fill="#4c9d78" />
-                                            <path d="M46 21 C42 14 46 8 52 8 C57 8 60 12 60 17 L60 21 Z" fill="#4c9d78" />
-                                        </svg>
-                                        <div style={{ position: "absolute", left: 58, top: -8, width: 28, height: 28, borderRadius: 999, background: "#fff", border: "2.5px solid #2f6b51", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#2f6b51", boxShadow: "0 4px 10px rgba(47,107,81,0.2)" }}>₹</div>
-                                    </div>
-                                </div>
-                                {/* falling coin */}
-                                <div style={{ position: "absolute", left: 266, top: 118, animation: "pa-drop 13s ease-in infinite" }}>
-                                    <div style={{ width: 26, height: 26, borderRadius: 999, background: "#fff", border: "2px solid #4c9d78", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#2f6b51" }}>₹</div>
-                                </div>
-
-                                {/* stage 1: sprout */}
-                                <div style={{ position: "absolute", left: 250, top: 170, width: 60, height: 64, transformOrigin: "bottom center", animation: "pa-grow1 13s ease-in-out infinite" }}>
-                                    <div style={{ position: "absolute", left: 28, bottom: 0, width: 4, height: 34, background: "#2f6b51", borderRadius: 4 }} />
-                                    <div style={{ position: "absolute", left: 8, bottom: 26, width: 20, height: 12, background: "#4c9d78", borderRadius: "0 12px 0 12px", transform: "rotate(-16deg)" }} />
-                                    <div style={{ position: "absolute", left: 32, bottom: 26, width: 20, height: 12, background: "#6fb893", borderRadius: "12px 0 12px 0", transform: "rotate(16deg)" }} />
-                                </div>
-
-                                {/* stage 2: plant */}
-                                <div style={{ position: "absolute", left: 240, top: 120, width: 80, height: 114, transformOrigin: "bottom center", animation: "pa-grow2 13s ease-in-out infinite" }}>
-                                    <div style={{ position: "absolute", left: 38, bottom: 0, width: 5, height: 74, background: "#2f6b51", borderRadius: 4 }} />
-                                    <div style={{ position: "absolute", left: 12, bottom: 60, width: 24, height: 14, background: "#4c9d78", borderRadius: "0 14px 0 14px", transform: "rotate(-18deg)" }} />
-                                    <div style={{ position: "absolute", left: 44, bottom: 60, width: 24, height: 14, background: "#6fb893", borderRadius: "14px 0 14px 0", transform: "rotate(18deg)" }} />
-                                    <div style={{ position: "absolute", left: 16, bottom: 34, width: 22, height: 13, background: "#8cc8a8", borderRadius: "0 13px 0 13px", transform: "rotate(-24deg)" }} />
-                                    <div style={{ position: "absolute", left: 42, bottom: 34, width: 22, height: 13, background: "#4c9d78", borderRadius: "13px 0 13px 0", transform: "rotate(24deg)" }} />
-                                </div>
-
-                                {/* stage 3: tree */}
-                                <div style={{ position: "absolute", left: 210, top: 56, width: 140, height: 178, transformOrigin: "bottom center", animation: "pa-grow3 13s ease-in-out infinite" }}>
-                                    <svg width="140" height="178" viewBox="0 0 140 178" fill="none">
-                                        <path d="M66 178 L66 110 L44 88 L48 84 L66 100 L66 78 L74 78 L74 92 L94 74 L98 78 L74 102 L74 178 Z" fill="#2f6b51" />
-                                        <ellipse cx="70" cy="52" rx="54" ry="44" fill="#4c9d78" />
-                                        <circle cx="32" cy="72" r="26" fill="#4c9d78" />
-                                        <circle cx="108" cy="70" r="24" fill="#4c9d78" />
-                                        <circle cx="52" cy="36" r="16" fill="#6fb893" />
-                                        <circle cx="92" cy="46" r="12" fill="#6fb893" />
-                                    </svg>
-                                    <div style={{ position: "absolute", left: 38, top: 52, width: 14, height: 14, borderRadius: 999, background: "#e9f7ee", animation: "pa-fruit 13s ease-in-out infinite" }} />
-                                    <div style={{ position: "absolute", left: 88, top: 32, width: 12, height: 12, borderRadius: 999, background: "#e9f7ee", animation: "pa-fruit 13s ease-in-out infinite", animationDelay: ".2s" }} />
-                                    <div style={{ position: "absolute", left: 66, top: 70, width: 11, height: 11, borderRadius: 999, background: "#e9f7ee", animation: "pa-fruit 13s ease-in-out infinite", animationDelay: ".4s" }} />
-                                </div>
-
-                                {/* final beat: the tree becomes a food token */}
-                                <div style={{ position: "absolute", left: 244, top: 104, width: 72, height: 72, borderRadius: 999, border: "3px solid #2f6b51", animation: "pa-token-ring 13s ease-out infinite" }} />
-                                <div style={{ position: "absolute", left: 244, top: 104, width: 72, height: 72, animation: "pa-token-final 13s ease-in-out infinite" }}>
-                                    <div style={{ width: 72, height: 72, borderRadius: 999, background: "#fff", border: "3px solid #2f6b51", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 24px rgba(47,107,81,0.25)" }}>
-                                        <div style={{ fontSize: 20, fontWeight: 800, color: "#2f6b51", lineHeight: 1 }}>₹</div>
-                                        <div style={{ ...mono, fontSize: 7, letterSpacing: "0.12em", color: "#4c9d78", marginTop: 3 }}>FOOD TOKEN</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
-                    <div style={{ position: "relative", ...mono, fontSize: 12, letterSpacing: "0.08em", color: "#4f7a63" }}>
-                        TOKENS ARE FOOD-VALUE ONLY · NEVER CASH
+                    <div style={{ position: "relative", fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: C.inkSoft }}>
+                        Tokens are food-value only · never cash
                     </div>
                 </div>
 
-                {/* RIGHT: login form */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 48, background: "#f2f9f4" }}>
-                    <div style={{ width: "100%", maxWidth: 440 }}>
+                {/* RIGHT: the form */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(24px, 5vw, 48px)" }}>
+                    <div style={{ width: "100%", maxWidth: 452 }}>
+                        <Link
+                            href="/"
+                            className="pa-login-mobilebrand"
+                            style={{ display: "none", alignItems: "center", minHeight: 44, marginBottom: 12, fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em", color: C.accent, textDecoration: "none" }}
+                        >
+                            pApAmA
+                        </Link>
+
+                        <Link
+                            href="/"
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                minHeight: 44,
+                                marginBottom: 4,
+                                fontSize: 13.5,
+                                fontWeight: 600,
+                                color: C.inkSoft,
+                                textDecoration: "none",
+                            }}
+                        >
+                            <ArrowLeft size={15} weight="bold" aria-hidden />
+                            Back to pApAmA
+                        </Link>
+
                         {/* portal tabs */}
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, background: "#e3f0e8", borderRadius: 999, padding: 6, marginBottom: 36 }}>
+                        <div role="tablist" aria-label="Choose your portal" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4, background: C.sand, border: `1px solid ${C.hairline}`, borderRadius: 999, padding: 4, marginBottom: 28 }}>
                             {PORTAL_KEYS.map((key) => {
                                 const active = key === portal;
                                 return (
                                     <button
                                         key={key}
                                         type="button"
+                                        role="tab"
+                                        aria-selected={active}
                                         onClick={() => {
                                             setPortal(key);
                                             setError(null);
@@ -384,12 +329,14 @@ function LoginForm() {
                                             fontSize: 13.5,
                                             fontFamily: "inherit",
                                             fontWeight: active ? 700 : 500,
-                                            padding: "9px 0",
+                                            /* 44px so it is a comfortable touch target — these were 38px. */
+                                            minHeight: 44,
+                                            padding: "0 4px",
                                             border: "none",
                                             borderRadius: 999,
-                                            background: active ? "#ffffff" : "transparent",
-                                            color: active ? "#2f6b51" : "#6f8378",
-                                            boxShadow: active ? "0 3px 10px rgba(47,107,81,0.14)" : "none",
+                                            background: active ? C.accent : "transparent",
+                                            color: active ? "#fff" : C.inkSoft,
+                                            cursor: "pointer",
                                         }}
                                     >
                                         {PORTAL_DEFS[key].label}
@@ -398,12 +345,12 @@ function LoginForm() {
                             })}
                         </div>
 
-                        <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-0.025em", color: "#264434" }}>{d.heading}</div>
-                        <p style={{ fontSize: 15, color: "#6f8378", margin: "8px 0 32px", lineHeight: 1.55 }}>{d.subtitle}</p>
+                        <h2 style={{ fontSize: "clamp(26px, 4.5vw, 34px)", fontWeight: 800, letterSpacing: "-0.03em", color: C.ink, margin: 0, lineHeight: 1.1 }}>{d.heading}</h2>
+                        <p style={{ fontSize: 15, color: C.inkSoft, margin: "10px 0 26px", lineHeight: 1.55 }}>{d.subtitle}</p>
 
-                        <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                        <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                             <div>
-                                <label htmlFor="pa-email" style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: "#4f6a5c", marginBottom: 8 }}>{d.idLabel}</label>
+                                <label htmlFor="pa-email" style={{ display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: C.inkFaint, marginBottom: 9 }}>{d.idLabel}</label>
                                 <input
                                     id="pa-email"
                                     className="pa-input"
@@ -413,13 +360,13 @@ function LoginForm() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder={d.idPlaceholder}
-                                    style={{ width: "100%", fontFamily: "var(--font-sans), sans-serif", fontSize: 15, padding: "14px 18px", border: "1.5px solid #d5e6db", borderRadius: 14, background: "#fbfdfc", color: "#264434", transition: "border-color .2s ease, box-shadow .2s ease" }}
+                                    style={INPUT}
                                 />
                             </div>
                             <div>
-                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                                    <label htmlFor="pa-password" style={{ fontSize: 13.5, fontWeight: 600, color: "#4f6a5c" }}>Password</label>
-                                    <Link href="/forgot-password" style={{ fontSize: 13, fontWeight: 600, color: "#3c8a68", textDecoration: "none" }}>Forgot?</Link>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 9 }}>
+                                    <label htmlFor="pa-password" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: C.inkFaint }}>Password</label>
+                                    <Link href="/forgot-password" style={{ display: "inline-flex", alignItems: "center", minHeight: 44, padding: "0 2px", fontSize: 13, fontWeight: 600, color: C.accent, textDecoration: "none" }}>Forgot?</Link>
                                 </div>
                                 <input
                                     id="pa-password"
@@ -430,12 +377,12 @@ function LoginForm() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
-                                    style={{ width: "100%", fontFamily: "var(--font-sans), sans-serif", fontSize: 15, padding: "14px 18px", border: "1.5px solid #d5e6db", borderRadius: 14, background: "#fbfdfc", color: "#264434", transition: "border-color .2s ease, box-shadow .2s ease" }}
+                                    style={INPUT}
                                 />
                             </div>
 
                             {error && (
-                                <p role="alert" style={{ margin: 0, fontSize: 14, color: "#b42318", background: "#fdeceb", border: "1px solid #f6cfca", borderRadius: 12, padding: "12px 16px" }}>
+                                <p role="alert" style={{ margin: 0, fontSize: 14, color: "#8C2F14", background: "#FCECE8", border: "1px solid #F0C4B8", borderRadius: 12, padding: "12px 15px", lineHeight: 1.5 }}>
                                     {error}
                                 </p>
                             )}
@@ -444,7 +391,7 @@ function LoginForm() {
                                 type="submit"
                                 disabled={loading}
                                 className="pa-btn"
-                                style={{ background: "#3c8a68", color: "#f7fcf9", fontSize: 16, fontWeight: 700, fontFamily: "inherit", padding: 16, border: "none", borderRadius: 999, textAlign: "center", marginTop: 6, opacity: loading ? 0.65 : 1, cursor: loading ? "not-allowed" : "pointer" }}
+                                style={{ background: C.accent, color: "#fff", fontSize: 16, fontWeight: 700, fontFamily: "inherit", minHeight: 54, border: "none", borderRadius: 999, textAlign: "center", marginTop: 6, opacity: loading ? 0.6 : 1, cursor: loading ? "wait" : "pointer" }}
                             >
                                 {loading ? "Signing in…" : d.cta}
                             </button>
@@ -452,33 +399,33 @@ function LoginForm() {
 
                         {ENABLE_GOOGLE_OAUTH && d.showAlt && (
                             <>
-                                <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "26px 0" }}>
-                                    <div style={{ flex: 1, height: 1, background: "#dcebe2" }} />
-                                    <span style={{ fontSize: 12.5, color: "#8ba396" }}>or</span>
-                                    <div style={{ flex: 1, height: 1, background: "#dcebe2" }} />
+                                <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "22px 0" }}>
+                                    <div style={{ flex: 1, height: 1, background: C.hairline }} />
+                                    <span style={{ fontSize: 12.5, color: C.inkFaint }}>or</span>
+                                    <div style={{ flex: 1, height: 1, background: C.hairline }} />
                                 </div>
-                                <button type="button" className="pa-btn" style={{ width: "100%", border: "1.5px solid #d5e6db", background: "#fff", color: "#33463c", fontSize: 15, fontWeight: 600, fontFamily: "inherit", padding: 14, borderRadius: 999, textAlign: "center" }}>
+                                <button type="button" className="pa-btn" style={{ width: "100%", border: `1px solid ${C.hairline}`, background: "#FFFDF8", color: C.ink, fontSize: 15, fontWeight: 600, fontFamily: "inherit", minHeight: 50, borderRadius: 999, textAlign: "center" }}>
                                     Continue with Google
                                 </button>
                             </>
                         )}
 
-                        <p style={{ fontSize: 14, color: "#6f8378", textAlign: "center", marginTop: 30 }}>
+                        <p style={{ fontSize: 14, color: C.inkSoft, textAlign: "center", marginTop: 24 }}>
                             {d.footNote}{" "}
                             {d.footHref ? (
-                                <Link href={d.footHref} style={{ color: "#3c8a68", fontWeight: 700, textDecoration: "none" }}>{d.footAction}</Link>
+                                <Link href={d.footHref} style={{ color: C.accent, fontWeight: 700, textDecoration: "none" }}>{d.footAction}</Link>
                             ) : (
-                                <span style={{ color: "#3c8a68", fontWeight: 700 }}>{d.footAction}</span>
+                                <span style={{ color: C.accent, fontWeight: 700 }}>{d.footAction}</span>
                             )}
                         </p>
 
                         {portal === "admin" && (
-                            <div style={{ marginTop: 22, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, ...mono, fontSize: 11.5, letterSpacing: "0.08em", color: "#8ba396" }}>
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8ba396" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <div style={{ marginTop: 18, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.inkFaint }}>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                     <rect x="4" y="10" width="16" height="10" rx="2" />
                                     <path d="M8 10V7a4 4 0 0 1 8 0v3" />
                                 </svg>
-                                RESTRICTED ACCESS · ALL ACTIONS ARE AUDIT-LOGGED
+                                Restricted · all actions are audit-logged
                             </div>
                         )}
                     </div>
@@ -487,6 +434,18 @@ function LoginForm() {
         </div>
     );
 }
+
+const INPUT: React.CSSProperties = {
+    width: "100%",
+    fontFamily: "var(--font-sans), sans-serif",
+    fontSize: 15.5,
+    height: 52,
+    padding: "0 18px",
+    border: `1px solid ${C.hairline}`,
+    borderRadius: 14,
+    background: "#FFFDF8",
+    color: C.ink,
+};
 
 export default function LoginPage() {
     return (

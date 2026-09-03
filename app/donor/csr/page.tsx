@@ -83,10 +83,10 @@ function CsrContent() {
     return (
         <div className="space-y-8">
             <div>
-                <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+                <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-zinc-900 ">
                     Corporate CSR
                 </h1>
-                <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+                <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-zinc-500 ">
                     Register your organisation as a corporate CSR donor. Your existing donations and
                     campaigns roll up into aggregated CSR reports. 80G utilisation certificates are not
                     yet available.
@@ -98,12 +98,12 @@ function CsrContent() {
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
                 </div>
             ) : loadError ? (
-                <div className="rounded-2xl border border-rose-200/60 bg-rose-50/40 p-6 text-center dark:border-rose-900/40 dark:bg-rose-950/20">
-                    <p className="text-sm font-semibold text-rose-700 dark:text-rose-400">{loadError}</p>
+                <div className="rounded-2xl border border-rose-200/60 bg-rose-50/40 p-6 text-center ">
+                    <p className="text-sm font-medium text-rose-700 ">{loadError}</p>
                     <button
                         type="button"
                         onClick={load}
-                        className="mt-4 rounded-xl border border-rose-300 px-4 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-100 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                        className="mt-4 rounded-xl border border-rose-300 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 "
                     >
                         Retry
                     </button>
@@ -111,10 +111,10 @@ function CsrContent() {
             ) : (
                 <form
                     onSubmit={handleSubmit}
-                    className="max-w-xl space-y-6 rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900"
+                    className="max-w-xl space-y-6 rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm "
                 >
                     {existing && (
-                        <div className="rounded-lg bg-emerald-500/10 p-3 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                        <div className="rounded-lg bg-emerald-500/10 p-3 text-xs font-medium text-emerald-700 ">
                             You are registered as a corporate CSR donor. You can update the details below.
                         </div>
                     )}
@@ -125,7 +125,7 @@ function CsrContent() {
                     <CsrField label="CSR focus area (optional)" value={focus} onChange={setFocus} placeholder="Child nutrition" />
 
                     {saveError && (
-                        <div className="rounded-lg bg-rose-500/10 p-3 text-xs font-semibold text-rose-700 dark:text-rose-400">
+                        <div className="rounded-lg bg-rose-500/10 p-3 text-xs font-medium text-rose-700 ">
                             {saveError}
                         </div>
                     )}
@@ -134,26 +134,26 @@ function CsrContent() {
                         <button
                             type="submit"
                             disabled={saveState === "saving"}
-                            className="rounded-lg bg-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-1 px-6 py-3 text-xs font-bold text-white shadow-md transition hover:bg-emerald-700 active:scale-[.98] disabled:opacity-50"
+                            className="rounded-lg bg-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-1 px-6 py-3 text-xs font-semibold text-white shadow-md transition hover:bg-emerald-700 active:scale-[.98] disabled:opacity-50"
                         >
                             {saveState === "saving" ? "Saving..." : existing ? "Update profile" : "Register as CSR donor"}
                         </button>
                         {saveState === "saved" && (
-                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Saved</span>
+                            <span className="text-xs font-semibold text-emerald-600 ">Saved</span>
                         )}
                     </div>
 
                     {/* 80G utilisation certificate — BLOCKED (needs 80G registration + email/PDF provider). */}
-                    <div className="mt-2 rounded-lg border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
+                    <div className="mt-2 rounded-lg border border-dashed border-zinc-300 p-3 ">
                         <button
                             type="button"
                             disabled
                             title="Coming soon — pending 80G registration and certificate delivery setup."
-                            className="cursor-not-allowed rounded-lg border border-zinc-300 px-4 py-2 text-xs font-bold text-zinc-400 dark:border-zinc-700"
+                            className="cursor-not-allowed rounded-lg border border-zinc-300 px-4 py-2 text-xs font-semibold text-zinc-400 "
                         >
                             Download 80G certificate
                         </button>
-                        <p className="mt-1.5 text-[10px] font-semibold text-zinc-400">
+                        <p className="mt-1.5 text-[11px] font-medium text-zinc-400">
                             80G utilisation certificates are not available yet.
                         </p>
                     </div>
@@ -180,7 +180,7 @@ function CsrField({
 }) {
     return (
         <div className="space-y-2">
-            <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400">
+            <label className="text-xs font-semibold text-zinc-600 ">
                 {label} {required && <span className="text-rose-500">*</span>}
             </label>
             <input
@@ -188,7 +188,7 @@ function CsrField({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
-                className={`w-full rounded-xl border border-zinc-200 p-3 text-sm text-zinc-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-100 ${
+                className={`w-full rounded-xl border border-zinc-200 p-3 text-sm text-zinc-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 ${
                     mono ? "font-mono tracking-wider" : ""
                 }`}
             />
@@ -198,7 +198,7 @@ function CsrField({
 
 export default function CsrPage() {
     return (
-        <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
+        <div className="flex min-h-screen flex-col bg-zinc-50 ">
             <Navbar />
             <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
                 <CsrContent />

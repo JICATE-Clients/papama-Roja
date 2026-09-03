@@ -58,7 +58,7 @@ export default function AdminNotificationTemplatesPage() {
                 resourceLabel="templates"
                 emptyHint="Templates are seeded per notification kind/channel."
                 table={
-                    <TableShell>
+                    <TableShell hideCols={[1, 2, 4, 5]}>
                         <TableHead columns={columns} />
                         <tbody className="divide-y divide-slate-100">
                             {items.map((t) => (
@@ -120,9 +120,14 @@ function TemplateRowView({
 
     return (
         <tr className="hover:bg-slate-50 align-top">
-            <td className="px-4 py-3 font-mono text-xs font-medium text-slate-900">{row.kind}</td>
-            <td className="px-4 py-3 text-slate-500">{row.channel}</td>
-            <td className="px-4 py-3 text-slate-700">
+            <td className="px-2 md:px-4 py-3 font-mono text-xs font-medium text-slate-900">{row.kind}</td>
+            <td className="px-2 md:px-4 py-3 text-slate-500">{row.channel}</td>
+            <td className="px-2 md:px-4 py-3 text-slate-700">
+                {/* Kind is an 88px mono column; reprinted here so a phone still
+                    shows which notification a row is. */}
+                <span className="mb-1 block font-mono text-[11px] font-medium text-slate-500 md:hidden">
+                    {row.kind}
+                </span>
                 {editing ? (
                     <div className="flex flex-col gap-1.5">
                         <input
@@ -148,7 +153,7 @@ function TemplateRowView({
                     </div>
                 )}
             </td>
-            <td className="px-4 py-3">
+            <td className="px-2 md:px-4 py-3">
                 <span
                     className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         row.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
@@ -157,9 +162,9 @@ function TemplateRowView({
                     {row.is_active ? "active" : "inactive"}
                 </span>
             </td>
-            <td className="px-4 py-3 text-slate-500">{row.version}</td>
+            <td className="px-2 md:px-4 py-3 text-slate-500">{row.version}</td>
             {canManage && (
-                <td className="px-4 py-3">
+                <td className="px-2 md:px-4 py-3">
                     {editing ? (
                         <div className="flex flex-wrap gap-1.5">
                             <ActionButton

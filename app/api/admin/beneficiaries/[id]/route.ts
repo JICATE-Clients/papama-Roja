@@ -20,7 +20,7 @@ export const GET = defineRoute<{ id: string }>(
         const { data: b, error } = await admin
             .from("beneficiaries")
             .select(
-                "id, category, status, eligibility_status, eligibility_expires_at, aadhaar_hash, face_hash, registered_by, created_at, updated_at"
+                "id, full_name, category, status, eligibility_status, eligibility_expires_at, aadhaar_hash, face_hash, registered_by, created_at, updated_at"
             )
             .eq("id", id)
             .maybeSingle();
@@ -53,6 +53,8 @@ export const GET = defineRoute<{ id: string }>(
         return {
             beneficiary: {
                 beneficiary_id: b.id,
+                // Optional by design; the drawer renders "Not recorded" when null.
+                full_name: b.full_name ?? null,
                 category: b.category,
                 status: b.status,
                 eligibility: b.eligibility_status,

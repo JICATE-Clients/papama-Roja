@@ -110,37 +110,40 @@ export default function VolunteerActivityPage() {
                 resourceLabel="volunteers"
                 emptyHint="Volunteers will appear here once they are registered."
                 table={
-                    <TableShell>
+                    <TableShell hideCols={[2, 3, 4, 5, 6]}>
                         <TableHead columns={columns} />
                         <tbody className="divide-y divide-slate-100">
                             {table.rows.map((v) => (
                                 <tr key={v.id} className="hover:bg-slate-50">
-                                    <td className="px-4 py-3">
+                                    <td className="px-2 md:px-4 py-3">
                                         <div className="font-medium text-slate-900">
                                             <Dash>{v.full_name}</Dash>
                                         </div>
-                                        <div className="text-xs text-slate-500">
+                                        {/* The email is the widest thing in the row (165px of a 342px
+                                            card) and only the name is needed to tell volunteers apart
+                                            here; the address is on /admin/volunteers. */}
+                                        <div className="hidden text-xs text-slate-500 md:block">
                                             <Dash>{v.email}</Dash>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3 text-slate-700">
+                                    <td className="px-2 md:px-4 py-3 text-slate-700">
                                         <Dash>{v.assigned_area}</Dash>
                                     </td>
-                                    <td className="px-4 py-3 text-slate-700">{v.tokens_distributed}</td>
-                                    <td className="px-4 py-3 text-slate-700">
+                                    <td className="px-2 md:px-4 py-3 text-slate-700">{v.tokens_distributed}</td>
+                                    <td className="px-2 md:px-4 py-3 text-slate-700">
                                         {v.registrations_assisted}
                                     </td>
-                                    <td className="px-4 py-3 text-slate-700">{v.active_days}</td>
-                                    <td className="px-4 py-3 text-slate-500 text-xs">
+                                    <td className="px-2 md:px-4 py-3 text-slate-700">{v.active_days}</td>
+                                    <td className="px-2 md:px-4 py-3 text-slate-500 text-xs">
                                         {v.last_active_at
                                             ? new Date(v.last_active_at).toLocaleDateString()
                                             : "—"}
                                     </td>
-                                    <td className="px-4 py-3">
+                                    <td className="px-2 md:px-4 py-3">
                                         <StatusBadge value={v.status} />
                                     </td>
                                     {canManage && (
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <ZoneAssign
                                                 current={v.assigned_area}
                                                 busy={assign.busyId === v.id}
@@ -177,13 +180,13 @@ function ZoneAssign({
     const dirty = (value.trim() || null) !== (current ?? null);
 
     return (
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
             <input
                 type="text"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder="zone / area"
-                className="w-32 rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-900 outline-none focus:border-slate-600 focus:ring-1 focus:ring-slate-600"
+                className="w-24 rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-900 outline-none focus:border-slate-600 focus:ring-1 focus:ring-slate-600 md:w-32"
             />
             <ActionButton
                 tone="primary"

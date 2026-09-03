@@ -16,6 +16,7 @@ import {
   type FetchState,
 } from "./_ui";
 import { TokenQrCode } from "@/components/donor/TokenQrCode";
+import { inr, shortDate } from "@/lib/format";
 
 /** A token currently held by this volunteer, awaiting distribution. */
 interface HeldToken {
@@ -192,7 +193,7 @@ function HeldTokensSection({
         resourceLabel="held tokens"
         emptyHint="Tokens granted to you will appear here once the admin approves a request."
       >
-        <TableShell>
+        <TableShell hideCols={[2, 5]}>
           <TableHead columns={["Serial", "Type", "Value", "Status", "Minted", "Action"]} />
           <tbody className="divide-y divide-slate-100">
             {tokens.map((t) => (
@@ -231,18 +232,18 @@ function DistributeRow({ token, reload }: { token: HeldToken; reload: () => Prom
   return (
     <>
       <tr className="hover:bg-slate-50">
-        <td className="px-4 py-3 font-mono text-xs text-slate-700">{token.serial_number}</td>
+        <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-700">{token.serial_number}</td>
         <td className="px-4 py-3 capitalize text-slate-700">
           {token.token_type.replace(/_/g, " ")}
         </td>
         <td className="px-4 py-3 font-medium text-slate-900">
-          ₹{token.value.toLocaleString("en-IN")}
+          {inr(token.value)}
         </td>
         <td className="px-4 py-3">
           <StatusBadge value={token.status} />
         </td>
         <td className="px-4 py-3 text-slate-500">
-          {new Date(token.minted_at).toLocaleDateString()}
+          {shortDate(token.minted_at)}
         </td>
         <td className="px-4 py-3">
           <button
@@ -265,7 +266,7 @@ function DistributeRow({ token, reload }: { token: HeldToken; reload: () => Prom
                 <TokenQrCode payload={token.qr_payload} size={150} />
                 <span className="font-mono text-[10px] text-slate-500">{token.serial_number}</span>
                 <span className="text-xs font-semibold text-slate-700">
-                  ₹{token.value.toLocaleString("en-IN")}
+                  {inr(token.value)}
                 </span>
               </div>
               <div className="flex-1">
@@ -333,7 +334,7 @@ function DistributedSection({
         resourceLabel="distributed tokens"
         emptyHint="Tokens you distribute will appear here, with the QR still viewable."
       >
-        <TableShell>
+        <TableShell hideCols={[2]}>
           <TableHead columns={["Serial", "Type", "Value", "Status", "Action"]} />
           <tbody className="divide-y divide-slate-100">
             {tokens.map((t) => (
@@ -352,12 +353,12 @@ function DistributedRow({ token }: { token: HeldToken }) {
   return (
     <>
       <tr className="hover:bg-slate-50">
-        <td className="px-4 py-3 font-mono text-xs text-slate-700">{token.serial_number}</td>
+        <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-700">{token.serial_number}</td>
         <td className="px-4 py-3 capitalize text-slate-700">
           {token.token_type.replace(/_/g, " ")}
         </td>
         <td className="px-4 py-3 font-medium text-slate-900">
-          ₹{token.value.toLocaleString("en-IN")}
+          {inr(token.value)}
         </td>
         <td className="px-4 py-3">
           <StatusBadge value={token.status} />
@@ -366,9 +367,10 @@ function DistributedRow({ token }: { token: HeldToken }) {
           <button
             type="button"
             onClick={() => setShow((v) => !v)}
-            className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+            className="whitespace-nowrap rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
           >
-            {show ? "Hide QR" : "Show QR"}
+            <span className="md:hidden">{show ? "Hide" : "QR"}</span>
+            <span className="hidden md:inline">{show ? "Hide QR" : "Show QR"}</span>
           </button>
         </td>
       </tr>
@@ -510,7 +512,7 @@ function MyRequestsSection({
         resourceLabel="requests"
         emptyHint="Submit a request above and it will show up here with its status."
       >
-        <TableShell>
+        <TableShell hideCols={[4]}>
           <TableHead columns={["Requested", "Granted", "Status", "Submitted"]} />
           <tbody className="divide-y divide-slate-100">
             {requests.map((r) => (
@@ -523,7 +525,7 @@ function MyRequestsSection({
                   <StatusBadge value={r.status} />
                 </td>
                 <td className="px-4 py-3 text-slate-500">
-                  {new Date(r.created_at).toLocaleDateString()}
+                  {shortDate(r.created_at)}
                 </td>
               </tr>
             ))}

@@ -99,21 +99,21 @@ export default function SettlementAuditPage() {
                 resourceLabel="audit entries"
                 emptyHint="Settlements flagged or randomly sampled for audit will appear here after a settlement run."
                 table={
-                    <TableShell>
+                    <TableShell hideCols={[3, 4, 6]}>
                         <TableHead columns={columns} />
                         <tbody className="divide-y divide-slate-100">
                             {table.rows.map((r) => (
                                 <tr key={r.id} className="hover:bg-slate-50">
-                                    <td className="px-4 py-3 font-medium text-slate-900">
+                                    <td className="px-2 md:px-4 py-3 font-medium text-slate-900">
                                         <Dash>{r.vendor_name}</Dash>
                                     </td>
-                                    <td className="px-4 py-3 text-slate-700">
+                                    <td className="px-2 md:px-4 py-3 text-slate-700">
                                         {r.amount != null ? `₹${r.amount.toLocaleString("en-IN")}` : "—"}
                                     </td>
-                                    <td className="px-4 py-3 text-slate-600">
+                                    <td className="px-2 md:px-4 py-3 text-slate-600">
                                         <Dash>{r.reason ? r.reason.replace(/_/g, " ") : null}</Dash>
                                     </td>
-                                    <td className="px-4 py-3">
+                                    <td className="px-2 md:px-4 py-3">
                                         <div className="flex items-center gap-1.5">
                                             {r.settlement_status && (
                                                 <StatusBadge value={r.settlement_status} />
@@ -121,16 +121,16 @@ export default function SettlementAuditPage() {
                                             {r.on_hold && <StatusBadge value="held" />}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3">
+                                    <td className="px-2 md:px-4 py-3">
                                         <StatusBadge value={r.status} />
                                     </td>
-                                    <td className="px-4 py-3 text-slate-500">
+                                    <td className="px-2 md:px-4 py-3 text-slate-500">
                                         {r.selected_at
                                             ? new Date(r.selected_at).toLocaleDateString()
                                             : "—"}
                                     </td>
                                     {canManage && (
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             {r.status === "pending" ? (
                                                 <div className="flex flex-wrap items-center gap-1.5">
                                                     <ActionButton

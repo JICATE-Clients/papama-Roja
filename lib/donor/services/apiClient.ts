@@ -9,6 +9,7 @@ import {
   CreditTransaction,
   NotificationItem,
   ConvertTokenItem,
+  RefundOverview,
 } from '../types/contract';
 import { DashboardService } from './dashboardService';
 import { isMockMode } from './mock-mode';
@@ -607,6 +608,33 @@ export const ApiClient = {
       body: JSON.stringify({ id }),
     });
     if (!res.ok) throw new Error(await readError(res, `Failed to mark notification read (${res.status})`));
+  },
+
+  /**
+   * The donor's own open payment failures (nothing requested against them yet)
+   * plus every refund they have raised. Mock mode returns empty rather than
+   * inventing a failed payment — a fake one would invite a refund request that
+   * cannot exist.
+   */
+  async getRefundOverview(): Promise<RefundOverview> {
+    if (isMockMode()) {
+      return { payment_failures: [], refunds: [] };
+    }
+    const res = await fetch('/api/donor/refund-request', { credentials: 'same-origin', cache: 'no-store' });
+    if (!res.ok) throw new Error(await readError(res, `Failed to load refunds (${res.status})`));
+    return (await res.json()) as RefundOverview;
+  },
+
+  /** Raise a refund against one open payment failure. */
+  async requestRefund(paymentFailureId: string, amountInr: number, reason: string): Promise<{ id: string }> {
+    const res = await fetch('/api/donor/refund-request', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payment_failure_id: paymentFailureId, amount_inr: amountInr, reason }),
+    });
+    if (!res.ok) throw new Error(await readError(res, `Refund request failed (${res.status})`));
+    return (await res.json()) as { id: string };
   },
 
   // Developer utility to reset local db state if needed

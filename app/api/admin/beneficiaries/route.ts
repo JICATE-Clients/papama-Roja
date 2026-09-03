@@ -21,7 +21,10 @@ const beneficiaryListQuerySchema = z.object({
  *
  * Thin read gated by `beneficiary_registration/read`. Privacy-first: the raw
  * `face_hash`/`aadhaar_hash` are NEVER returned — only the boolean presence flags
- * `face_hash_valid` / `aadhaar_linked`. `status` is the record-state enum
+ * `face_hash_valid` / `aadhaar_linked`. `full_name` IS returned — without it the
+ * console list has no identifying column at all and every row reads the same —
+ * but it is frequently null, since it is optional by design and most
+ * beneficiaries are non-app users. `status` is the record-state enum
  * (active|suspended|blocked) from the `beneficiaries` table; the pending-approval
  * queue lives in `beneficiary_registrations` (separate route).
  */
@@ -36,7 +39,7 @@ export const GET = defineRoute(
 
         const { data, error } = await supabase
             .from("beneficiaries")
-            .select("id, category, status, eligibility_status, aadhaar_hash, face_hash, created_at")
+            .select("id, full_name, category, status, eligibility_status, aadhaar_hash, face_hash, created_at")
             .order("created_at", { ascending: false })
             .range(offset, offset + limit - 1);
 
@@ -44,6 +47,7 @@ export const GET = defineRoute(
 
         const beneficiaries: BeneficiaryResponse[] = (data ?? []).map((b) => ({
             beneficiary_id: b.id,
+            full_name: b.full_name ?? null,
             category: b.category,
             status: b.status,
             eligibility: b.eligibility_status,

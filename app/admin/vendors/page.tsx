@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useCan } from "@/components/auth/AppUserProvider";
+import { NewVendorForm } from "./NewVendorForm";
 import type { VendorAction, VendorResponse } from "@/lib/validation/schemas";
 
 import {
@@ -60,6 +61,8 @@ type VendorDocument = {
  */
 export default function AdminVendorsPage() {
     const canManage = useCan("vendor_management", "update");
+    const canCreate = useCan("vendor_management", "create");
+    const [showCreate, setShowCreate] = useState(false);
     const { items, state, errorMsg, reload } = useAdminList<VendorResponse>(
         "/api/admin/vendors",
         "vendors",
@@ -129,6 +132,12 @@ export default function AdminVendorsPage() {
                   label: "Geo",
                   value: v.geo ? `${v.geo.lat.toFixed(5)}, ${v.geo.lng.toFixed(5)}` : null,
               },
+              {
+                  label: "Login",
+                  value: v.has_login
+                      ? "Linked — the vendor can sign in"
+                      : "Unclaimed — no account yet",
+              },
               { label: "Registered", value: new Date(v.created_at).toLocaleString(), full: true },
           ]
         : [];
@@ -145,7 +154,27 @@ export default function AdminVendorsPage() {
                 title="Vendors"
                 subtitle="Registered food vendors and their onboarding/KYC status. Click a vendor for the full profile + documents."
                 count={state === "ready" ? items.length : undefined}
+                action={
+                    canCreate ? (
+                        <button
+                            type="button"
+                            onClick={() => setShowCreate((o) => !o)}
+                            className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-slate-700"
+                        >
+                            {showCreate ? "Cancel" : "Add vendor"}
+                        </button>
+                    ) : null
+                }
             />
+
+            {canCreate && showCreate && (
+                <NewVendorForm
+                    onDone={() => {
+                        setShowCreate(false);
+                        void reload();
+                    }}
+                />
+            )}
 
             {state === "ready" && items.length > 0 && (
                 <FilterBar
@@ -166,7 +195,7 @@ export default function AdminVendorsPage() {
                 emptyHint="Vendors will appear here once they are onboarded."
                 table={
                     <>
-                        <TableShell>
+                        <TableShell hideCols={[3, 4, 5, 6, 7]}>
                             <TableHead columns={columns} />
                             <tbody className="divide-y divide-slate-100">
                                 {table.rows.map((v) => (
@@ -175,27 +204,27 @@ export default function AdminVendorsPage() {
                                         onClick={() => drawer.openRow(v)}
                                         className="cursor-pointer hover:bg-slate-50"
                                     >
-                                        <td className="px-4 py-3 font-medium text-slate-900">{v.name}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3 font-medium text-slate-900">{v.name}</td>
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={v.status} />
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={v.kyc_status} />
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             <Dash>{v.fssai_license}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             <Dash>{v.gst_number}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             {v.hygiene_rating != null ? `${v.hygiene_rating}/5` : "—"}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-500">
+                                        <td className="px-2 md:px-4 py-3 text-slate-500">
                                             {new Date(v.created_at).toLocaleDateString()}
                                         </td>
                                         {canManage && (
-                                            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                            <td className="px-2 md:px-4 py-3" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {actionsFor(v).map((a) => (
                                                         <ActionButton

@@ -3,6 +3,8 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/donor/Navbar";
+import { shortDate } from "@/lib/format";
+import { ArrowLeft } from "@phosphor-icons/react/dist/ssr/ArrowLeft";
 
 interface ScheduleItem {
   id: string;
@@ -127,34 +129,25 @@ export default function ScheduleTokenPage({
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
+    <div className="flex min-h-screen flex-col bg-zinc-50 ">
       <Navbar />
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-6">
           <Link
             href={`/donor/tokens/${id}`}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:underline"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth="2.5"
-              stroke="currentColor"
-              className="h-3.5 w-3.5"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-            </svg>
+            <ArrowLeft size={14} weight="bold" aria-hidden />
             Back to Token
           </Link>
         </div>
 
-        <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900/40 md:p-8">
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+        <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm md:p-8">
+          <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-zinc-900 ">
             Schedule for an Occasion
           </h1>
-          <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+          <p className="mt-1.5 text-sm text-zinc-500 leading-relaxed">
             Set a future date for this token to be redeemed (e.g. a birthday or festival).
             We&apos;ll send you a reminder 7 days before.
           </p>
@@ -166,12 +159,12 @@ export default function ScheduleTokenPage({
           ) : (
             <>
               {schedule && (
-                <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 text-sm dark:border-emerald-900/40 dark:bg-emerald-950/20">
-                  <p className="font-bold text-emerald-800 dark:text-emerald-400">
-                    Currently scheduled for {new Date(schedule.scheduled_for).toLocaleDateString()}
+                <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 text-sm ">
+                  <p className="font-semibold text-emerald-800 ">
+                    Currently scheduled for {shortDate(schedule.scheduled_for)}
                   </p>
                   {schedule.location && (
-                    <p className="mt-0.5 text-xs text-emerald-700 dark:text-emerald-300">
+                    <p className="mt-0.5 text-xs text-emerald-700 ">
                       Location: {schedule.location}
                     </p>
                   )}
@@ -179,19 +172,19 @@ export default function ScheduleTokenPage({
               )}
 
               {error && (
-                <div className="mt-4 rounded-lg bg-red-500/10 p-3 text-xs font-semibold text-red-700 dark:text-red-400">
+                <div className="mt-4 rounded-lg bg-red-500/10 p-3 text-xs font-medium text-red-700 ">
                   {error}
                 </div>
               )}
               {savedMsg && (
-                <div className="mt-4 rounded-lg bg-emerald-500/10 p-3 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                <div className="mt-4 rounded-lg bg-emerald-500/10 p-3 text-xs font-medium text-emerald-700 ">
                   {savedMsg}
                 </div>
               )}
 
               <form onSubmit={onSave} className="mt-6 space-y-5">
                 <div className="space-y-2">
-                  <label htmlFor="schedule-date" className="text-xs font-bold text-zinc-600 dark:text-zinc-400">
+                  <label htmlFor="schedule-date" className="text-xs font-semibold text-zinc-600 ">
                     Occasion date
                   </label>
                   <input
@@ -201,12 +194,12 @@ export default function ScheduleTokenPage({
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     required
-                    className="h-11 w-full rounded-xl border border-zinc-200 px-3 text-sm font-semibold text-zinc-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+                    className="h-11 w-full rounded-xl border border-zinc-200 px-3 text-sm font-medium text-zinc-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 "
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="schedule-location" className="text-xs font-bold text-zinc-600 dark:text-zinc-400">
+                  <label htmlFor="schedule-location" className="text-xs font-semibold text-zinc-600 ">
                     Location (optional)
                   </label>
                   <input
@@ -215,7 +208,7 @@ export default function ScheduleTokenPage({
                     placeholder="e.g. Anna Canteen, T. Nagar"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="h-11 w-full rounded-xl border border-zinc-200 px-3 text-sm font-semibold text-zinc-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+                    className="h-11 w-full rounded-xl border border-zinc-200 px-3 text-sm font-medium text-zinc-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 "
                   />
                 </div>
 
@@ -223,7 +216,7 @@ export default function ScheduleTokenPage({
                   <button
                     type="submit"
                     disabled={saving}
-                    className="rounded-lg bg-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-1 px-5 py-3 text-xs font-bold text-white transition hover:bg-emerald-700 shadow-md active:scale-[.98] disabled:pointer-events-none disabled:opacity-50 cursor-pointer"
+                    className="rounded-lg bg-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-1 px-5 py-3 text-xs font-semibold text-white transition hover:bg-emerald-700 shadow-md active:scale-[.98] disabled:pointer-events-none disabled:opacity-50 cursor-pointer"
                   >
                     {saving ? "Saving..." : schedule ? "Update schedule" : "Schedule occasion"}
                   </button>
@@ -232,7 +225,7 @@ export default function ScheduleTokenPage({
                       type="button"
                       onClick={onClear}
                       disabled={saving}
-                      className="rounded-xl border border-zinc-200 bg-white px-5 py-3 text-xs font-bold text-zinc-600 transition hover:bg-zinc-50 active:scale-[.98] disabled:pointer-events-none disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 cursor-pointer"
+                      className="rounded-xl border border-zinc-200 bg-white px-5 py-3 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-50 active:scale-[.98] disabled:pointer-events-none disabled:opacity-50 cursor-pointer"
                     >
                       Clear schedule
                     </button>

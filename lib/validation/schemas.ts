@@ -232,6 +232,12 @@ export type BeneficiaryRegistrationRequest = z.infer<typeof beneficiaryRegistrat
  */
 export const beneficiaryResponseSchema = z.object({
     beneficiary_id: z.string(),
+    /**
+     * Nullable BY DESIGN — beneficiaries.full_name is optional ("kept minimal
+     * for dignity/privacy"), and most beneficiaries are non-app users who were
+     * never asked for one. Callers must render a fallback, not assume a string.
+     */
+    full_name: z.string().nullable(),
     category: beneficiaryCategorySchema,
     status: beneficiaryStatusSchema,
     eligibility: eligibilityStatusSchema,
@@ -314,8 +320,50 @@ export const vendorResponseSchema = z.object({
     geo: geoPointSchema.nullable(), // client Q14; from geo_lat/geo_lng
     hygiene_rating: z.number().int().min(1).max(5).nullable(), // null until first rated
     created_at: isoTimestampSchema,
+    // Whether an auth account is linked (vendors.owner_id is set). Self-registered
+    // vendors always have one; an admin-created outlet starts unclaimed. Exposed as
+    // a boolean, never the owner UUID — the admin table only needs "can they sign
+    // in", and the id would be PII leaking out of a list endpoint.
+    has_login: z.boolean(),
 });
 export type VendorResponse = z.infer<typeof vendorResponseSchema>;
+
+/**
+ * POST /api/admin/vendors — staff pre-registration of an outlet (matrix
+ * `vendor_management/create`: admin + vendor_manager).
+ *
+ * Deliberately narrower than the public self-registration schema:
+ *   - No email/password. Creating someone's login means choosing or transmitting
+ *     a credential, and the email provider is still an open item (CLAUDE.md), so
+ *     there is no invite to send. The row is created UNCLAIMED (owner_id null)
+ *     and the vendor links their own account by self-registering later.
+ *   - No bank fields. Settlement details are collected from the vendor, not
+ *     typed in on their behalf.
+ * Everything here is business information an admin can verify on a site visit.
+ */
+export const vendorCreateRequestSchema = z
+    .object({
+        name: z.string().trim().min(1, "business name is required").max(200),
+        legal_name: z.string().trim().max(200).optional(),
+        address: z.string().trim().max(500).optional(),
+        city: z.string().trim().max(120).optional(),
+        pincode: z.string().trim().max(12).optional(),
+        phone: z.string().trim().max(32).optional(),
+        email: z.string().trim().email("enter a valid email").optional(),
+        emergency_contact: z.string().trim().max(120).optional(),
+        fssai_license: z.string().trim().max(64).optional(),
+        gst_number: z.string().trim().max(32).optional(),
+        geo_lat: z.number().min(-90).max(90).nullable().optional(),
+        geo_lng: z.number().min(-180).max(180).nullable().optional(),
+    })
+    // A half-set coordinate is worse than none: vendorDiscovery would treat the
+    // outlet as unlocatable anyway, and a stray lat with no lng reads like data
+    // loss rather than an omission.
+    .refine((v) => (v.geo_lat == null) === (v.geo_lng == null), {
+        message: "give both latitude and longitude, or neither",
+        path: ["geo_lng"],
+    });
+export type VendorCreateRequest = z.infer<typeof vendorCreateRequestSchema>;
 
 /**
  * PATCH /api/admin/vendors — a staff action on one vendor. The action drives a
@@ -562,14 +610,41 @@ export type EmergencyOverrideActivateRequest = z.infer<typeof emergencyOverrideA
 export const paymentFailureCreateRequestSchema = z
     .object({
         donation_id: z.string().uuid().optional(),
-        donor_id: z.string().uuid(),
-        amount_inr: inrAmountSchema.positive(),
+        donor_id: z.string().uuid().optional(),
+        amount_inr: inrAmountSchema.positive().optional(),
         reason: paymentFailureReasonSchema,
         max_retries: z.number().int().min(0).optional(),
         notes: z.string().trim().max(1000).optional(),
     })
-    .strict();
+    .strict()
+    // Two ways in, because reconciliation happens from two directions. Naming a
+    // `donation_id` lets the server read the donor and the amount off that
+    // donation — the admin is looking at a charge that failed, and re-typing a
+    // donor UUID and an amount that are already on the row is both tedious and a
+    // place to make the record wrong. Naming the donor and the amount directly
+    // still works for a failure with no donation row behind it.
+    .refine((b) => b.donation_id != null || (b.donor_id != null && b.amount_inr != null), {
+        message: "give a donation_id, or both donor_id and amount_inr",
+        path: ["donation_id"],
+    });
 export type PaymentFailureCreateRequest = z.infer<typeof paymentFailureCreateRequestSchema>;
+
+/**
+ * PATCH /api/admin/payment-failures — close a logged failure without a refund.
+ *
+ * `dismissed` was a status nothing could ever set: only refund approval moved a
+ * row, and only to `resolved`. A failure logged by mistake, or one the bank later
+ * confirms went through fine, stayed `open` forever AND kept offering the donor a
+ * refund path. The note is required — a dismissal with no reason is indis-
+ * tinguishable from a row someone lost interest in.
+ */
+export const paymentFailureDismissRequestSchema = z
+    .object({
+        payment_failure_id: z.string().uuid(),
+        note: z.string().trim().min(1, "say why this is being dismissed").max(1000),
+    })
+    .strict();
+export type PaymentFailureDismissRequest = z.infer<typeof paymentFailureDismissRequestSchema>;
 
 /** POST /api/donor/refund-request — donor self-initiates against an open payment_failures row. */
 export const refundRequestSchema = z
@@ -594,19 +669,118 @@ export const refundDecisionRequestSchema = z
     });
 export type RefundDecisionRequest = z.infer<typeof refundDecisionRequestSchema>;
 
-/** POST /api/admin/campaigns — minimal emergency campaign creation (addon #9). */
+/**
+ * GET /api/admin/payment-failures — one logged failure as the admin table reads
+ * it. `donor_label` is resolved server-side for the same reason the donations
+ * list resolves one: a UUID is unreadable in a table, and the id itself is PII
+ * that a list endpoint has no reason to hand out.
+ */
+export const paymentFailureResponseSchema = z.object({
+    id: z.string(),
+    donation_id: z.string().nullable(),
+    donor_label: z.string(),
+    amount_inr: z.number(),
+    reason: paymentFailureReasonSchema,
+    retry_count: z.number().int(),
+    max_retries: z.number().int().nullable(),
+    status: z.enum(["open", "resolved", "dismissed"]),
+    notes: z.string().nullable(),
+    created_at: isoTimestampSchema,
+    resolved_at: isoTimestampSchema.nullable(),
+    /** Whether a refund request already exists against this failure. */
+    has_refund: z.boolean(),
+});
+export type PaymentFailureResponse = z.infer<typeof paymentFailureResponseSchema>;
+
+/**
+ * GET /api/admin/refunds — one refund request as the admin table reads it. The
+ * originating failure's reason travels with the row: deciding a refund without
+ * seeing WHY the payment failed is deciding it blind, and it saves a join in
+ * every consumer.
+ */
+export const refundResponseSchema = z.object({
+    id: z.string(),
+    donor_label: z.string(),
+    payment_failure_id: z.string(),
+    payment_failure_reason: paymentFailureReasonSchema.nullable(),
+    amount_inr: z.number(),
+    reason: z.string(),
+    status: refundStatusSchema,
+    decided_at: isoTimestampSchema.nullable(),
+    decision_note: z.string().nullable(),
+    created_at: isoTimestampSchema,
+});
+export type RefundResponse = z.infer<typeof refundResponseSchema>;
+
+/**
+ * The four categories the `campaigns` table's CHECK constraint accepts
+ * (migration m14). This was `z.string().max(50)`, which let any value through
+ * Zod and then failed in Postgres as a 500 — the route's own comment even told
+ * callers to pass `"emergency"`, which the constraint rejects. Disaster relief
+ * IS the emergency category; there is no separate one.
+ */
+export const campaignCategorySchema = z.enum([
+    "School",
+    "Orphanage",
+    "Disaster Relief",
+    "Community Kitchen",
+]);
+export type CampaignCategory = z.infer<typeof campaignCategorySchema>;
+
+/** The lifecycle a campaign moves through (m14 CHECK on `status`). */
+export const campaignStatusSchema = z.enum(["active", "paused", "completed"]);
+export type CampaignStatus = z.infer<typeof campaignStatusSchema>;
+
+/** POST /api/admin/campaigns — minimal campaign creation (addon #9). */
 export const campaignCreateRequestSchema = z
     .object({
         title: z.string().trim().min(1).max(200),
         description: z.string().trim().max(2000).optional(),
         organization_name: z.string().trim().min(1).max(200),
-        category: z.string().trim().min(1).max(50),
+        category: campaignCategorySchema,
         location: z.string().trim().max(200).optional(),
         target_tokens: z.number().int().min(0).optional(),
         token_price_inr: z.number().int().positive(),
     })
     .strict();
 export type CampaignCreateRequest = z.infer<typeof campaignCreateRequestSchema>;
+
+/** PATCH /api/admin/campaigns — move one campaign along its lifecycle. */
+export const campaignStatusRequestSchema = z
+    .object({
+        campaign_id: z.string().uuid(),
+        status: campaignStatusSchema,
+    })
+    .strict();
+export type CampaignStatusRequest = z.infer<typeof campaignStatusRequestSchema>;
+
+/**
+ * GET /api/admin/campaigns — one campaign as the admin table reads it.
+ *
+ * `raised_inr` / `raised_tokens` are SUMMED FROM `donations`, not read from the
+ * `campaigns.raised_tokens` column. That column is a leftover from the donor
+ * module's old `token_types` table and nothing in the live system increments it
+ * — the only writer, `lib/donor/services/creditService.ts`, is dead code that
+ * still targets the pre-rename table. Reporting a stored counter that is
+ * permanently zero would be worse than reporting nothing.
+ */
+export const campaignResponseSchema = z.object({
+    id: z.string(),
+    title: z.string(),
+    description: z.string(),
+    organization_name: z.string(),
+    category: z.string(),
+    location: z.string().nullable(),
+    target_tokens: z.number().int(),
+    token_price_inr: z.number().int(),
+    status: campaignStatusSchema,
+    created_at: isoTimestampSchema,
+    /** Summed from completed donations carrying this campaign_id. */
+    raised_inr: z.number(),
+    raised_tokens: z.number().int(),
+    donation_count: z.number().int(),
+});
+export type CampaignResponse = z.infer<typeof campaignResponseSchema>;
 
 // ===========================================================================
 // Admin-only response schemas — net-new Dev-2 tables (M07–M13). Field names &
@@ -781,6 +955,9 @@ export const fraudFlagDetailResponseSchema = z.object({
     status: fraudStatusSchema,
     detection_method: fraudDetectionMethodSchema.nullable(),
     entity: z.object({ kind: z.string(), id: z.string() }), // jsonb polymorphic target
+    /** Human label for entity.id — vendor name or token serial. Null when the
+     *  kind has nothing to resolve to (face, redemption, thank_you). */
+    entity_label: z.string().nullable(),
     blocked: z.boolean(),
     resolved_by: z.string().nullable(),
     resolution_notes: z.string().nullable(),

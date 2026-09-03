@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useCan } from "@/components/auth/AppUserProvider";
+import { shortDate } from "@/lib/format";
 
 import {
     ActionButton,
@@ -25,11 +26,15 @@ import {
 
 type TokenRow = {
     id: string;
+    /** The identifier printed on the QR — what anyone in the field will quote. */
+    serial_number: string | null;
     status: string;
     token_type: string;
     value_inr: number | null;
     has_donor: boolean;
     has_beneficiary: boolean;
+    /** Who funded it. Null for pool/emergency tokens with no donor attached. */
+    donor_name: string | null;
     minted_at: string | null;
     expires_at: string | null;
     redeemed_at: string | null;
@@ -95,7 +100,13 @@ const rupee = (n: number | null | undefined) =>
     n != null ? `₹${n.toLocaleString("en-IN")}` : "—";
 const date = (s: string | null | undefined) => (s ? new Date(s).toLocaleString() : null);
 
-/** Who currently holds the token, derived from its lifecycle status. */
+/**
+ * Custody, derived from the lifecycle status.
+ *
+ * NOT a table column any more: it is a pure function of `status`, so showing
+ * both put the same fact in two adjacent cells. It survives for the detail
+ * drawer, where spelling out "Beneficiary" beside the raw enum is clearer.
+ */
 function holderOf(status: string): string {
     switch (status) {
         case "generated":
@@ -143,7 +154,7 @@ export default function AdminTokensPage() {
     );
 
     const table = useClientTable(items, {
-        searchKeys: ["id", "status", "token_type"],
+        searchKeys: ["serial_number", "id", "donor_name", "status", "token_type"],
         tabKey: "status",
         pageSize: 15,
     });
@@ -246,7 +257,7 @@ export default function AdminTokensPage() {
                 <FilterBar
                     search={table.search}
                     onSearch={table.setSearch}
-                    searchPlaceholder="Search by id, status, type…"
+                    searchPlaceholder="Search by serial, donor, status, type…"
                     tabs={tabs}
                     activeTab={table.activeTab}
                     onTab={table.setActiveTab}
@@ -261,9 +272,9 @@ export default function AdminTokensPage() {
                 emptyHint="Minted tokens will appear here."
                 table={
                     <>
-                        <TableShell>
+                        <TableShell hideCols={[2, 5, 6, 7, 8]}>
                             <TableHead
-                                columns={["Token", "Type", "Value", "Status", "Holder", "Minted", "Expires", "Redeemed"]}
+                                columns={["Serial", "Type", "Value", "Status", "Funded by", "Minted", "Expires", "Redeemed"]}
                             />
                             <tbody className="divide-y divide-slate-100">
                                 {table.rows.map((t) => (
@@ -272,21 +283,44 @@ export default function AdminTokensPage() {
                                         onClick={() => drawer.openRow(t)}
                                         className="cursor-pointer hover:bg-slate-50"
                                     >
-                                        <td className="px-4 py-3 font-mono text-xs text-slate-500">
-                                            {t.id.slice(0, 8)}
+                                        <td className="px-2 md:px-4 py-3 font-mono text-xs text-slate-700">
+                                            {t.serial_number ?? (
+                                                <span className="text-slate-400">{t.id.slice(0, 8)}</span>
+                                            )}
+                                            {/* Expires costs 86px of a 312px card at 360, but an
+                                                imminent expiry is the one thing on this row worth
+                                                acting on — so it is reprinted, warning and all. */}
+                                            {t.expires_at && (
+                                                <span
+                                                    className={`mt-1 block font-sans text-[11px] md:hidden ${
+                                                        expiringSoon(t)
+                                                            ? "font-medium text-orange-700"
+                                                            : "text-slate-500"
+                                                    }`}
+                                                >
+                                                    exp {shortDate(t.expires_at)}
+                                                    {expiringSoon(t) ? " ⚠" : ""}
+                                                </span>
+                                            )}
                                         </td>
-                                        <td className="px-4 py-3 capitalize text-slate-700">
+                                        <td className="px-2 md:px-4 py-3 capitalize text-slate-700">
                                             {t.token_type.replace(/_/g, " ")}
                                         </td>
-                                        <td className="px-4 py-3 font-medium text-slate-900">{rupee(t.value_inr)}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3 font-medium text-slate-900">{rupee(t.value_inr)}</td>
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={t.status} />
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">{holderOf(t.status)}</td>
-                                        <td className="px-4 py-3 text-slate-500">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
+                                            {t.donor_name ?? (
+                                                <span className="text-slate-400">
+                                                    {t.has_donor ? "Donor" : "Pool"}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-2 md:px-4 py-3 text-slate-500">
                                             <Dash>{t.minted_at ? new Date(t.minted_at).toLocaleDateString() : null}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-500">
+                                        <td className="px-2 md:px-4 py-3 text-slate-500">
                                             {t.expires_at ? (
                                                 <span
                                                     className={
@@ -302,7 +336,7 @@ export default function AdminTokensPage() {
                                                 <Dash>{null}</Dash>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-500">
+                                        <td className="px-2 md:px-4 py-3 text-slate-500">
                                             <Dash>
                                                 {t.redeemed_at ? new Date(t.redeemed_at).toLocaleDateString() : null}
                                             </Dash>

@@ -11,10 +11,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * The public donate flow (/donate, /donate/qr) and the donor "Donate
  * anonymously" toggle have no session, so they cannot use the auth-gated
  * /api/donations/create (which 401s and ignores any body donor_id). This route
- * records a donor-less `donations` row via the SERVICE-ROLE client (RLS allows
- * the donor_id-NULL insert — donations.donor_id is nullable, M15). No credit
- * balance is created because there is no account to hold it; the donation is the
- * record of the gift.
+ * runs on the SERVICE-ROLE client and attributes the gift to the system Guest
+ * Pool donor (`ensureGuestPoolDonor`, below), which DOES accrue a credit balance
+ * — that is the whole point: an admin later mints it into `in_admin_pool` tokens
+ * via /api/admin/pool/mint.
+ *
+ * (This comment previously claimed the row was written donor-less with no credit
+ * balance. That stopped being true when the Guest Pool was introduced. The
+ * difference matters: donations written before that change have `donor_id` NULL
+ * and no credit behind them, so that money is recorded but can never be minted.)
  *
  * Because it is unauthenticated, it is NOT a `defineRoute` (no matrix/audit
  * actor). It validates with Zod and applies a tiny in-memory per-IP rate limit

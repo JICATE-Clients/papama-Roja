@@ -45,7 +45,7 @@ export default function AdminFraudPage() {
     const { run, busyId, actionError } = useRowAction("/api/admin/fraud", reload);
 
     const table = useClientTable(items, {
-        searchKeys: ["flag_type", "severity", "detection_method"],
+        searchKeys: ["flag_type", "severity", "detection_method", "entity_label"],
         tabKey: "status",
         pageSize: 15,
     });
@@ -95,7 +95,8 @@ export default function AdminFraudPage() {
               { label: "Detection", value: f.detection_method?.replace(/_/g, " ") },
               { label: "Blocked", value: f.blocked ? "Yes" : "No" },
               { label: "Created", value: date(f.created_at) },
-              { label: "Entity", value: `${f.entity.kind} · ${f.entity.id}`, mono: true, full: true },
+              { label: "Entity", value: f.entity_label ? `${f.entity_label} (${f.entity.kind})` : f.entity.kind },
+              { label: "Entity id", value: f.entity.id, mono: true, full: true },
               ...(f.resolved_at ? [{ label: "Resolved at", value: date(f.resolved_at) }] : []),
               ...(f.resolved_by ? [{ label: "Resolved by", value: f.resolved_by, mono: true }] : []),
               ...(f.resolution_notes
@@ -155,7 +156,7 @@ export default function AdminFraudPage() {
                 emptyHint="Fraud flags will appear here as detections are raised."
                 table={
                     <>
-                        <TableShell>
+                        <TableShell hideCols={[4, 5, 6, 7]}>
                             <TableHead columns={columns} />
                             <tbody className="divide-y divide-slate-100">
                                 {table.rows.map((f) => (
@@ -164,30 +165,39 @@ export default function AdminFraudPage() {
                                         onClick={() => drawer.openRow(f)}
                                         className="cursor-pointer hover:bg-slate-50"
                                     >
-                                        <td className="px-4 py-3 font-medium capitalize text-slate-900">
+                                        <td className="px-2 md:px-4 py-3 font-medium capitalize text-slate-900">
                                             {f.flag_type.replace(/_/g, " ")}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={f.severity} />
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={f.status} />
                                         </td>
-                                        <td className="px-4 py-3 capitalize text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 capitalize text-slate-600">
                                             <Dash>{f.detection_method?.replace(/_/g, " ")}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
-                                            <span className="capitalize">{f.entity.kind}</span>{" "}
-                                            <span className="font-mono text-xs text-slate-400">{f.entity.id}</span>
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
+                                            {/* Name first, kind underneath. The full uuid was the
+                                                whole cell before, which told a triager nothing they
+                                                could act on without a second lookup. */}
+                                            <div className="font-medium text-slate-800">
+                                                {f.entity_label ?? (
+                                                    <span className="font-mono text-xs text-slate-400">
+                                                        {f.entity.id.slice(0, 8)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="text-xs capitalize text-slate-400">{f.entity.kind}</div>
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <BoolBadge value={f.blocked} danger yes="Blocked" no="No" />
                                         </td>
-                                        <td className="px-4 py-3 text-slate-500">
+                                        <td className="px-2 md:px-4 py-3 text-slate-500">
                                             {new Date(f.created_at).toLocaleDateString()}
                                         </td>
                                         {canManage && (
-                                            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                            <td className="px-2 md:px-4 py-3" onClick={(e) => e.stopPropagation()}>
                                                 {pendingAction[f.id] ? (
                                                     <div className="space-y-1.5">
                                                         <input

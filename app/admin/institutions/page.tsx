@@ -105,22 +105,22 @@ export default function AdminInstitutionsPage() {
                 emptyHint="Allocate tokens to an institution above to start the ledger."
                 table={
                     <>
-                        <TableShell>
+                        <TableShell hideCols={[4, 5]}>
                             <TableHead columns={columns} />
                             <tbody className="divide-y divide-slate-100">
                                 {table.rows.map((a) => (
                                     <tr key={a.id} className="hover:bg-slate-50">
-                                        <td className="px-4 py-3 font-medium text-slate-900">
+                                        <td className="px-2 md:px-4 py-3 font-medium text-slate-900">
                                             <Dash>{a.institution_name}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-700">{a.token_count}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3 text-slate-700">{a.token_count}</td>
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={a.status} />
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             <Dash>{a.notes}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-500">
+                                        <td className="px-2 md:px-4 py-3 text-slate-500">
                                             {new Date(a.created_at).toLocaleDateString()}
                                         </td>
                                     </tr>

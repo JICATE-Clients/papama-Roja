@@ -1,6 +1,7 @@
 "use client";
 
 import { useVendorFetch, PageHeader, ListStates, TableShell, TableHead, StatusBadge, Dash } from "../_ui";
+import { inr, shortDate } from "@/lib/format";
 
 /**
  * Settlement row shape is assumed (the backend contract didn't pin it). We render
@@ -22,7 +23,7 @@ interface Settlement {
 function fmtDate(v?: string) {
   if (!v) return null;
   const d = new Date(v);
-  return isNaN(d.getTime()) ? v : d.toLocaleDateString();
+  return isNaN(d.getTime()) ? v : shortDate(v);
 }
 
 export default function VendorSettlementsPage() {
@@ -68,7 +69,7 @@ export default function VendorSettlementsPage() {
                   )}
                 </td>
                 <td className="px-4 py-3 text-slate-900">
-                  {s.amount != null ? `₹${s.amount}` : <Dash>{null}</Dash>}
+                  {s.amount != null ? inr(s.amount) : <Dash>{null}</Dash>}
                 </td>
                 <td className="px-4 py-3">
                   {s.status ? <StatusBadge value={s.status} /> : <Dash>{null}</Dash>}

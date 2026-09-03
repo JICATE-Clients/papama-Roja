@@ -6,8 +6,9 @@ import { useEffect, useState } from "react";
 
 import { useCan } from "@/components/auth/AppUserProvider";
 
-import { SectionIcon } from "./_nav-icons";
+import { SectionIcon } from "@/components/nav/SectionIcon";
 import { ADMIN_SECTIONS } from "./adminSections";
+import { X } from "@phosphor-icons/react/dist/ssr/X";
 
 /**
  * Mobile bottom-sheet "Jump to…" command palette opened from the bottom-nav FAB.
@@ -116,16 +117,16 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                             aria-label="Close"
                             className="shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                         >
-                            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-                                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                            </svg>
+                            <X size={20} weight="bold" aria-hidden />
                         </button>
                     </div>
                     {/* Search */}
                     <div className="relative mt-3">
                         <SectionIcon
                             name="search"
-                            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                            size={17}
+                            color="#a4998a"
+                            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
                         />
                         <input
                             type="search"
@@ -162,7 +163,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                                                     : "bg-slate-100 text-slate-600"
                                             }`}
                                         >
-                                            <SectionIcon href={entry.href} className="h-5 w-5" />
+                                            <SectionIcon href={entry.href} size={20} />
                                         </span>
                                         <span className="min-w-0 flex-1">
                                             <span className="block truncate text-sm font-medium text-slate-900">
@@ -176,7 +177,9 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                                         </span>
                                         <SectionIcon
                                             name="chevron"
-                                            className="h-4 w-4 shrink-0 text-slate-300"
+                                            size={15}
+                                            color="#c3b79f"
+                                            className="shrink-0"
                                         />
                                     </Link>
                                 </li>

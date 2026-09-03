@@ -7,6 +7,7 @@ import { PageHeader, Notice } from "../_ui";
 import FaceCapture from "@/components/face/FaceCapture";
 import QrScanner from "@/components/vendor/QrScanner";
 import type { FaceCapture as FaceCaptureValue } from "@/lib/validation/schemas";
+import { inr } from "@/lib/format";
 
 /** Co-pay defaults (mirrors system_config `co_contribution_max`; server clamps too). */
 const CO_PAY_DEFAULT = 0;
@@ -363,7 +364,7 @@ export default function VendorScanPage() {
               <option value="">Select an approved item…</option>
               {menus.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.item_name} — ₹{m.price}
+                  {m.item_name} — {inr(m.price)}
                   {m.is_special_care_equivalent ? " (special care)" : ""}
                 </option>
               ))}
@@ -610,7 +611,7 @@ function ValueTable({ value }: { value: ValueBreakdown }) {
             <tr key={r.label} className="border-b border-slate-100 last:border-0">
               <td className="px-3 py-2 text-slate-600">{r.label}</td>
               <td className="px-3 py-2 text-right font-medium text-slate-900">
-                {r.amount != null ? `₹${r.amount}` : "—"}
+                {r.amount != null ? inr(r.amount) : "—"}
               </td>
             </tr>
           ))}

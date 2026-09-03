@@ -5,14 +5,15 @@ import Link from "next/link";
 import Navbar from "@/components/donor/Navbar";
 import { ApiClient } from "@/lib/donor/services/apiClient";
 import { NotificationItem } from "@/lib/donor/types/contract";
+import { shortDateTime } from "@/lib/format";
 
 const NOTIF_ICONS = {
-  donation_success: { icon: "💳", color: "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400" },
-  threshold: { icon: "🚀", color: "bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-950/20 dark:text-blue-400" },
-  token_generated: { icon: "🎫", color: "bg-teal-50 text-teal-600 border-teal-100 dark:bg-teal-950/20 dark:text-teal-400" },
-  redemption: { icon: "🍲", color: "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/20 dark:text-amber-400" },
-  thank_you: { icon: "✉️", color: "bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-950/20 dark:text-purple-400" },
-  meal_photo: { icon: "📷", color: "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/20 dark:text-rose-400" },
+  donation_success: { icon: "💳", color: "bg-emerald-50 text-emerald-600 border-emerald-100 " },
+  threshold: { icon: "🚀", color: "bg-blue-50 text-blue-600 border-blue-100 " },
+  token_generated: { icon: "🎫", color: "bg-teal-50 text-teal-600 border-teal-100 " },
+  redemption: { icon: "🍲", color: "bg-amber-50 text-amber-600 border-amber-100 " },
+  thank_you: { icon: "✉️", color: "bg-purple-50 text-purple-600 border-purple-100 " },
+  meal_photo: { icon: "📷", color: "bg-rose-50 text-rose-600 border-rose-100 " },
 };
 
 export default function NotificationsPage() {
@@ -60,17 +61,17 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
+    <div className="flex min-h-screen flex-col bg-zinc-50 ">
       <Navbar />
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-zinc-900 ">
               Notification Center
             </h1>
-            <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="mt-1.5 text-sm text-zinc-500 ">
               Track token generation, credit balance thresholds, and meal redemption receipts in real-time.
             </p>
           </div>
@@ -78,7 +79,7 @@ export default function NotificationsPage() {
           {notifications.some((n) => !n.read) && (
             <button
               onClick={handleMarkAllAsRead}
-              className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-xs font-bold text-zinc-700 hover:bg-zinc-50 transition active:scale-[.98] self-start sm:self-center dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition active:scale-[.98] self-start sm:self-center "
             >
               Mark All as Read
             </button>
@@ -92,21 +93,21 @@ export default function NotificationsPage() {
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
             </div>
           ) : error ? (
-            <div className="text-center py-16 bg-white rounded-2xl border border-zinc-200/80 dark:bg-zinc-900/40 dark:border-zinc-800">
+            <div className="text-center py-16 bg-white rounded-2xl border border-zinc-200/80 ">
               <span className="text-3xl">⚠️</span>
-              <h3 className="mt-4 text-sm font-bold text-zinc-900 dark:text-zinc-50">
+              <h3 className="mt-4 text-sm font-semibold text-zinc-900 ">
                 Couldn&apos;t load notifications
               </h3>
               <p className="mt-1 text-xs text-zinc-500">{error}</p>
               <button
                 onClick={loadNotifications}
-                className="mt-4 rounded-lg bg-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-1 px-4 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 active:scale-[.98]"
+                className="mt-4 rounded-lg bg-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-1 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 active:scale-[.98]"
               >
                 Retry
               </button>
             </div>
           ) : notifications.length > 0 ? (
-            <div className="rounded-2xl border border-zinc-200/80 bg-white overflow-hidden shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900 divide-y divide-zinc-150/60 dark:divide-zinc-800/50">
+            <div className="rounded-2xl border border-zinc-200/80 bg-white overflow-hidden shadow-sm divide-y divide-zinc-200/60 ">
               {notifications.map((notif) => {
                 const config = NOTIF_ICONS[notif.type] || { icon: "🔔", color: "bg-zinc-50 text-zinc-600" };
                 return (
@@ -129,20 +130,20 @@ export default function NotificationsPage() {
                     {/* Content */}
                     <div className="flex-1 min-w-0 space-y-1.5">
                       <div className="flex items-center justify-between gap-4">
-                        <span className="text-xs font-bold text-zinc-900 dark:text-zinc-50">
+                        <span className="text-xs font-semibold text-zinc-900 ">
                           {notif.title}
                         </span>
-                        <span className="text-[10px] text-zinc-400 font-semibold shrink-0">
-                          {new Date(notif.created_at).toLocaleString()}
+                        <span className="text-[11px] text-zinc-400 font-medium shrink-0">
+                          {shortDateTime(notif.created_at)}
                         </span>
                       </div>
-                      <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                      <p className="text-xs font-medium text-zinc-500 leading-relaxed">
                         {notif.body}
                       </p>
 
                       {/* Metadata block for Redemptions and verified meal photos */}
                       {(notif.type === "redemption" || notif.type === "meal_photo") && notif.meta && (
-                        <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-4 text-[11px] font-semibold text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/20 dark:text-zinc-400 space-y-1.5">
+                        <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-4 text-[11px] font-medium text-zinc-600 space-y-1.5">
                           {/* Verified meal photo (addon2 A5) — shown once proof is approved */}
                           {notif.meta.meal_photo_url && (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -155,7 +156,7 @@ export default function NotificationsPage() {
                           {notif.meta.meal_info && (
                             <p className="flex justify-between">
                               <span className="text-zinc-400">Meal Redeemed:</span>
-                              <strong className="text-zinc-800 dark:text-zinc-100">{notif.meta.meal_info}</strong>
+                              <strong className="text-zinc-800 ">{notif.meta.meal_info}</strong>
                             </p>
                           )}
                           <p className="flex justify-between gap-2">
@@ -165,18 +166,18 @@ export default function NotificationsPage() {
                           {notif.meta.beneficiary_category && (
                             <p className="flex justify-between">
                               <span className="text-zinc-400">Beneficiary Category:</span>
-                              <span className="uppercase text-[10px] font-black text-amber-600">{notif.meta.beneficiary_category.replace("_", " ")}</span>
+                              <span className="uppercase text-[11px] font-bold text-amber-600">{notif.meta.beneficiary_category.replace("_", " ")}</span>
                             </p>
                           )}
                           {notif.meta.token_reference && (
                             <p className="flex justify-between">
                               <span className="text-zinc-400">Token Reference:</span>
-                              <span className="font-mono text-[10px] text-zinc-500">{notif.meta.token_reference}</span>
+                              <span className="font-mono text-[11px] text-zinc-500">{notif.meta.token_reference}</span>
                             </p>
                           )}
-                          <p className="flex justify-between text-[10px]">
+                          <p className="flex justify-between text-[11px]">
                             <span className="text-zinc-400 font-normal">Scan Timestamp:</span>
-                            <span className="font-mono text-zinc-500 font-normal">{new Date(notif.meta.time || notif.created_at).toLocaleString()}</span>
+                            <span className="font-mono text-zinc-500 font-normal">{shortDateTime(notif.meta.time || notif.created_at)}</span>
                           </p>
                         </div>
                       )}
@@ -185,7 +186,7 @@ export default function NotificationsPage() {
                       {(notif.type === "redemption" || notif.type === "meal_photo") && (
                         <Link
                           href="/donor/donate"
-                          className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline block pt-1"
+                          className="text-[11px] font-semibold text-emerald-600 hover:underline block pt-1"
                         >
                           Donate again
                         </Link>
@@ -195,7 +196,7 @@ export default function NotificationsPage() {
                       {!notif.read && (
                         <button
                           onClick={() => handleMarkAsRead(notif.id)}
-                          className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline block pt-1"
+                          className="text-[11px] font-semibold text-emerald-600 hover:underline block pt-1"
                         >
                           Mark as Read
                         </button>
@@ -206,9 +207,9 @@ export default function NotificationsPage() {
               })}
             </div>
           ) : (
-            <div className="text-center py-16 bg-white rounded-2xl border border-zinc-200/80 dark:bg-zinc-900/40">
+            <div className="text-center py-16 bg-white rounded-2xl border border-zinc-200/80 ">
               <span className="text-3xl">🔔</span>
-              <h3 className="mt-4 text-sm font-bold text-zinc-900 dark:text-zinc-50">
+              <h3 className="mt-4 text-sm font-semibold text-zinc-900 ">
                 No Notifications Found
               </h3>
               <p className="mt-1 text-xs text-zinc-500">

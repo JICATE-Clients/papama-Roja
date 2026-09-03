@@ -2,16 +2,21 @@
 
 import { useCan } from "@/components/auth/AppUserProvider";
 
+import { useMemo } from "react";
+
 import {
     ActionButton,
     AdminPageHeader,
     Dash,
+    FilterBar,
     ListStates,
+    Pagination,
     StatusBadge,
     TableHead,
     TableShell,
     useAction,
     useAdminList,
+    useClientTable,
 } from "../_ui";
 
 /**
@@ -40,6 +45,35 @@ export default function AdminComplaintsPage() {
         "/admin/complaints"
     );
 
+    /**
+     * This is a work queue, so it only ever grows — and it shipped with neither
+     * search nor paging, which meant the only way to find a complaint was to
+     * scroll the whole list. `complaint_status` is nullable in the data (an
+     * untriaged row has no status), so rows are normalised to "open" for both
+     * the tab counts and the filter.
+     */
+    const rows = useMemo(
+        () => items.map((c) => ({ ...c, complaint_status: c.complaint_status ?? "open" })),
+        [items]
+    );
+
+    const table = useClientTable(rows, {
+        searchKeys: ["vendor_name", "comment", "resolution"],
+        tabKey: "complaint_status",
+        pageSize: 15,
+    });
+
+    const tabs = useMemo(
+        () => [
+            { label: "All", value: "all", count: table.tabCounts.all },
+            { label: "Open", value: "open", count: table.tabCounts.open },
+            { label: "Investigating", value: "investigating", count: table.tabCounts.investigating },
+            { label: "Resolved", value: "resolved", count: table.tabCounts.resolved },
+            { label: "Dismissed", value: "dismissed", count: table.tabCounts.dismissed },
+        ],
+        [table.tabCounts]
+    );
+
     const triage = useAction({
         method: "PATCH",
         endpoint: () => "/api/admin/complaints",
@@ -58,6 +92,17 @@ export default function AdminComplaintsPage() {
                 count={state === "ready" ? items.length : undefined}
             />
 
+            {state === "ready" && items.length > 0 && (
+                <FilterBar
+                    search={table.search}
+                    onSearch={table.setSearch}
+                    searchPlaceholder="Search by vendor, comment, resolution…"
+                    tabs={tabs}
+                    activeTab={table.activeTab}
+                    onTab={table.setActiveTab}
+                />
+            )}
+
             <ListStates
                 state={state}
                 errorMsg={errorMsg}
@@ -65,30 +110,31 @@ export default function AdminComplaintsPage() {
                 resourceLabel="complaints"
                 emptyHint="Complaints raised by beneficiaries will appear here."
                 table={
-                    <TableShell>
+                    <>
+                    <TableShell hideCols={[1, 3, 4, 6]}>
                         <TableHead columns={columns} />
                         <tbody className="divide-y divide-slate-100">
-                            {items.map((c) => {
+                            {table.rows.map((c) => {
                                 const status = c.complaint_status ?? "open";
                                 const busy = triage.busyId === c.id;
                                 return (
                                     <tr key={c.id} className="hover:bg-slate-50 align-top">
-                                        <td className="px-4 py-3 text-slate-500">
+                                        <td className="px-2 md:px-4 py-3 text-slate-500">
                                             {new Date(c.created_at).toLocaleDateString()}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-800">{c.vendor_name}</td>
-                                        <td className="px-4 py-3 text-slate-600">{c.rating}★</td>
-                                        <td className="px-4 py-3 text-slate-600 max-w-xs">
+                                        <td className="px-2 md:px-4 py-3 text-slate-800">{c.vendor_name}</td>
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">{c.rating}★</td>
+                                        <td className="px-2 md:px-4 py-3 text-slate-600 max-w-xs">
                                             <Dash>{c.comment}</Dash>
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={status} />
                                         </td>
-                                        <td className="px-4 py-3 text-slate-500 max-w-xs">
+                                        <td className="px-2 md:px-4 py-3 text-slate-500 max-w-xs">
                                             <Dash>{c.resolution}</Dash>
                                         </td>
                                         {canManage && (
-                                            <td className="px-4 py-3">
+                                            <td className="px-2 md:px-4 py-3">
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {status === "open" && (
                                                         <ActionButton
@@ -150,6 +196,8 @@ export default function AdminComplaintsPage() {
                             })}
                         </tbody>
                     </TableShell>
+                    <Pagination page={table.page} pageCount={table.pageCount} onPage={table.setPage} />
+                    </>
                 }
             />
         </div>

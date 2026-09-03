@@ -20,15 +20,29 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export const GUEST_POOL_EMAIL = "guest-pool@papama.internal";
 export const GUEST_POOL_NAME = "pApAmA Guest Pool";
 
-/** Find (or lazily create) the system Guest Pool donor; returns its donors.id. */
+/**
+ * Find (or lazily create) the system Guest Pool donor; returns its donors.id.
+ *
+ * Reads `order(created_at).limit(1)` rather than `maybeSingle()` because the race
+ * the insert below guards against ALREADY HAPPENED on this database: two
+ * guest-pool rows exist, created 3ms apart on 2026-06-25, and there is no unique
+ * index on `donors.email` to have stopped it. `maybeSingle()` fails with PGRST116
+ * on more than one row, which took down every caller — `/api/admin/donations`
+ * returned 500 for months, taking the whole admin donations page with it.
+ *
+ * Picking the OLDEST is what makes this deterministic: every caller then agrees
+ * on which row is the pool, so a second duplicate cannot split the balance
+ * further. Collapsing the existing duplicates is a data fix, not a code one.
+ */
 export async function ensureGuestPoolDonor(admin: SupabaseClient): Promise<string> {
     const { data: existing, error } = await admin
         .from("donors")
         .select("id")
         .eq("email", GUEST_POOL_EMAIL)
-        .maybeSingle();
+        .order("created_at", { ascending: true })
+        .limit(1);
     if (error) throw new Error(error.message);
-    if (existing) return (existing as { id: string }).id;
+    if (existing && existing.length > 0) return (existing[0] as { id: string }).id;
 
     const { data: created, error: insertError } = await admin
         .from("donors")
@@ -41,8 +55,9 @@ export async function ensureGuestPoolDonor(admin: SupabaseClient): Promise<strin
             .from("donors")
             .select("id")
             .eq("email", GUEST_POOL_EMAIL)
-            .maybeSingle();
-        if (race) return (race as { id: string }).id;
+            .order("created_at", { ascending: true })
+            .limit(1);
+        if (race && race.length > 0) return (race[0] as { id: string }).id;
         throw new Error(insertError?.message ?? "failed to ensure guest pool donor");
     }
     return (created as { id: string }).id;

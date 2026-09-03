@@ -92,7 +92,7 @@ export default function AdminReportsPage() {
                 emptyHint="No reports yet. Generate one above."
                 table={
                     <>
-                        <TableShell>
+                        <TableShell hideCols={[1, 3, 6]}>
                             <TableHead columns={["Type", "Title", "Period", "Summary", "File", "Created"]} />
                             <tbody className="divide-y divide-slate-100">
                                 {table.rows.map((r) => (
@@ -101,13 +101,18 @@ export default function AdminReportsPage() {
                                         onClick={() => drawer.openRow(r)}
                                         className="cursor-pointer hover:bg-slate-50"
                                     >
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={r.report_type} />
                                         </td>
-                                        <td className="px-4 py-3 font-medium text-slate-900">
+                                        <td className="px-2 md:px-4 py-3 font-medium text-slate-900">
                                             <Dash>{r.title}</Dash>
+                                            {/* Type is a badge column worth 99px on a phone; reprinted
+                                                here so the report kind is still visible. */}
+                                            <span className="mt-1 block md:hidden">
+                                                <StatusBadge value={r.report_type} />
+                                            </span>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             {r.period_start || r.period_end ? (
                                                 <>
                                                     <Dash>{r.period_start}</Dash> → <Dash>{r.period_end}</Dash>
@@ -116,10 +121,10 @@ export default function AdminReportsPage() {
                                                 "All time"
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             <SummaryCell summary={r.summary} />
                                         </td>
-                                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                        <td className="px-2 md:px-4 py-3" onClick={(e) => e.stopPropagation()}>
                                             <a
                                                 href={`/api/admin/reports/export?id=${r.id}`}
                                                 target="_blank"
@@ -129,7 +134,7 @@ export default function AdminReportsPage() {
                                                 Export CSV
                                             </a>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-500">
+                                        <td className="px-2 md:px-4 py-3 text-slate-500">
                                             {new Date(r.created_at).toLocaleDateString()}
                                         </td>
                                     </tr>

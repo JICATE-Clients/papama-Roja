@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useCan } from "@/components/auth/AppUserProvider";
 import type { Action, Feature } from "@/lib/permissions";
 
-import { SectionIcon } from "./_nav-icons";
+import { SectionIcon } from "@/components/nav/SectionIcon";
 import { CommandPalette } from "./CommandPalette";
 
 /**
@@ -80,7 +80,7 @@ export function AdminBottomNav() {
                     aria-expanded={paletteOpen}
                     className="absolute left-1/2 top-0 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-slate-900 text-white shadow-lg shadow-slate-900/25 ring-4 ring-white transition hover:bg-slate-700 active:scale-95"
                 >
-                    <SectionIcon name="search" className="h-5 w-5" />
+                    <SectionIcon name="search" size={20} />
                 </button>
             </div>
 
@@ -115,7 +115,7 @@ function NavItem({ dest, pathname }: { dest: NavDest; pathname: string }) {
                     active ? "bg-slate-100" : "bg-transparent group-active:bg-slate-100"
                 }`}
             >
-                <SectionIcon href={dest.href} className="h-5 w-5" />
+                <SectionIcon href={dest.href} size={20} />
             </span>
             <span>{dest.label}</span>
         </Link>

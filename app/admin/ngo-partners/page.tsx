@@ -113,7 +113,7 @@ export default function AdminNgoPartnersPage() {
                 emptyHint="Register a partner above to start the registry."
                 table={
                     <>
-                        <TableShell>
+                        <TableShell hideCols={[2, 3, 4, 5]}>
                             <TableHead columns={columns} />
                             <tbody className="divide-y divide-slate-100">
                                 {table.rows.map((n) => (
@@ -122,24 +122,24 @@ export default function AdminNgoPartnersPage() {
                                         onClick={() => drawer.openRow(n)}
                                         className="cursor-pointer hover:bg-slate-50"
                                     >
-                                        <td className="px-4 py-3 font-medium text-slate-900">{n.name}</td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 font-medium text-slate-900">{n.name}</td>
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             <Dash>{n.registration_number}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             <Dash>{n.focus_area}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             <Dash>{n.contact_person ?? n.contact_email}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             <Dash>{n.city}</Dash>
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={n.status} />
                                         </td>
                                         {canManage && (
-                                            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                            <td className="px-2 md:px-4 py-3" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {n.status !== "active" && (
                                                         <ActionButton

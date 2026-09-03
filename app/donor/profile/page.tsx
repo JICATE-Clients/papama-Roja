@@ -76,16 +76,16 @@ function ProfileContent() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-zinc-900 ">
           My Profile
         </h1>
-        <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+        <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-zinc-500 ">
           Manage your donor details. Your PAN is optional and used only for 80G
           tax-receipt purposes once registration is enabled.
         </p>
         <a
           href="/donor/csr"
-          className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-400"
+          className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 "
         >
           Donating on behalf of a company? Register for Corporate CSR →
         </a>
@@ -96,14 +96,14 @@ function ProfileContent() {
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
         </div>
       ) : loadError ? (
-        <div className="rounded-2xl border border-rose-200/60 bg-rose-50/40 p-6 text-center dark:border-rose-900/40 dark:bg-rose-950/20">
-          <p className="text-sm font-semibold text-rose-700 dark:text-rose-400">
+        <div className="rounded-2xl border border-rose-200/60 bg-rose-50/40 p-6 text-center ">
+          <p className="text-sm font-medium text-rose-700 ">
             {loadError}
           </p>
           <button
             type="button"
             onClick={loadProfile}
-            className="mt-4 rounded-xl border border-rose-300 px-4 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-100 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/40"
+            className="mt-4 rounded-xl border border-rose-300 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 "
           >
             Retry
           </button>
@@ -111,13 +111,13 @@ function ProfileContent() {
       ) : (
         <form
           onSubmit={handleSubmit}
-          className="max-w-xl space-y-6 rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900"
+          className="max-w-xl space-y-6 rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm "
         >
           {/* Full name */}
           <div className="space-y-2">
             <label
               htmlFor="full_name"
-              className="text-xs font-bold text-zinc-600 dark:text-zinc-400"
+              className="text-xs font-semibold text-zinc-600 "
             >
               Full name
             </label>
@@ -127,7 +127,7 @@ function ProfileContent() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Your name"
-              className="w-full rounded-xl border border-zinc-200 p-3 text-sm text-zinc-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-100"
+              className="w-full rounded-xl border border-zinc-200 p-3 text-sm text-zinc-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 "
             />
           </div>
 
@@ -135,7 +135,7 @@ function ProfileContent() {
           <div className="space-y-2">
             <label
               htmlFor="pan_number"
-              className="text-xs font-bold text-zinc-600 dark:text-zinc-400"
+              className="text-xs font-semibold text-zinc-600 "
             >
               PAN{" "}
               <span className="font-normal text-zinc-400">(optional, for 80G)</span>
@@ -147,16 +147,16 @@ function ProfileContent() {
               onChange={(e) => setPan(e.target.value.toUpperCase())}
               placeholder="ABCDE1234F"
               maxLength={10}
-              className="w-full rounded-xl border border-zinc-200 p-3 font-mono text-sm uppercase tracking-wider text-zinc-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-100"
+              className="w-full rounded-xl border border-zinc-200 p-3 font-mono text-sm uppercase tracking-wider text-zinc-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 "
             />
-            <p className="text-[10px] font-semibold leading-normal text-zinc-400 dark:text-zinc-500">
+            <p className="text-[11px] font-medium leading-normal text-zinc-400 ">
               Leave blank if you don&apos;t want to provide it. Format: 5 letters,
               4 digits, 1 letter.
             </p>
           </div>
 
           {saveError && (
-            <div className="rounded-lg bg-rose-500/10 p-3 text-xs font-semibold text-rose-700 dark:text-rose-400">
+            <div className="rounded-lg bg-rose-500/10 p-3 text-xs font-medium text-rose-700 ">
               {saveError}
             </div>
           )}
@@ -166,7 +166,7 @@ function ProfileContent() {
             <button
               type="submit"
               disabled={saveState === "saving"}
-              className="rounded-lg bg-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-1 px-6 py-3 text-xs font-bold text-white shadow-md transition hover:bg-emerald-700 active:scale-[.98] disabled:opacity-50"
+              className="rounded-lg bg-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-1 px-6 py-3 text-xs font-semibold text-white shadow-md transition hover:bg-emerald-700 active:scale-[.98] disabled:opacity-50"
             >
               {saveState === "saving" ? (
                 <span className="flex items-center justify-center gap-1.5">
@@ -178,7 +178,7 @@ function ProfileContent() {
               )}
             </button>
             {saveState === "saved" && (
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+              <span className="text-xs font-semibold text-emerald-600 ">
                 Saved
               </span>
             )}
@@ -191,7 +191,7 @@ function ProfileContent() {
 
 export default function ProfilePage() {
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
+    <div className="flex min-h-screen flex-col bg-zinc-50 ">
       <Navbar />
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">

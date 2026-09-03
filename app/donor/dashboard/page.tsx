@@ -8,7 +8,7 @@ export default function DashboardPage() {
   const { dashboard, tokens, loading, error, refetch } = useDashboard();
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
+    <div className="flex min-h-screen flex-col bg-zinc-50 ">
       <Navbar />
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
@@ -18,7 +18,7 @@ export default function DashboardPage() {
           </div>
         ) : error ? (
           <div className="text-center py-12">
-            <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+            <p className="text-zinc-600 mb-4">
               Failed to load dashboard: {error.message}
             </p>
             <button

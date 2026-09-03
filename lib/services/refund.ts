@@ -23,8 +23,10 @@ type Client = SupabaseClient;
 
 export interface LogPaymentFailureInput {
     donationId?: string | null;
-    donorId: string;
-    amountInr: number;
+    /** Omit to read it off `donationId`'s donation. */
+    donorId?: string | null;
+    /** Omit to read it off `donationId`'s donation. */
+    amountInr?: number | null;
     reason: PaymentFailureReason;
     maxRetries?: number | null;
     notes?: string | null;
@@ -35,12 +37,38 @@ export async function logPaymentFailure(
     input: LogPaymentFailureInput,
     actor: AppUser
 ): Promise<{ id: string }> {
+    let donorId = input.donorId ?? null;
+    let amountInr = input.amountInr ?? null;
+
+    // Reconciliation usually starts from the charge that failed, so a donation
+    // id alone is enough — the donor and the amount are already on that row and
+    // copying them by hand is how a failure record ends up disagreeing with the
+    // donation it describes. An explicit donorId/amountInr always wins, for the
+    // failure that has no donation behind it.
+    if (input.donationId && (donorId == null || amountInr == null)) {
+        const { data: donation, error: donationError } = await admin
+            .from("donations")
+            .select("id, donor_id, amount_inr")
+            .eq("id", input.donationId)
+            .maybeSingle();
+        if (donationError) throw new Error(donationError.message);
+        if (!donation) throw new NotFoundError("donation not found");
+        const row = donation as { donor_id: string | null; amount_inr: number };
+        donorId = donorId ?? row.donor_id;
+        amountInr = amountInr ?? Number(row.amount_inr);
+    }
+
+    // A guest/unattributed donation has no donor to refund — the credit was
+    // never granted to anyone, so there is nothing to reverse.
+    if (!donorId) throw new BadRequestError("this donation has no donor to refund");
+    if (amountInr == null) throw new BadRequestError("an amount is required");
+
     const { data, error } = await admin
         .from("payment_failures")
         .insert({
             donation_id: input.donationId ?? null,
-            donor_id: input.donorId,
-            amount_inr: input.amountInr,
+            donor_id: donorId,
+            amount_inr: amountInr,
             reason: input.reason,
             detected_by: actor.id,
             max_retries: input.maxRetries ?? null,
@@ -56,8 +84,13 @@ export async function logPaymentFailure(
             action: "payment_failure.log",
             entity_table: "payment_failures",
             entity_id: data.id,
-            summary: `payment failure logged for donor ${input.donorId}: ₹${input.amountInr} (${input.reason})`,
-            metadata: { donor_id: input.donorId, amount_inr: input.amountInr, reason: input.reason },
+            summary: `payment failure logged for donor ${donorId}: ₹${amountInr} (${input.reason})`,
+            metadata: {
+                donor_id: donorId,
+                amount_inr: amountInr,
+                reason: input.reason,
+                donation_id: input.donationId ?? null,
+            },
         },
         admin
     );

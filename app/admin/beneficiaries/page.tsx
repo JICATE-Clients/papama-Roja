@@ -77,7 +77,7 @@ export default function AdminBeneficiariesPage() {
     });
 
     const table = useClientTable(items, {
-        searchKeys: ["category", "status", "eligibility"],
+        searchKeys: ["full_name", "beneficiary_id", "category", "status", "eligibility"],
         tabKey: "status",
         pageSize: 15,
     });
@@ -114,12 +114,15 @@ export default function AdminBeneficiariesPage() {
         };
     }, [drawer.selected]);
 
-    const columns = ["Category", "Status", "Eligibility", "Aadhaar", "Face hash", "Registered"];
+    // "Name" leads: without it every row began at Category and twenty
+    // beneficiaries were indistinguishable from one another.
+    const columns = ["Name", "Category", "Status", "Eligibility", "Aadhaar", "Face hash", "Registered"];
 
     const b = detail?.beneficiary;
     const elig = eligibilityNote(b?.eligibility_expires_at ?? null);
     const sections: DetailSection[] = b
         ? [
+              { label: "Name", value: b.full_name ?? "Not recorded" },
               { label: "Category", value: b.category.replace(/_/g, " ") },
               { label: "Status", value: b.status },
               { label: "Eligibility", value: b.eligibility },
@@ -163,7 +166,7 @@ export default function AdminBeneficiariesPage() {
                 emptyHint="Beneficiaries will appear here once they are registered and approved."
                 table={
                     <>
-                        <TableShell>
+                        <TableShell hideCols={[4, 5, 6, 7]}>
                             <TableHead columns={columns} />
                             <tbody className="divide-y divide-slate-100">
                                 {table.rows.map((b) => (
@@ -172,22 +175,33 @@ export default function AdminBeneficiariesPage() {
                                         onClick={() => drawer.openRow(b)}
                                         className="cursor-pointer hover:bg-slate-50"
                                     >
-                                        <td className="px-4 py-3 font-medium capitalize text-slate-900">
+                                        <td className="px-2 md:px-4 py-3 font-medium text-slate-900">
+                                            {b.full_name ?? (
+                                                /* full_name is optional by design, so a lot of rows
+                                                   have none. Fall back to a short id rather than an
+                                                   empty cell — it is still something to read out,
+                                                   match against the drawer, and search on. */
+                                                <span className="font-mono text-xs text-slate-400">
+                                                    {b.beneficiary_id.slice(0, 8)}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-2 md:px-4 py-3 capitalize text-slate-600">
                                             {b.category.replace(/_/g, " ")}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={b.status} />
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={b.eligibility} />
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <BoolBadge value={b.aadhaar_linked} yes="Linked" no="No" />
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <BoolBadge value={b.face_hash_valid} yes="Valid" no="Missing" />
                                         </td>
-                                        <td className="px-4 py-3 text-slate-500">
+                                        <td className="px-2 md:px-4 py-3 text-slate-500">
                                             {new Date(b.registered_at).toLocaleDateString()}
                                         </td>
                                     </tr>

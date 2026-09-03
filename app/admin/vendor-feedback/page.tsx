@@ -8,13 +8,16 @@ import {
     AdminPageHeader,
     BoolBadge,
     Dash,
+    FilterBar,
     ListStates,
     Notice,
+    Pagination,
     SectionHeading,
     StatusBadge,
     TableHead,
     TableShell,
     useAdminList,
+    useClientTable,
 } from "../_ui";
 
 type VendorQuality = {
@@ -69,6 +72,16 @@ export default function AdminVendorFeedbackPage() {
     // machine (loading/forbidden/error) trivial and consistent.
     const quality = useAdminList<VendorQuality>("/api/admin/vendor-feedback", "vendors", "/admin/vendor-feedback");
     const feedback = useAdminList<FeedbackRow>("/api/admin/vendor-feedback", "feedback", "/admin/vendor-feedback");
+    const feedbackTable = useClientTable(feedback.items, {
+        searchKeys: ["vendor_name", "comment"],
+        pageSize: 12,
+    });
+    /*
+     * "Recent feedback" and "Inspections" are append-only logs — they only ever
+     * get longer. Both shipped rendering every row with no search and no paging.
+     * The vendor-quality table above is bounded by the vendor count, so it is
+     * left as a full list on purpose.
+     */
     const inspections = useAdminList<InspectionRow>(
         "/api/admin/vendor-inspections",
         "inspections",
@@ -100,25 +113,25 @@ export default function AdminVendorFeedbackPage() {
                     resourceLabel="vendor quality"
                     emptyHint="Once beneficiaries rate vendors, their quality scores appear here."
                     table={
-                        <TableShell>
+                        <TableShell hideCols={[3, 4, 5]}>
                             <TableHead
                                 columns={["Vendor", "Status", "Avg rating", "Feedback", "Complaints", "Quality score"]}
                             />
                             <tbody className="divide-y divide-slate-100">
                                 {rankedVendors.map((v) => (
                                     <tr key={v.vendor_id} className="hover:bg-slate-50">
-                                        <td className="px-4 py-3 font-medium text-slate-900">
+                                        <td className="px-2 md:px-4 py-3 font-medium text-slate-900">
                                             <Dash>{v.name}</Dash>
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={v.status} />
                                         </td>
-                                        <td className="px-4 py-3 text-slate-700">
+                                        <td className="px-2 md:px-4 py-3 text-slate-700">
                                             {v.rating_avg != null ? v.rating_avg.toFixed(2) : "—"}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-700">{v.feedback_count}</td>
-                                        <td className="px-4 py-3 text-slate-700">{v.complaint_count}</td>
-                                        <td className="px-4 py-3 text-slate-700">
+                                        <td className="px-2 md:px-4 py-3 text-slate-700">{v.feedback_count}</td>
+                                        <td className="px-2 md:px-4 py-3 text-slate-700">{v.complaint_count}</td>
+                                        <td className="px-2 md:px-4 py-3 text-slate-700">
                                             {v.quality_score != null ? v.quality_score.toFixed(1) : "—"}
                                         </td>
                                     </tr>
@@ -132,6 +145,14 @@ export default function AdminVendorFeedbackPage() {
             {/* Feedback log ------------------------------------------------------ */}
             <section>
                 <SectionHeading title="Recent feedback" subtitle="Latest beneficiary ratings and complaints." />
+
+                {feedback.state === "ready" && feedback.items.length > 0 && (
+                    <FilterBar
+                        search={feedbackTable.search}
+                        onSearch={feedbackTable.setSearch}
+                        searchPlaceholder="Search feedback by vendor or comment…"
+                    />
+                )}
                 <ListStates
                     state={feedback.state}
                     errorMsg={feedback.errorMsg}
@@ -139,28 +160,35 @@ export default function AdminVendorFeedbackPage() {
                     resourceLabel="feedback"
                     emptyHint="Beneficiary feedback will appear here as it arrives."
                     table={
-                        <TableShell>
+                        <>
+                        <TableShell hideCols={[1, 4]}>
                             <TableHead columns={["Date", "Vendor", "Rating", "Complaint", "Comment"]} />
                             <tbody className="divide-y divide-slate-100">
-                                {feedback.items.map((f) => (
+                                {feedbackTable.rows.map((f) => (
                                     <tr key={f.id} className="hover:bg-slate-50">
-                                        <td className="px-4 py-3 text-slate-500">{fmtDate(f.created_at)}</td>
-                                        <td className="px-4 py-3 font-medium text-slate-900">
+                                        <td className="px-2 md:px-4 py-3 text-slate-500">{fmtDate(f.created_at)}</td>
+                                        <td className="px-2 md:px-4 py-3 font-medium text-slate-900">
                                             <Dash>{f.vendor_name}</Dash>
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <Stars rating={f.rating} />
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <BoolBadge value={f.is_complaint} yes="Complaint" no="—" danger />
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             <Dash>{f.comment}</Dash>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </TableShell>
+                        <Pagination
+                            page={feedbackTable.page}
+                            pageCount={feedbackTable.pageCount}
+                            onPage={feedbackTable.setPage}
+                        />
+                        </>
                     }
                 />
             </section>
@@ -188,26 +216,26 @@ export default function AdminVendorFeedbackPage() {
                     resourceLabel="inspections"
                     emptyHint="Recorded inspections will appear here."
                     table={
-                        <TableShell>
+                        <TableShell hideCols={[1, 5]}>
                             <TableHead columns={["Date", "Vendor", "Hygiene", "Result", "Notes"]} />
                             <tbody className="divide-y divide-slate-100">
                                 {inspections.items.map((r) => (
                                     <tr key={r.id} className="hover:bg-slate-50">
-                                        <td className="px-4 py-3 text-slate-500">{fmtDate(r.inspection_date)}</td>
-                                        <td className="px-4 py-3 font-medium text-slate-900">
+                                        <td className="px-2 md:px-4 py-3 text-slate-500">{fmtDate(r.inspection_date)}</td>
+                                        <td className="px-2 md:px-4 py-3 font-medium text-slate-900">
                                             <Dash>{r.vendor_name}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-700">
+                                        <td className="px-2 md:px-4 py-3 text-slate-700">
                                             {r.hygiene_score != null ? `${r.hygiene_score}/5` : "—"}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             {r.passed == null ? (
                                                 <span className="text-slate-400">—</span>
                                             ) : (
                                                 <BoolBadge value={r.passed} yes="Passed" no="Failed" danger={!r.passed} />
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">
                                             <Dash>{r.notes}</Dash>
                                         </td>
                                     </tr>

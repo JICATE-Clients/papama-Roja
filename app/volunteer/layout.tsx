@@ -44,10 +44,12 @@ export default async function VolunteerLayout({ children }: { children: ReactNod
 
   return (
     <BugReporterWrapper>
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100/60">
+      <div className="pa-app pa-app-volunteer pa-app-root min-h-screen">
         <VolunteerHeader />
         {/* pb-24 on mobile clears the fixed bottom bar; removed on md+. */}
-        <main className="mx-auto max-w-5xl px-4 pt-6 pb-24 sm:px-6 sm:pt-8 md:pb-8">{children}</main>
+        <div className="pa-console-main">
+          <main className="mx-auto max-w-7xl px-4 pt-6 pb-24 sm:px-6 sm:pt-8 md:pb-8">{children}</main>
+        </div>
       </div>
     </BugReporterWrapper>
   );
@@ -56,7 +58,7 @@ export default async function VolunteerLayout({ children }: { children: ReactNod
 function AwaitingApproval({ status }: { status: string }) {
   const rejected = status === "rejected";
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+    <main className="pa-app pa-app-volunteer flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
         <h1 className="text-xl font-semibold text-slate-900">
           {rejected ? "Application not approved" : "Application received"}
@@ -88,7 +90,7 @@ function AwaitingApproval({ status }: { status: string }) {
 
 function NotVolunteer({ role }: { role: string }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+    <main className="pa-app pa-app-volunteer flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
         <h1 className="text-xl font-semibold text-slate-900">Not a volunteer account</h1>
         <p className="mt-2 text-sm text-slate-500">

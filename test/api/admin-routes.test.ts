@@ -96,6 +96,7 @@ import { GET as vendorCapacityGET } from "@/app/api/admin/vendor-capacity/route"
 import { GET as vendorFeedbackGET } from "@/app/api/admin/vendor-feedback/route";
 import { GET as vendorInspectionsGET } from "@/app/api/admin/vendor-inspections/route";
 import { GET as vendorMenusGET } from "@/app/api/admin/vendor-menus/route";
+import { POST as vendorsPOST } from "@/app/api/admin/vendors/route";
 import { GET as volunteersGET } from "@/app/api/admin/volunteers/route";
 import { GET as volunteerActivityGET } from "@/app/api/admin/volunteer-activity/route";
 import { GET as volunteerRequestsGET } from "@/app/api/admin/volunteer-requests/route";
@@ -213,6 +214,12 @@ const adminRoutes: RouteSpec[] = [
     { name: "admin/vendor-feedback GET", handler: vendorFeedbackGET, method: "GET" },
     { name: "admin/vendor-inspections GET", handler: vendorInspectionsGET, method: "GET" },
     { name: "admin/vendor-menus GET", handler: vendorMenusGET, method: "GET" },
+    {
+        name: "admin/vendors POST",
+        handler: vendorsPOST,
+        method: "POST",
+        body: { name: "Pre-registered Outlet" },
+    },
     { name: "admin/volunteers GET", handler: volunteersGET, method: "GET" },
     { name: "admin/volunteer-activity GET", handler: volunteerActivityGET, method: "GET" },
     { name: "admin/volunteer-requests GET", handler: volunteerRequestsGET, method: "GET" },

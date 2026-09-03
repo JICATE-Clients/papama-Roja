@@ -171,7 +171,7 @@ export default function AdminSettlementsPage() {
                 emptyHint="Settlements will appear here once settlement cycles run."
                 table={
                     <>
-                        <TableShell>
+                        <TableShell hideCols={[5, 6]}>
                             <TableHead columns={columns} />
                             <tbody className="divide-y divide-slate-100">
                                 {table.rows.map((s) => (
@@ -180,7 +180,7 @@ export default function AdminSettlementsPage() {
                                         onClick={() => drawer.openRow(s)}
                                         className="cursor-pointer hover:bg-slate-50"
                                     >
-                                        <td className="px-4 py-3 text-slate-700">
+                                        <td className="px-2 md:px-4 py-3 text-slate-700">
                                             {s.vendor_name ? (
                                                 <span className="font-medium">{s.vendor_name}</span>
                                             ) : (
@@ -189,11 +189,11 @@ export default function AdminSettlementsPage() {
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 capitalize text-slate-700">
+                                        <td className="px-2 md:px-4 py-3 capitalize text-slate-700">
                                             {s.period.replace(/_/g, " ")}
                                         </td>
-                                        <td className="px-4 py-3 font-medium text-slate-900">{rupee(s.amount)}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3 font-medium text-slate-900">{rupee(s.amount)}</td>
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={s.status} />
                                             {s.on_hold && (
                                                 <span className="ml-1.5 inline-flex items-center rounded-full bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700 ring-1 ring-inset ring-orange-600/20">
@@ -201,8 +201,8 @@ export default function AdminSettlementsPage() {
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600">{s.line_items}</td>
-                                        <td className="px-4 py-3 text-slate-500">
+                                        <td className="px-2 md:px-4 py-3 text-slate-600">{s.line_items}</td>
+                                        <td className="px-2 md:px-4 py-3 text-slate-500">
                                             <Dash>
                                                 {s.settled_at ? new Date(s.settled_at).toLocaleDateString() : null}
                                             </Dash>

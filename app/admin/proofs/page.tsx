@@ -170,25 +170,25 @@ export default function AdminProofsPage() {
                                         onClick={() => drawer.openRow(p)}
                                         className="cursor-pointer hover:bg-slate-50"
                                     >
-                                        <td className="px-4 py-3 font-medium text-slate-900">
+                                        <td className="px-2 md:px-4 py-3 font-medium text-slate-900">
                                             <Dash>{p.vendor_name}</Dash>
                                         </td>
-                                        <td className="px-4 py-3 font-mono text-xs text-slate-600">
+                                        <td className="px-2 md:px-4 py-3 font-mono text-xs text-slate-600">
                                             {p.redemption_id.slice(0, 8)}…
                                         </td>
-                                        <td className="px-4 py-3 text-slate-700">{rupee(p.settlement_amount_inr)}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-500">
+                                        <td className="px-2 md:px-4 py-3 text-slate-700">{rupee(p.settlement_amount_inr)}</td>
+                                        <td className="px-2 md:px-4 py-3 text-xs text-slate-500">
                                             {p.proof_uploaded_at
                                                 ? new Date(p.proof_uploaded_at).toLocaleDateString("en-IN")
                                                 : "—"}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <div className="flex gap-2">
                                                 <ProofThumb label="Plate" url={p.photo_url} />
                                                 <ProofThumb label="Receipt" url={p.receipt_url} />
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <StatusBadge value={p.proof_status ?? "—"} />
                                         </td>
                                     </tr>

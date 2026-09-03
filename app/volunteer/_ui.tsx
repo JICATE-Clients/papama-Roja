@@ -153,10 +153,26 @@ export function SectionHeading({
   );
 }
 
-export function TableShell({ children }: { children: ReactNode }) {
+/**
+ * `hideCols` lists 1-based column positions to drop below `md` — see the
+ * `pa-tcol-hide-*` helpers in globals.css. Hiding by position keeps a heading
+ * and its cells together automatically, which matters here because a row can
+ * render in more than one shape (the menu table swaps in an edit form).
+ *
+ * The wrapper still scrolls, so nothing becomes unreachable; the columns left
+ * visible are simply the ones worth a phone's width.
+ */
+export function TableShell({
+  children,
+  hideCols,
+}: {
+  children: ReactNode;
+  hideCols?: number[];
+}) {
+  const hide = (hideCols ?? []).map((n) => `pa-tcol-hide-${n}`).join(" ");
   return (
     <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-      <table className="w-full text-left text-sm">{children}</table>
+      <table className={`w-full text-left text-sm ${hide}`.trim()}>{children}</table>
     </div>
   );
 }
@@ -166,7 +182,7 @@ export function TableHead({ columns }: { columns: string[] }) {
     <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
       <tr>
         {columns.map((c) => (
-          <th key={c} className="px-4 py-3 font-medium">
+          <th key={c} className="px-2 py-3 font-medium md:px-4">
             {c}
           </th>
         ))}
@@ -202,7 +218,11 @@ const BADGE_TONES: Record<string, string> = {
 };
 
 /** Capitalised, underscores-to-spaces status pill, tone keyed off the value. */
-export function StatusBadge({ value }: { value: string }) {
+export function StatusBadge({ value }: { value: string | null | undefined }) {
+  // A nullable column or a renamed API field arrives as undefined at runtime;
+  // `value.replace(...)` below would throw during render and take the whole
+  // page down. A dash is the honest fallback.
+  if (!value) return <Dash>{null}</Dash>;
   const tone = BADGE_TONES[value] ?? "bg-slate-100 text-slate-600 ring-slate-500/20";
   return (
     <span

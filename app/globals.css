@@ -25,6 +25,172 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+/* ── Hidden page scrollbar ───────────────────────────────────────────────────
+ * The vertical scrollbar track is hidden site-wide. Pages still scroll by
+ * wheel, trackpad, touch, keyboard and programmatic scroll — only the visual
+ * track goes.
+ *
+ * Scoped to the document scroller ON PURPOSE. A blanket `*::-webkit-scrollbar`
+ * would also hide the scrollbars on inner scroll containers, and the admin
+ * console relies on those: its wide data tables sit in overflow-x panes where
+ * the bar is the only hint that there is more to the right.
+ */
+html {
+  scrollbar-width: none;      /* Firefox */
+  -ms-overflow-style: none;   /* legacy Edge */
+}
+html::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* ── Signed-in app theme ─────────────────────────────────────────────────────
+ * Shared by all four consoles: admin, donor, vendor, volunteer.
+ *
+ * Between them they carry ~900 slate/white utility usages. Tailwind v4 compiles
+ * every colour utility to `var(--color-*)`, so re-pointing those variables
+ * inside one scope re-tints every console at once — far safer than rewriting
+ * 50-odd files, and it keeps future pages on-palette for free.
+ *
+ * The ramp below is the public site's warm neutral family mapped onto slate's
+ * 50→900 steps, so lightness relationships (and therefore contrast) survive.
+ * Deliberately MUTED: this is a dense data tool people sit in all day, not a
+ * landing page. No aurora, no large type, no decorative colour — the accents
+ * (green/red/amber) stay loud precisely because the surface is quiet.
+ */
+.pa-app {
+    /* Per-console accent. Each panel overrides it below, so a vendor can tell
+       at a glance they are not in the admin console — while the surfaces,
+       type and hairlines stay identical across all four. */
+    --app-accent: #0B7A55;
+
+    /* Sidebar width, defined ONCE here. The sidebar reads it for its own width
+       and the main column reads it for its left padding, so the two cannot
+       drift. It lived as an inline custom property + an arbitrary Tailwind
+       class; the class generated but the variable never reached it, so the
+       first grid column of every page rendered underneath the sidebar. */
+    --console-sidebar: 236px;
+
+    --color-slate-50: #faf7f0;
+    --color-slate-100: #f3ece0;
+    --color-slate-200: #ded1bc; /* hairlines and table rules */
+    --color-slate-300: #d5c8b2;
+    /* The faintest step still used for real text — dashes, hints, and the
+       10px uppercase labels all over the donor console — so it has to clear
+       AA, not merely look grey. The stock slate-400 was 2.85:1 on white.
+       Darkening it to clear 4.5:1 on a white card still left it failing on
+       the tinted surfaces (4.35:1 on -50, 3.96:1 on -100), which is where
+       most of those labels actually sit. This value clears 4.5:1 on all
+       three and stays visibly lighter than -500. slate-300 remains the faint
+       non-text step. */
+    --color-slate-400: #746a5c;
+    --color-slate-500: #6b6255;
+    --color-slate-600: #5d564a; /* body copy */
+    --color-slate-700: #453f35;
+    --color-slate-800: #2c2921;
+    --color-slate-900: #1c2b24; /* headings — same ink as the public site */
+
+    /* Cards sit just above the page rather than pure white. */
+    --color-white: #fffdf8;
+
+    /* Success/brand green retuned to the pApAmA accent so status chips, links
+       and "approve" actions match the rest of the product. */
+    --color-green-50: #eaf3ee;
+    --color-green-100: #d7e9df;
+    --color-green-600: #0b7a55;
+    --color-green-700: #096544;
+    --color-green-800: #075036;
+    --color-emerald-50: #eaf3ee;
+    --color-emerald-100: #d7e9df;
+    --color-emerald-200: #b9d8c8;
+    --color-emerald-500: #128a61;
+    --color-emerald-600: #0b7a55;
+    --color-emerald-700: #096544;
+    --color-emerald-800: #075036;
+    --color-emerald-900: #063f2b;
+
+    /* Teal reads as the volunteer accent at its mid steps, and folds into the
+       same green family at the ends, so a teal chip next to an emerald one
+       looks deliberate rather than like two different design systems. */
+    --color-teal-50: #eaf3ee;
+    --color-teal-100: #d7e9df;
+    --color-teal-500: #2f7f70;
+    --color-teal-600: #276b5e;
+    --color-teal-700: #1f564b;
+
+    /* ── zinc, aliased onto the slate ramp above ────────────────────────────
+       The donor, vendor and volunteer panels were built on Tailwind's `zinc`
+       ramp while admin and the public site use `slate`. Re-pointing slate
+       therefore retinted admin and left the other three consoles cold blue-
+       grey — the exact mismatch that made them look like a different product.
+       These are the SAME values as the slate ramp, not a second warm ramp:
+       the two greys must converge, or every shared component would render
+       differently depending on which console imported it. ~400 usages. */
+    --color-zinc-50: #faf7f0;
+    --color-zinc-100: #f3ece0;
+    --color-zinc-200: #ded1bc;
+    --color-zinc-300: #d5c8b2;
+    --color-zinc-400: #746a5c;
+    --color-zinc-500: #6b6255;
+    --color-zinc-600: #5d564a;
+    --color-zinc-700: #453f35;
+    --color-zinc-800: #2c2921;
+    --color-zinc-900: #1c2b24;
+    --color-zinc-950: #141f1a;
+}
+
+/* The page itself, behind the layout's gradient. */
+.pa-admin-sidebar,
+.pa-console-sidebar { width: var(--console-sidebar); }
+
+/*
+ * The sidebar nav scrolls when 25 links do not fit a short window, so it keeps
+ * a scrollbar — unlike the page scroller, hiding it here would conceal that
+ * there are more sections below the fold. It is just made thin and quiet.
+ */
+.pa-admin-nav,
+.pa-console-nav { scrollbar-width: thin; scrollbar-color: #d5c8b2 transparent; }
+.pa-admin-nav::-webkit-scrollbar,
+.pa-console-nav::-webkit-scrollbar { width: 6px; }
+.pa-admin-nav::-webkit-scrollbar-track,
+.pa-console-nav::-webkit-scrollbar-track { background: transparent; }
+.pa-admin-nav::-webkit-scrollbar-thumb,
+.pa-console-nav::-webkit-scrollbar-thumb { background: #d5c8b2; border-radius: 999px; }
+.pa-admin-nav::-webkit-scrollbar-thumb:hover,
+.pa-console-nav::-webkit-scrollbar-thumb:hover { background: #bfae90; }
+
+/*
+ * Table density.
+ *
+ * The 25 section pages each set their own cell padding as Tailwind utilities
+ * (px-4 py-3). Rather than edit 25 files, these rules override from the wrapper
+ * — a descendant selector outranks a single utility class, so the whole console
+ * tightens from one place and any new page inherits it.
+ *
+ * 12px vertical padding on every row is a lot when the job is scanning a list;
+ * 9px fits noticeably more on screen without crowding.
+ */
+.pa-admin-tablewrap td { padding-top: 9px; padding-bottom: 9px; }
+.pa-admin-tablewrap tbody tr { transition: background-color .12s ease; }
+.pa-admin-tablewrap tbody tr:hover { background-color: #faf7f0; }
+.pa-admin-tablewrap tbody tr:last-child > td { border-bottom: 0; }
+
+/* Numbers line up column-to-column when they share a width. */
+.pa-admin-tablewrap td { font-variant-numeric: tabular-nums; }
+
+@media (min-width: 768px) {
+    .pa-admin-main,
+    .pa-console-main { padding-left: var(--console-sidebar); }
+}
+
+/* Accent per console. Same shell, different signature colour, so a vendor can
+   tell at a glance they are not in the admin console. */
+.pa-app-donor { --app-accent: #C98A15; }     /* turmeric */
+.pa-app-vendor { --app-accent: #C2542A; }    /* chilli   */
+.pa-app-volunteer { --app-accent: #2F7F70; } /* teal     */
+
+.pa-app-root {
+    background-color: #f6f1e8;
+}
+
+
 /* ── Base legibility + restrained shine ──────────────────────────────────────
  * Antialiasing for crisper text on the compact body scale, a subtle slate
  * selection tint, and smooth scrolling only when the user hasn't asked to
@@ -49,4 +215,30 @@ body {
       scroll-behavior: smooth;
     }
   }
+}
+
+/* ── Dropping a table column on phones ──────────────────────────────────────
+   Every table in the vendor and volunteer consoles is wider than a 390px
+   screen (the worst needs 575px against 388px available), so on the device
+   ~98% of this product's traffic uses, you had to swipe sideways to reach a
+   status or an action.
+
+   These hide by position rather than by a class on each cell, so the heading
+   and its column always disappear together — a per-cell class has to be kept
+   in sync by hand, and a table with two row variants (menu rows render an edit
+   form or a display row) gives you two places to get it wrong. Compose them:
+   `pa-tcol-hide-3 pa-tcol-hide-5`. */
+@media (max-width: 767.98px) {
+    .pa-tcol-hide-1 :is(th, td):nth-child(1),
+    .pa-tcol-hide-2 :is(th, td):nth-child(2),
+    .pa-tcol-hide-3 :is(th, td):nth-child(3),
+    .pa-tcol-hide-4 :is(th, td):nth-child(4),
+    .pa-tcol-hide-5 :is(th, td):nth-child(5),
+    .pa-tcol-hide-6 :is(th, td):nth-child(6),
+    .pa-tcol-hide-7 :is(th, td):nth-child(7),
+    .pa-tcol-hide-8 :is(th, td):nth-child(8),
+    .pa-tcol-hide-9 :is(th, td):nth-child(9),
+    .pa-tcol-hide-10 :is(th, td):nth-child(10) {
+        display: none;
+    }
 }

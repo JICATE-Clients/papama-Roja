@@ -7,6 +7,12 @@ import { TokenQrCode } from "@/components/donor/TokenQrCode";
 import { PrintableToken } from "@/components/donor/PrintableToken";
 import { ApiClient } from "@/lib/donor/services/apiClient";
 import { TokenItem } from "@/lib/donor/types/contract";
+import { inr, shortDate, shortDateTime } from "@/lib/format";
+import { ArrowLeft } from "@phosphor-icons/react/dist/ssr/ArrowLeft";
+import { CalendarBlank } from "@phosphor-icons/react/dist/ssr/CalendarBlank";
+import { Clock } from "@phosphor-icons/react/dist/ssr/Clock";
+import { Printer } from "@phosphor-icons/react/dist/ssr/Printer";
+import { Warning } from "@phosphor-icons/react/dist/ssr/Warning";
 
 function useCountdown(expiresAt: string | undefined, isActive: boolean) {
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
@@ -96,17 +102,17 @@ export default function TokenDetailPage({
 
   const statusColors: Record<string, string> = {
     // Authoritative token_status enum (token-flow.md)
-    generated: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/50",
-    live: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/50",
-    in_admin_pool: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/50",
-    assigned_to_volunteer: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900/50",
-    distributed: "bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/30 dark:text-cyan-400 dark:border-cyan-900/50",
-    redeemed: "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-800/60",
-    expired: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/50",
+    generated: "bg-blue-50 text-blue-700 border-blue-200 ",
+    live: "bg-emerald-50 text-emerald-700 border-emerald-200 ",
+    in_admin_pool: "bg-amber-50 text-amber-700 border-amber-200 ",
+    assigned_to_volunteer: "bg-purple-50 text-purple-700 border-purple-200 ",
+    distributed: "bg-cyan-50 text-cyan-700 border-cyan-200 ",
+    redeemed: "bg-zinc-100 text-zinc-600 border-zinc-200 ",
+    expired: "bg-red-50 text-red-700 border-red-200 ",
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
+    <div className="flex min-h-screen flex-col bg-zinc-50 ">
       <Navbar />
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
@@ -114,22 +120,9 @@ export default function TokenDetailPage({
         <div className="mb-6">
           <Link
             href="/donor/tokens"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:underline"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth="2.5"
-              stroke="currentColor"
-              className="h-3.5 w-3.5"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
-              />
-            </svg>
+            <ArrowLeft size={14} weight="bold" aria-hidden />
             Back to Token Ledger
           </Link>
         </div>
@@ -141,26 +134,28 @@ export default function TokenDetailPage({
         ) : token ? (
           <div className="space-y-8">
             {/* Header Details Card */}
-            <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900/40 md:p-8">
+            <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm md:p-8">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <span className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">
+                  <span className="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">
                     Food Token Certificate
                   </span>
-                  <h1 className="mt-1 font-mono text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 break-all">
-                    {token.token_id.substring(0, 18).toUpperCase()}...
+                  <h1 className="mt-1 font-mono text-xl sm:text-2xl font-semibold tracking-tight text-zinc-900 break-all">
+                    {token.serial_number
+                      ? token.serial_number
+                      : `${token.token_id.substring(0, 8).toUpperCase()}…`}
                   </h1>
-                  <p className="mt-1 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                    Type: <span className="uppercase text-emerald-600 dark:text-emerald-400">{token.type.replace("_", " ")}</span>
+                  <p className="mt-1 text-sm font-medium text-zinc-700 ">
+                    Type: <span className="uppercase text-emerald-600 ">{token.type.replace("_", " ")}</span>
                   </p>
                 </div>
                 <div className="self-start sm:self-center flex flex-wrap items-center gap-2">
                   {token.type === "special_care" && (
-                    <span className="inline-flex rounded-full bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900/50 px-3 py-1 text-xs font-bold border">
+                    <span className="inline-flex rounded-full bg-rose-50 text-rose-700 border-rose-200 px-3 py-1 text-xs font-semibold border">
                       SPECIAL CARE
                     </span>
                   )}
-                  <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase ${statusColors[token.status]}`}>
+                  <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase ${statusColors[token.status]}`}>
                     {token.status}
                   </span>
                 </div>
@@ -169,29 +164,25 @@ export default function TokenDetailPage({
 
             {/* Expiry Warning Banner (Active Timer) */}
             {isClose && timeLeft && (
-              <div className="rounded-2xl border border-amber-200 bg-amber-500/5 p-6 shadow-sm dark:border-amber-800/30 dark:bg-amber-950/20 text-amber-800 dark:text-amber-400 animate-pulse">
-                <h3 className="text-sm font-bold flex items-center gap-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="h-5 w-5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                  </svg>
+              <div className="rounded-2xl border border-amber-200 bg-amber-500/5 p-6 shadow-sm text-amber-800 animate-pulse">
+                <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                  <Clock size={20} weight="duotone" aria-hidden />
                   Voucher Expiring Soon!
                 </h3>
                 <p className="mt-2 text-xs font-medium">
-                  This active food voucher will expire in <strong className="font-bold">{timeLeft}</strong>. Please ensure it is assigned and claimed soon.
+                  This active food voucher will expire in <strong className="font-semibold">{timeLeft}</strong>. Please ensure it is assigned and claimed soon.
                 </p>
               </div>
             )}
 
             {/* Special Care Instructions Banner */}
             {token.type === "special_care" && token.special_instructions && (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50/35 p-6 shadow-sm dark:border-rose-800/30 dark:bg-rose-950/10">
-                <h3 className="text-sm font-bold text-rose-800 dark:text-rose-400 flex items-center gap-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="h-5 w-5 text-rose-600">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                  </svg>
+              <div className="rounded-2xl border border-rose-200 bg-rose-50/35 p-6 shadow-sm ">
+                <h3 className="text-sm font-semibold text-rose-800 flex items-center gap-1.5">
+                  <Warning size={20} weight="duotone" className="text-rose-600" aria-hidden />
                   Special Care Instructions
                 </h3>
-                <p className="mt-2 text-xs text-rose-700 dark:text-rose-300 font-medium">
+                <p className="mt-2 text-xs text-rose-700 font-medium">
                   {token.special_instructions}
                 </p>
               </div>
@@ -200,8 +191,8 @@ export default function TokenDetailPage({
             {/* Token Lifecycle Timeline & Cert */}
             <div className="grid gap-8 md:grid-cols-3">
               {/* Timeline Journey */}
-              <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900/40 md:col-span-2">
-                <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+              <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm md:col-span-2">
+                <h2 className="text-base font-medium text-zinc-900 ">
                   Token Lifecycle Path
                 </h2>
                 <p className="text-zinc-400 text-xs mt-0.5">
@@ -209,22 +200,22 @@ export default function TokenDetailPage({
                 </p>
 
                 {/* Timeline Steps */}
-                <div className="mt-8 space-y-8 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-200 dark:before:bg-zinc-800">
-                  
+                <div className="mt-8 space-y-8 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-200 ">
+
                   {/* Step 1: Minted */}
                   <div className="relative pl-10 flex items-start gap-4">
-                    <div className="absolute left-1.5 h-6 w-6 rounded-full border-2 border-emerald-500 bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center -translate-x-1/2">
-                      <div className="h-2 w-2 rounded-full bg-emerald-600 dark:bg-emerald-400" />
+                    <div className="absolute left-1.5 h-6 w-6 rounded-full border-2 border-emerald-500 bg-emerald-100 flex items-center justify-center -translate-x-1/2">
+                      <div className="h-2 w-2 rounded-full bg-emerald-600 " />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                      <h4 className="text-sm font-semibold text-zinc-900 ">
                         Token Generated
                       </h4>
-                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      <p className="mt-1 text-xs text-zinc-500 ">
                         Voucher created from credit conversion. Cryptographic token and value verified.
                       </p>
-                      <span className="mt-2 inline-block font-mono text-[10px] text-zinc-400 bg-zinc-50 px-2 py-0.5 rounded dark:bg-zinc-800">
-                        Issued At: {new Date(token.issued_at).toLocaleString()}
+                      <span className="mt-2 inline-block font-mono text-[11px] text-zinc-400 bg-zinc-50 px-2 py-0.5 rounded ">
+                        Issued At: {shortDateTime(token.issued_at)}
                       </span>
                     </div>
                   </div>
@@ -233,10 +224,10 @@ export default function TokenDetailPage({
                   <div className="relative pl-10 flex items-start gap-4">
                     <div className={`absolute left-1.5 h-6 w-6 rounded-full border-2 flex items-center justify-center -translate-x-1/2 ${
                       token.status === "redeemed"
-                        ? "border-emerald-500 bg-emerald-100 dark:bg-emerald-950"
+                        ? "border-emerald-500 bg-emerald-100 "
                         : token.status === "expired"
-                        ? "border-red-500 bg-red-100 dark:bg-red-950"
-                        : "border-blue-400 bg-blue-50 dark:bg-blue-950"
+                        ? "border-red-500 bg-red-100 "
+                        : "border-blue-400 bg-blue-50 "
                     }`}>
                       <div className={`h-2 w-2 rounded-full ${
                         token.status === "redeemed"
@@ -249,40 +240,40 @@ export default function TokenDetailPage({
                     <div>
                       {token.status === "redeemed" && (
                         <>
-                          <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                          <h4 className="text-sm font-semibold text-zinc-900 ">
                             Token Redeemed
                           </h4>
-                          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                          <p className="mt-1 text-xs text-zinc-500 ">
                             Voucher scanned and redeemed for meal:{" "}
-                            <strong className="font-semibold text-zinc-700 dark:text-zinc-200">
+                            <strong className="font-medium text-zinc-700 ">
                               {token.meal_info || "Lunch — Wholesome Meal"}
                             </strong>.
                           </p>
-                          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                            Vendor: <strong className="font-bold text-zinc-700 dark:text-zinc-200">{token.vendor_name}</strong> ({token.location})
+                          <p className="mt-1 text-xs text-zinc-500 ">
+                            Vendor: <strong className="font-semibold text-zinc-700 ">{token.vendor_name}</strong> ({token.location})
                           </p>
                           {token.beneficiary_category && (
-                            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                              Beneficiary Category: <span className="uppercase text-[10px] font-bold text-amber-600">{token.beneficiary_category.replace("_", " ")}</span>
+                            <p className="mt-1 text-xs text-zinc-500 ">
+                              Beneficiary Category: <span className="uppercase text-[11px] font-semibold text-amber-600">{token.beneficiary_category.replace("_", " ")}</span>
                             </p>
                           )}
-                          <span className="mt-2 inline-block font-mono text-[10px] text-zinc-400 bg-zinc-50 px-2 py-0.5 rounded dark:bg-zinc-800">
-                            Redeemed At: {new Date(token.redeemed_at || "").toLocaleString()}
+                          <span className="mt-2 inline-block font-mono text-[11px] text-zinc-400 bg-zinc-50 px-2 py-0.5 rounded ">
+                            Redeemed At: {shortDateTime(token.redeemed_at || "")}
                           </span>
                         </>
                       )}
 
                       {token.status === "expired" && (
                         <>
-                          <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                          <h4 className="text-sm font-semibold text-zinc-900 ">
                             Token Expired
                           </h4>
-                          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                          <p className="mt-1 text-xs text-zinc-500 ">
                             This token expired unused.
                           </p>
                           {token.expires_at && (
-                            <span className="mt-2 inline-block font-mono text-[10px] text-zinc-400 bg-zinc-50 px-2 py-0.5 rounded dark:bg-zinc-800">
-                              Expired At: {new Date(token.expires_at).toLocaleString()}
+                            <span className="mt-2 inline-block font-mono text-[11px] text-zinc-400 bg-zinc-50 px-2 py-0.5 rounded ">
+                              Expired At: {shortDateTime(token.expires_at)}
                             </span>
                           )}
                         </>
@@ -290,15 +281,15 @@ export default function TokenDetailPage({
 
                       {isLive && (
                         <>
-                          <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                          <h4 className="text-sm font-semibold text-zinc-900 ">
                             Live / Awaiting Scan
                           </h4>
-                          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                          <p className="mt-1 text-xs text-zinc-500 ">
                             Voucher is live and ready to be presented at any participating Anna Canteen or kitchen counter.
                           </p>
                           {token.expires_at && (
-                            <span className="mt-2 inline-block font-mono text-[10px] text-blue-600 bg-blue-50/50 px-2 py-0.5 rounded dark:bg-blue-950/20 dark:text-blue-400 font-bold">
-                              Expires On: {new Date(token.expires_at).toLocaleDateString()}
+                            <span className="mt-2 inline-block font-mono text-[11px] text-blue-600 bg-blue-50/50 px-2 py-0.5 rounded font-semibold">
+                              Expires On: {shortDate(token.expires_at)}
                             </span>
                           )}
                         </>
@@ -312,29 +303,27 @@ export default function TokenDetailPage({
               <div className="space-y-6 md:col-span-1">
                 {/* QR Code Card — rendered client-side via the `qrcode` package (no external requests). */}
                 {isLive && (
-                  <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900/40 text-center flex flex-col items-center">
-                    <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-4">
+                  <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm text-center flex flex-col items-center">
+                    <h3 className="text-base font-medium text-zinc-900 mb-4">
                       Voucher QR Code
                     </h3>
-                    <div className="p-4 bg-white rounded-2xl border border-zinc-150 shadow-inner flex items-center justify-center">
+                    <div className="p-4 bg-white rounded-2xl border border-zinc-200 shadow-inner flex items-center justify-center">
                       <TokenQrCode payload={token.qr_payload} size={140} />
                     </div>
-                    <div className="mt-3 font-mono text-[10px] text-zinc-400 break-all select-all">
+                    <div className="mt-3 font-mono text-[11px] text-zinc-400 break-all select-all">
                       {token.qr_payload}
                     </div>
-                    <p className="text-[10px] text-zinc-400 mt-2 leading-relaxed">
-                      Counter staff will scan this code to issue 1 meal (worth ₹{token.value}).
+                    <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
+                      Counter staff will scan this code to issue 1 meal (worth {inr(token.value)}).
                     </p>
                     {/* Printed / anti-copy token (DIST-5): generate a print-ready
                         physical token with an anti-copy watermark + area-lock. */}
                     <button
                       type="button"
                       onClick={handlePrint}
-                      className="no-print mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-300 bg-white py-2.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50 active:scale-[.98] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                      className="no-print mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-300 bg-white py-2.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 active:scale-[.98] "
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="h-4 w-4">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
-                      </svg>
+                      <Printer size={16} weight="duotone" aria-hidden />
                       Print anti-copy token
                     </button>
                   </div>
@@ -345,50 +334,48 @@ export default function TokenDetailPage({
                 {(token.status === "live" || token.status === "in_admin_pool") && (
                   <Link
                     href={`/donor/tokens/${id}/schedule`}
-                    className="flex items-center justify-center gap-1.5 rounded-2xl border border-zinc-200/80 bg-white px-4 py-3 text-xs font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-50 dark:border-zinc-800/60 dark:bg-zinc-900/40 dark:text-emerald-400 dark:hover:bg-emerald-950/20"
+                    className="flex items-center justify-center gap-1.5 rounded-2xl border border-zinc-200/80 bg-white px-4 py-3 text-xs font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-50 "
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="h-4 w-4">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-                    </svg>
+                    <CalendarBlank size={16} weight="duotone" aria-hidden />
                     Schedule for an occasion
                   </Link>
                 )}
 
                 {/* Verification box — real serial / QR payload */}
-                <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900/40">
-                  <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+                <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm ">
+                  <h3 className="text-base font-medium text-zinc-900 ">
                     Verification
                   </h3>
-                  <p className="text-[10px] text-zinc-400 mt-0.5">
+                  <p className="text-[11px] text-zinc-400 mt-0.5">
                     Token verification details.
                   </p>
 
                   <div className="mt-6 space-y-4 text-xs">
                     {token.serial_number && (
                       <div>
-                        <span className="font-semibold text-zinc-400 dark:text-zinc-500">
+                        <span className="font-medium text-zinc-400 ">
                           Serial Number
                         </span>
-                        <p className="font-mono text-[10px] text-zinc-700 dark:text-zinc-300 break-all bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded mt-1 select-all">
+                        <p className="font-mono text-[11px] text-zinc-700 break-all bg-zinc-50 p-2.5 rounded mt-1 select-all">
                           {token.serial_number}
                         </p>
                       </div>
                     )}
 
                     <div>
-                      <span className="font-semibold text-zinc-400 dark:text-zinc-500">
+                      <span className="font-medium text-zinc-400 ">
                         Voucher Token ID
                       </span>
-                      <p className="font-mono text-[10px] text-zinc-700 dark:text-zinc-300 break-all bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded mt-1 select-all">
+                      <p className="font-mono text-[11px] text-zinc-700 break-all bg-zinc-50 p-2.5 rounded mt-1 select-all">
                         {token.token_id}
                       </p>
                     </div>
 
                     <div>
-                      <span className="font-semibold text-zinc-400 dark:text-zinc-500">
+                      <span className="font-medium text-zinc-400 ">
                         QR Payload
                       </span>
-                      <p className="font-mono text-[10px] text-zinc-700 dark:text-zinc-300 break-all bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded mt-1 select-all">
+                      <p className="font-mono text-[11px] text-zinc-700 break-all bg-zinc-50 p-2.5 rounded mt-1 select-all">
                         {token.qr_payload}
                       </p>
                     </div>
@@ -408,14 +395,14 @@ export default function TokenDetailPage({
                     <button
                       type="button"
                       onClick={() => setShowPrint(false)}
-                      className="w-1/3 rounded-xl border border-zinc-200 bg-white py-3 text-xs font-bold text-zinc-700 hover:bg-zinc-50"
+                      className="w-1/3 rounded-xl border border-zinc-200 bg-white py-3 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
                     >
                       Close
                     </button>
                     <button
                       type="button"
                       onClick={() => window.print()}
-                      className="flex-1 rounded-lg bg-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-1 py-3 text-xs font-bold text-white transition hover:bg-emerald-700 active:scale-[.98]"
+                      className="flex-1 rounded-lg bg-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-1 py-3 text-xs font-semibold text-white transition hover:bg-emerald-700 active:scale-[.98]"
                     >
                       Print this token
                     </button>
@@ -439,8 +426,8 @@ export default function TokenDetailPage({
             `}</style>
           </div>
         ) : (
-          <div className="text-center py-16 bg-white rounded-2xl border border-zinc-200 dark:bg-zinc-900/40 dark:border-zinc-800">
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
+          <div className="text-center py-16 bg-white rounded-2xl border border-zinc-200 ">
+            <h3 className="text-sm font-semibold text-zinc-900 ">
               Token Not Found
             </h3>
             <p className="mt-1 text-xs text-zinc-500">
