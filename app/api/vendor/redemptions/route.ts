@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { validateRedemption } from "@/lib/services/redemption";
 import { flagFraud } from "@/lib/services/fraud";
+import { resolveServiceLocation } from "@/lib/services/serviceLocation";
 import { embeddingFingerprint, toVectorLiteral } from "@/lib/face/embedding";
 import { faceCaptureSchema } from "@/lib/validation/schemas";
 import { dispatchNotification } from "@/lib/notifications/dispatch";
@@ -84,6 +85,11 @@ export const POST = defineRoute(
         const beneficiaryId = result.beneficiary?.id ?? null;
         const nowIso = new Date().toISOString();
 
+        // A-1: freeze WHERE the meal was served, from the Food Partner's
+        // operating address as it stands right now. Never re-derived later — a
+        // vendor moving premises must not relocate historical redemptions.
+        const serviceLocation = await resolveServiceLocation(admin as never, vendorId);
+
         // 1. Insert the redemption (payment_status defaults to 'locked').
         const { data: redemptionRow, error: redemptionError } = await admin
             .from("token_redemptions")
@@ -98,6 +104,7 @@ export const POST = defineRoute(
                 geo_lat: body.geo?.lat ?? null,
                 geo_lng: body.geo?.lng ?? null,
                 face_hash_checked: true, // capture required + liveness-gated + vector-matched
+                ...serviceLocation,
             })
             .select("id, payment_status")
             .single();

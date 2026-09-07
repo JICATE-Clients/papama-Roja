@@ -75,11 +75,23 @@ function fakeAdminClient(existing: unknown, inserted: unknown) {
     return { client: { from } as never, captured };
 }
 
+/**
+ * A-1 (B-02) made a Food Partner's PIN, state and district mandatory. These
+ * tests are about other things — coordinates, FSSAI dedupe, matrix gating — so
+ * the address is supplied by default and only the address tests override it.
+ * (The mandatory-address rule itself is covered in test/services/location-a1.)
+ */
+const VALID_ADDRESS = {
+    pincode: "600001",
+    registered_state_id: "11111111-1111-4111-8111-111111111111",
+    registered_district_id: "22222222-2222-4222-8222-222222222222",
+};
+
 const postReq = (body: Record<string, unknown>) =>
     new NextRequest("http://localhost/api/admin/vendors", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...VALID_ADDRESS, ...body }),
     });
 
 const CREATED = { id: "v-new", name: "Anna's Kitchen", status: "pending", kyc_status: "pending" };

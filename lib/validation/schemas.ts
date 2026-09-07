@@ -203,6 +203,39 @@ export const donorProfilePatchSchema = z.object({
 export type DonorProfilePatch = z.infer<typeof donorProfilePatchSchema>;
 
 // ===========================================================================
+// Location (A-1 / B-02, CD §D-2)
+// ===========================================================================
+
+/**
+ * A 6-digit Indian PIN code. Mirrors `public.is_valid_pincode()` exactly — the
+ * DB CHECK is the backstop, this is the message the user actually reads.
+ *
+ * No Indian PIN begins with 0, so a leading zero is a typo (usually a stripped
+ * digit), not a valid code.
+ */
+export const pincodeSchema = z
+    .string()
+    .trim()
+    .regex(/^[1-9][0-9]{5}$/, "PIN code must be 6 digits and cannot start with 0");
+
+/**
+ * Structured address where every part is optional — the LENIENT shape.
+ *
+ * Used for beneficiaries (CD §D-2: "optional fields never block registration").
+ * A malformed PIN is still rejected, but an ABSENT one is not: nobody is turned
+ * away from a meal for want of a postal code.
+ */
+export const lenientAddressSchema = z.object({
+    address: z.string().trim().max(500).optional(),
+    locality: z.string().trim().max(200).optional(),
+    city: z.string().trim().max(120).optional(),
+    pincode: pincodeSchema.optional(),
+    state_id: z.string().uuid().optional(),
+    district_id: z.string().uuid().optional(),
+});
+export type LenientAddress = z.infer<typeof lenientAddressSchema>;
+
+// ===========================================================================
 // Beneficiary registration (BEN-1…5) — net-new, no collision
 // ===========================================================================
 
@@ -220,6 +253,12 @@ export const beneficiaryRegistrationRequestSchema = z.object({
     // storage references; presence rules are category-driven in the service.
     document_refs: z.array(z.string()).default([]),
     location_hint: z.string().optional(),
+    /**
+     * Structured location (A-1). Every field optional and the whole object
+     * optional — CD §D-2's lenient rule. Registration must succeed with no
+     * location at all.
+     */
+    location: lenientAddressSchema.optional(),
 });
 export type BeneficiaryRegistrationRequest = z.infer<typeof beneficiaryRegistrationRequestSchema>;
 
@@ -347,7 +386,28 @@ export const vendorCreateRequestSchema = z
         legal_name: z.string().trim().max(200).optional(),
         address: z.string().trim().max(500).optional(),
         city: z.string().trim().max(120).optional(),
-        pincode: z.string().trim().max(12).optional(),
+        /**
+         * A-1 / CD §D-2 — Food Partner addresses are MANDATORY and full. This is
+         * the opposite of the beneficiary rule and deliberately so: a Food
+         * Partner is a business we settle money to and inspect, and its district
+         * is what A-2 checks a token's geographic scope against. An outlet with
+         * no district cannot be scope-checked at all.
+         */
+        pincode: pincodeSchema,
+        registered_state_id: z.string().uuid("select a state"),
+        registered_district_id: z.string().uuid("select a district"),
+        registered_locality: z.string().trim().max(200).optional(),
+        /**
+         * Operating address — where meals are actually served, when that differs
+         * from the registered address. Omit entirely when they are the same;
+         * consumers resolve with coalesce(operating_*, registered).
+         */
+        operating_address: z.string().trim().max(500).optional(),
+        operating_locality: z.string().trim().max(200).optional(),
+        operating_city: z.string().trim().max(120).optional(),
+        operating_pincode: pincodeSchema.optional(),
+        operating_state_id: z.string().uuid().optional(),
+        operating_district_id: z.string().uuid().optional(),
         phone: z.string().trim().max(32).optional(),
         email: z.string().trim().email("enter a valid email").optional(),
         emergency_contact: z.string().trim().max(120).optional(),
@@ -362,7 +422,28 @@ export const vendorCreateRequestSchema = z
     .refine((v) => (v.geo_lat == null) === (v.geo_lng == null), {
         message: "give both latitude and longitude, or neither",
         path: ["geo_lng"],
-    });
+    })
+    // A partial operating address is worse than none: the redemption snapshot
+    // resolves operating-then-registered per field, so a half-filled operating
+    // address would silently mix two places into one snapshot row. Require the
+    // district whenever any operating field is given.
+    .refine(
+        (v) => {
+            const anyOperating =
+                v.operating_address != null ||
+                v.operating_locality != null ||
+                v.operating_city != null ||
+                v.operating_pincode != null ||
+                v.operating_state_id != null ||
+                v.operating_district_id != null;
+            return !anyOperating || (v.operating_district_id != null && v.operating_state_id != null);
+        },
+        {
+            message:
+                "an operating address needs both its state and district — leave every operating field blank if it is the same as the registered address",
+            path: ["operating_district_id"],
+        }
+    );
 export type VendorCreateRequest = z.infer<typeof vendorCreateRequestSchema>;
 
 /**

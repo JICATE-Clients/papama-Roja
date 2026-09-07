@@ -218,7 +218,16 @@ const adminRoutes: RouteSpec[] = [
         name: "admin/vendors POST",
         handler: vendorsPOST,
         method: "POST",
-        body: { name: "Pre-registered Outlet" },
+        // A-1 (B-02): PIN + state + district are mandatory for a Food Partner,
+        // so this guard smoke test needs a body that actually passes validation
+        // — otherwise it would 400 before reaching the matrix check it exists
+        // to exercise.
+        body: {
+            name: "Pre-registered Outlet",
+            pincode: "600001",
+            registered_state_id: "11111111-1111-4111-8111-111111111111",
+            registered_district_id: "22222222-2222-4222-8222-222222222222",
+        },
     },
     { name: "admin/volunteers GET", handler: volunteersGET, method: "GET" },
     { name: "admin/volunteer-activity GET", handler: volunteerActivityGET, method: "GET" },

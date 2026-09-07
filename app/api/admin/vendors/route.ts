@@ -202,7 +202,19 @@ export const POST = defineRoute(
                 legal_name: body.legal_name ?? null,
                 address: body.address ?? null,
                 city: body.city ?? null,
-                pincode: body.pincode ?? null,
+                pincode: body.pincode,
+                // A-1 — registered address is mandatory and full for a Food
+                // Partner; the operating address is stored only when it differs
+                // (NULL means "same as registered", resolved with coalesce).
+                registered_state_id: body.registered_state_id,
+                registered_district_id: body.registered_district_id,
+                registered_locality: body.registered_locality ?? null,
+                operating_address: body.operating_address ?? null,
+                operating_locality: body.operating_locality ?? null,
+                operating_city: body.operating_city ?? null,
+                operating_pincode: body.operating_pincode ?? null,
+                operating_state_id: body.operating_state_id ?? null,
+                operating_district_id: body.operating_district_id ?? null,
                 phone: body.phone ?? null,
                 email: body.email ?? null,
                 emergency_contact: body.emergency_contact ?? null,
