@@ -99,12 +99,12 @@ create policy districts_select_authenticated on public.districts
 
 create policy states_write_admin on public.states
     for all to authenticated
-    using (public.current_app_role() = 'admin')
-    with check (public.current_app_role() = 'admin');
+    using (private.current_app_role() = 'admin')
+    with check (private.current_app_role() = 'admin');
 create policy districts_write_admin on public.districts
     for all to authenticated
-    using (public.current_app_role() = 'admin')
-    with check (public.current_app_role() = 'admin');
+    using (private.current_app_role() = 'admin')
+    with check (private.current_app_role() = 'admin');
 
 -- =============================================================================
 -- Food Partner (vendors) — full structured address, registered AND operating

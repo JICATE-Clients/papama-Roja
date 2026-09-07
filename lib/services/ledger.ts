@@ -19,7 +19,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * edit.
  */
 
-export type LedgerName = "donation" | "vendor_payable" | "revenue";
+/**
+ * `special_care_pool` (A-3 / CD §D-8) is the Common Special Care Pool: the
+ * ₹100-minus-meal surplus from a Special Care redemption. It is NOT revenue —
+ * that money is committed to funding future special-care meals, and the eight-
+ * line pool statement is reported off this stream.
+ */
+export type LedgerName = "donation" | "vendor_payable" | "revenue" | "special_care_pool";
 
 export interface PostLedgerEntryArgs {
     admin: SupabaseClient;

@@ -188,20 +188,37 @@ export const POST = defineRoute(
                 console.error("redemption.create: forfeited-balance insert failed", forfeitError);
                 secondaryWriteWarnings.push({ step: "forfeited_balances", error: forfeitError.message });
             } else {
-                // Triple-ledger financial trail (addon #18): a forfeited remainder
-                // is platform revenue. Best-effort, same non-blocking discipline
-                // as the rest of this step.
+                // Where the remainder goes depends on the token type (A-3 /
+                // CD §D-8).
+                //
+                // SPECIAL CARE: a ₹100 token spent on a ₹75 meal leaves ₹25 that
+                // is NOT ours. It belongs to the Common Special Care Pool and
+                // funds future special-care meals — booking it as revenue would
+                // record donated money as income to pApAmA.
+                //
+                // STANDARD: still revenue for now. Card F-4 (B-03) moves it to
+                // the Meal Pool, and is deliberately sequenced after this card so
+                // the two ledger streams land one at a time.
+                const isSpecialCare = token.token_type === "special_care";
+                const ledger = isSpecialCare ? "special_care_pool" : "revenue";
+
                 try {
                     await postLedgerEntry({
                         admin,
-                        ledger: "revenue",
+                        ledger,
                         amountInr: value.forfeited,
                         referenceType: "redemption",
                         referenceId: redemption.id,
-                        description: `forfeited balance on redemption ${redemption.id}`,
+                        description: isSpecialCare
+                            ? `Special Care surplus to pool on redemption ${redemption.id}`
+                            : `forfeited balance on redemption ${redemption.id}`,
                     });
                 } catch (e) {
-                    console.error("redemption.create: revenue ledger posting failed", e);
+                    console.error(`redemption.create: ${ledger} ledger posting failed`, e);
+                    secondaryWriteWarnings.push({
+                        step: `ledger:${ledger}`,
+                        error: e instanceof Error ? e.message : String(e),
+                    });
                 }
             }
         }
