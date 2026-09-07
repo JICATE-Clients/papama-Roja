@@ -498,6 +498,13 @@ export type SystemConfigResponse = z.infer<typeof systemConfigResponseSchema>;
 export const systemConfigUpdateRequestSchema = z.object({
     key: z.string().min(1),
     value: z.union([z.string(), z.number(), z.boolean(), z.null()]),
+    /**
+     * Why the value was changed (Work Order Q-3 / B-14). Optional here — the
+     * audit already records who, when and the before/after, so a reason is an
+     * improvement rather than a gate. It is MANDATORY when extending an active
+     * emergency override (CD §D-6), enforced at that route, not this one.
+     */
+    reason: z.string().trim().min(1).max(500).optional(),
 });
 export type SystemConfigUpdateRequest = z.infer<typeof systemConfigUpdateRequestSchema>;
 

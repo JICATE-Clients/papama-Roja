@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { deriveQrPayload, qrHashOf } from "@/app/api/_lib/tokenQr";
+import { BadRequestError } from "@/lib/api/handler";
 import type { AppUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/services/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -174,6 +175,28 @@ export async function activateEmergencyOverride(
     client?: Client
 ): Promise<ActivateOverrideResult> {
     const admin = client ?? (createAdminClient() as unknown as Client);
+
+    // --- Extension guard (Work Order Q-3 / B-14, CD §D-6) --------------------
+    // Activating an override for a key that already has an active one is not a
+    // fresh activation — it is an EXTENSION: it overwrites the config again and
+    // starts a new auto-revert window, so an emergency relaxation can be kept
+    // alive indefinitely by repeating the call. The first activation may be
+    // urgent enough to excuse a blank reason; every extension after it must say
+    // why, because that is the audit trail for how long a relaxation ran and on
+    // whose authority.
+    const { data: activeRow } = await admin
+        .from("emergency_overrides")
+        .select("id")
+        .eq("config_key", input.configKey)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+
+    if (activeRow && !input.reason?.trim()) {
+        throw new BadRequestError(
+            `an override for '${input.configKey}' is already active — extending it requires a reason`
+        );
+    }
 
     let maxDays: number | null = null;
     try {

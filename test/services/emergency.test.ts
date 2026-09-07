@@ -174,6 +174,11 @@ function buildOverrideAdmin(opts: {
     cfgRow?: { value: string | null } | null;
     insertResult?: { id: string };
     insertError?: string;
+    /**
+     * An already-active override for the same key, which makes the call an
+     * EXTENSION rather than a fresh activation (Q-3 / B-14). Defaults to none.
+     */
+    activeOverride?: { id: string } | null;
 }) {
     const from = vi.fn().mockImplementation((table: string) => {
         if (table === "system_config") {
@@ -193,6 +198,19 @@ function buildOverrideAdmin(opts: {
         }
         if (table === "emergency_overrides") {
             return {
+                // The extension guard's lookup: .select().eq().eq().limit().maybeSingle()
+                select: vi.fn().mockReturnValue({
+                    eq: vi.fn().mockReturnValue({
+                        eq: vi.fn().mockReturnValue({
+                            limit: vi.fn().mockReturnValue({
+                                maybeSingle: vi.fn().mockResolvedValue({
+                                    data: opts.activeOverride ?? null,
+                                    error: null,
+                                }),
+                            }),
+                        }),
+                    }),
+                }),
                 insert: vi.fn().mockReturnValue({
                     select: vi.fn().mockReturnValue({
                         single: vi.fn().mockResolvedValue(
@@ -254,6 +272,57 @@ describe("activateEmergencyOverride", () => {
             }),
             admin
         );
+    });
+
+    // --- Q-3 / B-14: extending an active override requires a reason ---------
+    it("rejects an extension with no reason", async () => {
+        getNumberMock.mockResolvedValue(30);
+        const admin = buildOverrideAdmin({ activeOverride: { id: "ov-existing" } });
+        await expect(
+            activateEmergencyOverride(
+                { configKey: "emergency_max_meals_per_day", overrideValue: "5" },
+                actor,
+                admin
+            )
+        ).rejects.toThrow(/already active.*requires a reason/i);
+    });
+
+    it("rejects an extension whose reason is only whitespace", async () => {
+        getNumberMock.mockResolvedValue(30);
+        const admin = buildOverrideAdmin({ activeOverride: { id: "ov-existing" } });
+        await expect(
+            activateEmergencyOverride(
+                { configKey: "emergency_max_meals_per_day", overrideValue: "5", reason: "   " },
+                actor,
+                admin
+            )
+        ).rejects.toThrow(/requires a reason/i);
+    });
+
+    it("allows an extension that carries a reason", async () => {
+        getNumberMock.mockResolvedValue(30);
+        const admin = buildOverrideAdmin({ activeOverride: { id: "ov-existing" } });
+        const result = await activateEmergencyOverride(
+            {
+                configKey: "emergency_max_meals_per_day",
+                overrideValue: "5",
+                reason: "Flood response extended — district collector request",
+            },
+            actor,
+            admin
+        );
+        expect(result.id).toBe("ov-1");
+    });
+
+    it("still allows a FIRST activation with no reason", async () => {
+        getNumberMock.mockResolvedValue(30);
+        const admin = buildOverrideAdmin({ activeOverride: null });
+        const result = await activateEmergencyOverride(
+            { configKey: "emergency_max_meals_per_day", overrideValue: "5" },
+            actor,
+            admin
+        );
+        expect(result.id).toBe("ov-1");
     });
 
     it("throws when recording the override fails", async () => {

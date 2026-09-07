@@ -11,6 +11,7 @@ import { shortDateTime } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getBoolean } from "@/lib/system-config";
+import { findUnsetMandatoryConfig } from "@/lib/services/go-live";
 import { getTransparencyStats, type TransparencyStats } from "@/lib/services/transparency";
 
 /**
@@ -193,12 +194,13 @@ const plural = (n: number, one: string, many = `${one}s`) =>
 const num = (n: number) => n.toLocaleString("en-IN");
 
 export default async function AdminHomePage() {
-    const [kpis, activity, transparency, money, pipeline] = await Promise.all([
+    const [kpis, activity, transparency, money, pipeline, unsetConfig] = await Promise.all([
         loadKpis(),
         loadRecentActivity(),
         loadTransparency(),
         loadMoneySeries(),
         loadPipeline(),
+        findUnsetMandatoryConfig(createAdminClient() as never),
     ]);
 
     // Anything needing a human decision leads. Everything else is a counter.
@@ -225,6 +227,41 @@ export default async function AdminHomePage() {
                         : "Nothing is waiting on you."}
                 </p>
             </header>
+
+            {/* GO-LIVE READINESS (Q-4 / B-06). Sits above the queues because an
+                unset mandatory key is not a task in a queue — it is a rule that
+                is silently not running. Absent entirely once all are set, so it
+                never becomes background noise an admin learns to scroll past. */}
+            {unsetConfig.length > 0 && (
+                <section className="mb-8 rounded-xl border border-amber-300 bg-amber-50 p-4 sm:p-5">
+                    <h2 className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+                        <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full bg-amber-500" />
+                        Critical configuration incomplete
+                    </h2>
+                    <p className="mt-1.5 text-[13px] leading-relaxed text-amber-800">
+                        {unsetConfig.length === 1
+                            ? "One mandatory setting has no value."
+                            : `${unsetConfig.length} mandatory settings have no value.`}{" "}
+                        Each rule below is <strong className="font-semibold">not being enforced</strong> until
+                        it is set.
+                    </p>
+                    <ul className="mt-3 space-y-2">
+                        {unsetConfig.map((c) => (
+                            <li key={c.key} className="text-[13px] leading-relaxed text-amber-900">
+                                <span className="font-medium">{c.label}</span>
+                                <span className="ml-1.5 font-mono text-[11px] text-amber-700">{c.key}</span>
+                                <span className="mt-0.5 block text-amber-800">{c.consequence}</span>
+                            </li>
+                        ))}
+                    </ul>
+                    <Link
+                        href="/admin/system-config"
+                        className="mt-4 inline-block rounded-lg bg-amber-900 px-3.5 py-2 text-[13px] font-medium text-amber-50 hover:bg-amber-800"
+                    >
+                        Review configuration
+                    </Link>
+                </section>
+            )}
 
             {needsAction.length === 0 && (
                 <p className="mb-8 flex items-center gap-2.5 text-sm text-slate-500">

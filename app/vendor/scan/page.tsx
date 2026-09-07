@@ -9,9 +9,15 @@ import QrScanner from "@/components/vendor/QrScanner";
 import type { FaceCapture as FaceCaptureValue } from "@/lib/validation/schemas";
 import { inr } from "@/lib/format";
 
-/** Co-pay defaults (mirrors system_config `co_contribution_max`; server clamps too). */
+/**
+ * Co-pay default. The MAXIMUM is deliberately not a constant here — it comes
+ * from `system_config.co_contribution_max` via /api/vendor/redemptions/limits
+ * (Work Order Q-2 / B-20). It used to be hardcoded to 5 while the server clamped
+ * to the config, so raising the config left the till silently refusing the
+ * higher amount. `null` means the key is unset, in which case the engine accepts
+ * only ₹0 and the field is disabled — never guess a ceiling.
+ */
 const CO_PAY_DEFAULT = 0;
-const CO_PAY_MAX = 5;
 
 /* ---- Backend contract types ------------------------------------------------ */
 
@@ -123,6 +129,11 @@ export default function VendorScanPage() {
   const [menuItemId, setMenuItemId] = useState("");
   const [face, setFace] = useState<FaceCaptureValue | null>(null);
   const [coPay, setCoPay] = useState("");
+  /**
+   * The co-pay ceiling from system_config. `undefined` while loading, `null`
+   * when the key is unset (field disabled — the engine accepts only ₹0 then).
+   */
+  const [coPayMax, setCoPayMax] = useState<number | null | undefined>(undefined);
   const [geo, setGeo] = useState<Geo | null>(null);
   const [geoBusy, setGeoBusy] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
@@ -146,6 +157,31 @@ export default function VendorScanPage() {
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [proofBusy, setProofBusy] = useState(false);
   const [proofDone, setProofDone] = useState(false);
+
+  /* Load the co-pay ceiling from system_config (Q-2 / B-20). */
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/vendor/redemptions/limits", {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        if (!res.ok) {
+          // Fail CLOSED: without a known ceiling the till must not invent one.
+          if (active) setCoPayMax(null);
+          return;
+        }
+        const body = (await res.json()) as { co_contribution_max?: number | null };
+        if (active) setCoPayMax(body.co_contribution_max ?? null);
+      } catch {
+        if (active) setCoPayMax(null);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   /* Load approved menu items for the <select>. */
   useEffect(() => {
@@ -402,25 +438,32 @@ export default function VendorScanPage() {
                 id="copay"
                 type="number"
                 min="0"
-                max={CO_PAY_MAX}
+                max={coPayMax ?? 0}
                 step="1"
+                disabled={coPayMax === undefined || coPayMax === null}
                 value={coPay}
                 onChange={(e) => {
-                  // Client-side clamp to ₹0..₹5; the server clamps to co_contribution_max too.
+                  // Clamp to ₹0..co_contribution_max. The server clamps to the
+                  // same config value, so the two can no longer diverge.
+                  const ceiling = coPayMax ?? 0;
                   const raw = e.target.value;
                   if (raw === "") {
                     setCoPay("");
                   } else {
                     const n = Number(raw);
-                    setCoPay(isNaN(n) ? "" : String(Math.max(CO_PAY_DEFAULT, Math.min(CO_PAY_MAX, n))));
+                    setCoPay(isNaN(n) ? "" : String(Math.max(CO_PAY_DEFAULT, Math.min(ceiling, n))));
                   }
                   resetFlow();
                 }}
                 placeholder={String(CO_PAY_DEFAULT)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-600 focus:ring-1 focus:ring-slate-600"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-600 focus:ring-1 focus:ring-slate-600 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
               />
               <p className="mt-1 text-xs text-slate-400">
-                Optional voluntary contribution — default ₹{CO_PAY_DEFAULT}, max ₹{CO_PAY_MAX}.
+                {coPayMax === undefined
+                  ? "Loading contribution limit…"
+                  : coPayMax === null
+                    ? "Contributions are unavailable until an administrator sets the limit."
+                    : `Optional voluntary contribution — default ₹${CO_PAY_DEFAULT}, max ${inr(coPayMax)}.`}
               </p>
             </div>
           </div>

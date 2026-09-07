@@ -43,7 +43,24 @@ export const GET = defineRoute({ feature: "audit_reports", action: "read" }, asy
  * `null` unsets the row. Unknown key → 404, bad value for the type → 400. Records
  * `updated_by` and audits the change. Does NOT create new keys.
  */
+/**
+ * Per-key hard ceilings for numeric config (Work Order Q-1 / B-10).
+ *
+ * The type check below only proves a number is non-negative, which is not enough
+ * for a key that carries a policy limit. The client's decision (CD §D-1) fixes
+ * the beneficiary contribution at ₹10 — that is a promise made to beneficiaries,
+ * not a tunable. Storing 50 here would let a single config edit quietly raise
+ * what every beneficiary is asked to pay at the counter, with nothing downstream
+ * to catch it: the redemption engine clamps to whatever this row says.
+ *
+ * Keys absent from this map keep the non-negative check only.
+ */
+const NUMERIC_MAX: Readonly<Record<string, number>> = {
+    co_contribution_max: 10,
+};
+
 function toStoredValue(
+    key: string,
     valueType: string,
     value: string | number | boolean | null
 ): string | null {
@@ -60,6 +77,10 @@ function toStoredValue(
             // redemptions) — reject it rather than store a foot-gun.
             if (n < 0) {
                 throw new BadRequestError("value for a 'number' config must be zero or positive");
+            }
+            const max = NUMERIC_MAX[key];
+            if (max !== undefined && n > max) {
+                throw new BadRequestError(`${key} cannot exceed ${max}`);
             }
             return String(n);
         }
@@ -90,7 +111,7 @@ export const PATCH = defineRoute(
         if (fetchError || !data) throw new NotFoundError("config key not found");
         const row = data as { key: string; value: string | null; value_type: string };
 
-        const stored = toStoredValue(row.value_type, body.value);
+        const stored = toStoredValue(row.key, row.value_type, body.value);
 
         const { error: updateError } = await admin
             .from("system_config")
@@ -108,7 +129,14 @@ export const PATCH = defineRoute(
             entity_table: "system_config",
             entity_id: body.key,
             summary: `${body.key}: ${row.value ?? "unset"} → ${stored ?? "unset"}`,
-            metadata: { from: row.value, to: stored },
+            // `reason` is omitted rather than stored as null when absent, so a
+            // metadata query for reasons returns only changes that actually
+            // carried one.
+            metadata: {
+                from: row.value,
+                to: stored,
+                ...(body.reason ? { reason: body.reason } : {}),
+            },
         });
 
         return { ok: true, key: body.key, value: stored };
