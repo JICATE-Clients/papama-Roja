@@ -18,7 +18,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { reportTokenLost, revalidateToken } from "@/lib/services/token";
 import { writeAuditLog } from "@/lib/services/audit";
-import { getBoolean, getNumber, MissingConfigError } from "@/lib/system-config";
+import { getBoolean } from "@/lib/system-config";
 import { makeUser } from "@test/helpers";
 
 /**
@@ -27,7 +27,6 @@ import { makeUser } from "@test/helpers";
  * - §3.2/§7 [M2-5]: token revalidation (admin, audited, config-gated)
  */
 
-const getNumberMock = vi.mocked(getNumber);
 const getBooleanMock = vi.mocked(getBoolean);
 
 const BASE_TOKEN = {
@@ -151,97 +150,45 @@ describe("reportTokenLost", () => {
     });
 });
 
-function buildAdminForRevalidate(opts: {
-    tokenRow?: Record<string, unknown> | null;
-    distributionCount?: number;
-    updatedRows?: Array<{ id: string }>;
-}) {
-    const tables: Record<string, unknown> = {
-        tokens: {
-            select: vi.fn().mockReturnValue({
-                eq: vi.fn().mockReturnValue({
-                    maybeSingle: vi.fn().mockResolvedValue({
-                        data: opts.tokenRow === undefined
-                            ? { id: "tok-1", status: "expired", expires_at: "2026-01-01T00:00:00.000Z" }
-                            : opts.tokenRow,
-                        error: null,
-                    }),
-                }),
-            }),
-            update: vi.fn().mockReturnValue({
-                eq: vi.fn().mockReturnValue({
-                    eq: vi.fn().mockReturnValue({
-                        select: vi.fn().mockResolvedValue({
-                            data: opts.updatedRows ?? [{ id: "tok-1" }],
-                            error: null,
-                        }),
-                    }),
-                }),
-            }),
-        },
-        token_distribution_records: {
-            select: vi.fn().mockReturnValue({
-                eq: vi.fn().mockResolvedValue({ count: opts.distributionCount ?? 0, error: null }),
-            }),
-        },
-    };
-    const from = vi.fn().mockImplementation((table: string) => tables[table] ?? {});
-    return { from } as unknown as SupabaseClient;
-}
 
-describe("revalidateToken", () => {
+describe("revalidateToken — RETIRED (A-2 / B-23)", () => {
     const actor = makeUser("admin", { id: "admin-1" });
 
     beforeEach(() => {
         vi.clearAllMocks();
+    });
+
+    /**
+     * The client retired revalidation on 18 Aug 2026. It reactivated the SAME
+     * token, which contradicts "expired = permanently non-redeemable" — it left
+     * a QR in circulation that was supposed to be dead. The replacement is a
+     * controlled reissue: a new token, new QR, permanently linked to the
+     * original.
+     *
+     * These tests assert the RETIREMENT, and deliberately replace the old
+     * behaviour tests (audit written, status restored, expiry extended) — those
+     * described behaviour that must no longer be possible.
+     */
+    it("refuses unconditionally, whatever the token's state", async () => {
+        await expect(revalidateToken("tok-1", actor)).rejects.toThrow(/retired/i);
+    });
+
+    it("points the caller at the controlled reissue instead of just refusing", async () => {
+        await expect(revalidateToken("tok-1", actor)).rejects.toThrow(/reissue/i);
+    });
+
+    it("cannot be re-enabled by flipping token_revalidation_allowed", async () => {
+        // The config key is forced false by migration 20260907000004, but a
+        // config an admin can toggle is not a retirement. The refusal is in
+        // code and reads no config at all — so it holds even if the key is
+        // somehow set back to true.
         getBooleanMock.mockResolvedValue(true);
-        getNumberMock.mockImplementation(async (key: string) => {
-            if (key === "token_expiry_days") return 90;
-            throw new MissingConfigError(key, "missing");
-        });
+        await expect(revalidateToken("tok-1", actor)).rejects.toThrow(/retired/i);
+        expect(getBooleanMock).not.toHaveBeenCalled();
     });
 
-    it("throws when revalidation is disabled", async () => {
-        getBooleanMock.mockResolvedValue(false);
-        const client = buildAdminForRevalidate({});
-        await expect(revalidateToken("tok-1", actor, client)).rejects.toThrow(
-            "token revalidation is disabled"
-        );
-    });
-
-    it("rejects a non-expired token", async () => {
-        const client = buildAdminForRevalidate({
-            tokenRow: { id: "tok-1", status: "live", expires_at: null },
-        });
-        await expect(revalidateToken("tok-1", actor, client)).rejects.toThrow(
-            /only an expired token/
-        );
-    });
-
-    it("restores 'live' when no distribution record exists", async () => {
-        const client = buildAdminForRevalidate({ distributionCount: 0 });
-        const result = await revalidateToken("tok-1", actor, client);
-        expect(result.restored_status).toBe("live");
-    });
-
-    it("restores 'distributed' when a distribution record exists", async () => {
-        const client = buildAdminForRevalidate({ distributionCount: 1 });
-        const result = await revalidateToken("tok-1", actor, client);
-        expect(result.restored_status).toBe("distributed");
-    });
-
-    it("throws when token_expiry_days is unset", async () => {
-        getNumberMock.mockRejectedValue(new MissingConfigError("token_expiry_days", "missing"));
-        const client = buildAdminForRevalidate({});
-        await expect(revalidateToken("tok-1", actor, client)).rejects.toThrow();
-    });
-
-    it("writes an audit log", async () => {
-        const client = buildAdminForRevalidate({});
-        await revalidateToken("tok-1", actor, client);
-        expect(writeAuditLog).toHaveBeenCalledWith(
-            expect.objectContaining({ action: "token.revalidate", entity_table: "tokens" }),
-            client
-        );
+    it("writes no audit row — nothing happened to audit", async () => {
+        await expect(revalidateToken("tok-1", actor)).rejects.toThrow();
+        expect(writeAuditLog).not.toHaveBeenCalled();
     });
 });

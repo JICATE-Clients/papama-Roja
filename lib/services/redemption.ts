@@ -6,6 +6,8 @@ import { getNumber, getBoolean, getString, MissingConfigError } from "@/lib/syst
 import { qrHashOf } from "@/app/api/_lib/tokenQr";
 import { toVectorLiteral } from "@/lib/face/embedding";
 import { getGreatCircleDistanceKm } from "@/lib/services/geo";
+import { resolveServiceLocation } from "@/lib/services/serviceLocation";
+import { checkTokenScope, type TokenGeographicScope } from "@/lib/services/tokenScope";
 
 /**
  * Redemption validation + value engine (owner §4.4, RED-1..7, PROOF-4).
@@ -49,6 +51,14 @@ interface TokenRow {
     beneficiary_id: string | null;
     expires_at: string | null;
     redeemed_at: string | null;
+    // A-2 (B-23): structured geographic scope, checked against the SERVICE
+    // location. Distinct from the legacy free-text `area_lock`, which is printed
+    // on the token but never enforced.
+    geographic_scope: TokenGeographicScope | null;
+    scope_city: string | null;
+    scope_pincode: string | null;
+    scope_state: { name: string | null } | null;
+    scope_district: { name: string | null } | null;
 }
 
 /** The menu row fields the engine needs. */
@@ -191,7 +201,10 @@ export async function validateRedemption(
     const { data: tokenData } = await admin
         .from("tokens")
         .select(
-            "id, qr_hash, status, value_inr, token_type, donor_id, beneficiary_id, expires_at, redeemed_at"
+            `id, qr_hash, status, value_inr, token_type, donor_id, beneficiary_id, expires_at, redeemed_at,
+             geographic_scope, scope_city, scope_pincode,
+             scope_state:states!tokens_scope_state_id_fkey(name),
+             scope_district:districts!tokens_scope_district_id_fkey(name)`
         )
         .eq("qr_hash", qrHash)
         .maybeSingle();
@@ -560,6 +573,54 @@ export async function validateRedemption(
                         : `vendor city '${vendorCity}' is outside the operating city '${operatingCity}'`,
                 });
             }
+        }
+    }
+
+    // --- token geographic scope (A-2 / B-23, CD §D-2A) -----------------------
+    // Distinct from the city lock above. City lock is an ORG-WIDE pilot control
+    // ("pApAmA only operates in this city"); this is a PER-TOKEN restriction a
+    // donor or admin chose ("this token is for Coimbatore district"). Both can
+    // apply, and either can block.
+    //
+    // Checked against the SERVICE location — the Food Partner's operating
+    // address — and NEVER against the beneficiary's location. A beneficiary may
+    // travel from anywhere; the restriction governs where the meal is served.
+    // Checking the beneficiary would turn a distribution control into a means
+    // test on where someone lives.
+    {
+        const scope = token.geographic_scope ?? "PAN_INDIA";
+
+        if (scope === "PAN_INDIA") {
+            // The default and the overwhelmingly common case — skip the lookup.
+            checks.push({
+                name: "token_scope",
+                pass: true,
+                hard: false,
+                detail: "token is valid anywhere in India",
+            });
+        } else {
+            const serviceLocation = await resolveServiceLocation(admin as never, input.vendor_id);
+            const result = checkTokenScope(
+                {
+                    geographic_scope: scope,
+                    scope_state_name: token.scope_state?.name ?? null,
+                    scope_district_name: token.scope_district?.name ?? null,
+                    scope_city: token.scope_city,
+                    scope_pincode: token.scope_pincode,
+                },
+                serviceLocation
+            );
+
+            // HARD: a restricted token redeemed outside its scope is exactly the
+            // misuse the restriction exists to prevent. Fails closed when the
+            // service location is unknown — otherwise every restriction would be
+            // bypassable by a Food Partner with an incomplete address.
+            checks.push({
+                name: "token_scope",
+                pass: result.allowed,
+                hard: true,
+                detail: result.detail,
+            });
         }
     }
 

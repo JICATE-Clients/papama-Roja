@@ -9,7 +9,6 @@ import { BadRequestError, NotFoundError } from "@/lib/api/handler";
 import type { AppUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/services/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getBoolean, getNumber } from "@/lib/system-config";
 
 /**
  * Lost-token + revalidation service (spec §3.2 Token rules [M2-5] — moved from
@@ -171,76 +170,30 @@ export interface RevalidateTokenResult {
 }
 
 /**
- * Revalidate (extend) an expired token — admin-only, audited (spec §3.2/§7).
- * Gated by `token_revalidation_allowed`; only an `expired` token is eligible.
- * Restores `distributed` if the token has a distribution record, else `live`.
+ * RETIRED (A-2 / B-23, client decision confirmed 18 Aug 2026).
+ *
+ * Revalidation reactivated the SAME token, which directly contradicts the
+ * approved model: an expired token is PERMANENTLY non-redeemable, and the only
+ * route back is a controlled reissue — a NEW token with a new ID, new QR and new
+ * dates, permanently linked to the original, approved by an admin with a reason.
+ * Extending the original leaves a QR in circulation that was supposed to be dead.
+ *
+ * The function is kept as a hard stop rather than deleted so that any caller,
+ * queued job or stale client still pointing at it fails loudly and traceably
+ * instead of hitting a missing export.
+ *
+ * NOT gated on `token_revalidation_allowed` any more. That key is forced false
+ * by migration 20260907000004 and documented as retired, but a config an admin
+ * can toggle is not a retirement — flipping it back must not resurrect a
+ * behaviour the client has retired. The check is unconditional and in code.
  */
 export async function revalidateToken(
-    tokenId: string,
-    actor: AppUser,
-    client?: Client
+    _tokenId: string,
+    _actor: AppUser,
+    _client?: Client
 ): Promise<RevalidateTokenResult> {
-    const admin = client ?? (createAdminClient() as unknown as Client);
-
-    const allowed = await getBoolean("token_revalidation_allowed", admin as never);
-    if (!allowed) throw new BadRequestError("token revalidation is disabled");
-
-    const { data: tokenRow, error: fetchError } = await admin
-        .from("tokens")
-        .select("id, status, expires_at")
-        .eq("id", tokenId)
-        .maybeSingle();
-    if (fetchError) throw new Error(fetchError.message);
-    if (!tokenRow) throw new NotFoundError("token not found");
-    const token = tokenRow as { id: string; status: string; expires_at: string | null };
-
-    if (token.status !== "expired") {
-        throw new BadRequestError(
-            `only an expired token can be revalidated (status is '${token.status}')`
-        );
-    }
-
-    const days = await getNumber("token_expiry_days", admin as never);
-    const newExpiresAt = new Date(Date.now() + days * 86_400_000).toISOString();
-
-    const { count, error: countError } = await admin
-        .from("token_distribution_records")
-        .select("id", { count: "exact", head: true })
-        .eq("token_id", tokenId);
-    if (countError) throw new Error(countError.message);
-    const restoredStatus: "live" | "distributed" = (count ?? 0) > 0 ? "distributed" : "live";
-
-    const { data: updated, error: updateError } = await admin
-        .from("tokens")
-        .update({ status: restoredStatus, expires_at: newExpiresAt, expired_at: null })
-        .eq("id", tokenId)
-        .eq("status", "expired")
-        .select("id");
-    if (updateError) throw new Error(updateError.message);
-    if (!updated || updated.length === 0) {
-        throw new BadRequestError("token status changed concurrently — retry");
-    }
-
-    await writeAuditLog(
-        {
-            actor,
-            action: "token.revalidate",
-            entity_table: "tokens",
-            entity_id: tokenId,
-            summary: `token revalidated: expired → ${restoredStatus}, new expiry ${newExpiresAt}`,
-            metadata: {
-                old_expires_at: token.expires_at,
-                new_expires_at: newExpiresAt,
-                restored_status: restoredStatus,
-            },
-        },
-        admin
+    throw new BadRequestError(
+        "token revalidation has been retired — an expired token is permanently non-redeemable; raise a controlled reissue instead"
     );
-
-    return {
-        token_id: tokenId,
-        old_expires_at: token.expires_at,
-        new_expires_at: newExpiresAt,
-        restored_status: restoredStatus,
-    };
 }
+
