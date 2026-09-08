@@ -6,12 +6,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { validateRedemption } from "@/lib/services/redemption";
 import { flagFraud } from "@/lib/services/fraud";
+import {
+    initialContributionStatus,
+    resolveExpectedContribution,
+} from "@/lib/services/contribution";
 import { resolveServiceLocation } from "@/lib/services/serviceLocation";
 import { embeddingFingerprint, toVectorLiteral } from "@/lib/face/embedding";
 import { faceCaptureSchema } from "@/lib/validation/schemas";
 import { dispatchNotification } from "@/lib/notifications/dispatch";
 import { incrementUsage } from "@/lib/services/vendorCapacity";
 import { postLedgerEntry } from "@/lib/services/ledger";
+import { getNumber } from "@/lib/system-config";
 
 /**
  * POST /api/vendor/redemptions — commit a redemption (RED-1..7, PROOF-4).
@@ -90,6 +95,19 @@ export const POST = defineRoute(
         // vendor moving premises must not relocate historical redemptions.
         const serviceLocation = await resolveServiceLocation(admin as never, vendorId);
 
+        // F-1 (CD §D-1): freeze what the ₹10 contribution was under policy AT
+        // THIS MOMENT. Frozen per row so a later policy change cannot re-price
+        // historical redemptions. Unset config → 0 expected: never invent a
+        // charge to a beneficiary, and never block every settlement on a value
+        // nobody has set.
+        let contributionPolicy: number | null = null;
+        try {
+            contributionPolicy = await getNumber("co_contribution_max", admin as never);
+        } catch {
+            contributionPolicy = null;
+        }
+        const contributionExpected = resolveExpectedContribution(contributionPolicy);
+
         // 1. Insert the redemption (payment_status defaults to 'locked').
         const { data: redemptionRow, error: redemptionError } = await admin
             .from("token_redemptions")
@@ -105,6 +123,13 @@ export const POST = defineRoute(
                 geo_lng: body.geo?.lng ?? null,
                 face_hash_checked: true, // capture required + liveness-gated + vector-matched
                 ...serviceLocation,
+                // Starts OUTSTANDING even when the beneficiary paid at the
+                // counter: the Food Partner holds that ₹10 as pApAmA's agent
+                // (CD §D-1 principle 2), and it is not pApAmA's money until
+                // remitted AND reconciled. Marking it collected here would
+                // release settlements against money pApAmA has not received.
+                contribution_expected_inr: contributionExpected,
+                contribution_status: initialContributionStatus(contributionExpected),
             })
             .select("id, payment_status")
             .single();

@@ -1,5 +1,6 @@
 import { BadRequestError, NotFoundError, defineRoute, parseBody } from "@/lib/api/handler";
 import { ForbiddenError, userHasCapability } from "@/lib/permissions";
+import { checkSettlementContributionGate } from "@/lib/services/contribution";
 import { postLedgerEntry } from "@/lib/services/ledger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -154,6 +155,32 @@ export const PATCH = defineRoute(
         // A held settlement cannot be paid until released (the override's whole point).
         if (body.action === "pay" && settlement.on_hold) {
             throw new BadRequestError("settlement is on hold — release it before paying");
+        }
+
+        // CONTRIBUTION GATE (F-1 / B-01, CD §D-1 principle 3): a Food Partner's
+        // meal settlement is released only after the ₹10 beneficiary contribution
+        // has been received/reconciled, unless an authorised waiver was recorded.
+        //
+        // The Food Partner collects that ₹10 as pApAmA's agent, so paying them in
+        // full while the contribution is still outstanding hands over the meal
+        // value AND leaves pApAmA chasing money the partner already holds. The
+        // gate names the blocking lines rather than refusing opaquely — an admin
+        // cannot fix "something is outstanding".
+        if (body.action === "pay") {
+            const gate = await checkSettlementContributionGate(admin as never, body.settlement_id);
+            if (!gate.releasable) {
+                const named = gate.outstanding
+                    .slice(0, 10)
+                    .map((l) => l.redemption_id)
+                    .join(", ");
+                const more =
+                    gate.outstanding.length > 10
+                        ? ` (+${gate.outstanding.length - 10} more)`
+                        : "";
+                throw new BadRequestError(
+                    `${gate.reason}${named ? `: ${named}${more}` : ""}`
+                );
+            }
         }
 
         const update: Record<string, unknown> = { status: rule.to, updated_at: nowIso };
