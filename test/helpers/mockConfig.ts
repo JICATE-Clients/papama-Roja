@@ -50,7 +50,24 @@ const DEFAULTS: Record<string, ConfigRow> = {
     vendor_min_feedback_count: { key: "vendor_min_feedback_count", value: "5", value_type: "number" },
 
     // --- Settlement & audit (spec §7) ---
-    settlement_audit_sample_pct: { key: "settlement_audit_sample_pct", value: "0.05", value_type: "number" }, // spec §7: 5% (renamed from settlement_random_audit_rate)
+    /**
+     * KEY-NAME DRIFT (found while building F-3, corrected here).
+     *
+     * `settlement_audit_sample_pct` is labelled below as a rename of
+     * `settlement_random_audit_rate`. That rename never happened in production:
+     * lib/services/settlement.ts and the DB seed both still read
+     * `settlement_random_audit_rate`, so the fixture key matches nothing, and
+     * its 5% contradicts the client's confirmed 10% baseline (CD §D-5).
+     *
+     * To be precise about what this does and does not fix: the drift is NOT
+     * why random-audit sampling is untested. `settlement.test.ts` mocks
+     * `getConfig` directly and deliberately rejects it ("audit sampling off"),
+     * and no test calls `queueRandomAudits` at all. Adding the real key here
+     * makes the fixture honest; it does not by itself add coverage. That
+     * coverage gap is real and still open.
+     */
+    settlement_random_audit_rate: { key: "settlement_random_audit_rate", value: "0.10", value_type: "number" }, // the key production reads; CD §D-5 baseline
+    settlement_audit_sample_pct: { key: "settlement_audit_sample_pct", value: "0.05", value_type: "number" }, // LEGACY — matches no production key
     proof_phash_dup_distance: { key: "proof_phash_dup_distance", value: "10", value_type: "number" },
 
     // --- Emergency (spec §7, §3.3) ---

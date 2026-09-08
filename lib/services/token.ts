@@ -8,6 +8,7 @@ import { deriveQrPayload, qrHashOf } from "@/app/api/_lib/tokenQr";
 import { BadRequestError, NotFoundError } from "@/lib/api/handler";
 import type { AppUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/services/audit";
+import { flagException } from "@/lib/services/riskAudit";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -149,6 +150,18 @@ export async function reportTokenLost(
         },
         admin
     );
+
+    // F-3 (CD §D-5): a token reissue is one of the inherently risky transaction
+    // kinds that must auto-appear in the exception queue for review. Best-effort
+    // and never throwing — the replacement has already been minted and the
+    // original blocked, so failing to queue must not undo a valid reissue. A
+    // missed queue entry is a review gap; a throw here would break the reissue.
+    await flagException(admin as never, {
+        exceptionType: "token_reissue",
+        entityTable: "tokens",
+        entityId: minted.id,
+        detail: `token ${token.serial_number} reported lost and replaced by ${minted.serial_number}`,
+    });
 
     return {
         old_token_id: token.id,
