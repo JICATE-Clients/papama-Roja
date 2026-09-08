@@ -1,6 +1,12 @@
 import { BadRequestError, NotFoundError, defineRoute, parseBody } from "@/lib/api/handler";
 import { ForbiddenError, userHasCapability } from "@/lib/permissions";
 import { checkSettlementContributionGate } from "@/lib/services/contribution";
+import {
+    canApprove,
+    canPay,
+    canPayToVendorAccount,
+    canReleaseHold,
+} from "@/lib/services/makerChecker";
 import { postLedgerEntry } from "@/lib/services/ledger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -107,16 +113,30 @@ export const PATCH = defineRoute(
 
         const { data, error: fetchError } = await admin
             .from("vendor_settlements")
-            .select("id, status, on_hold, amount")
+            .select(
+                "id, status, on_hold, amount, vendor_id, version, approved_version, " +
+                    "prepared_by, locked_by, approved_by, hold_placed_by, hold_is_material"
+            )
             .eq("id", body.settlement_id)
             .single();
 
         if (fetchError || !data) throw new NotFoundError("settlement not found");
-        const settlement = data as {
+        // Via `unknown`: the concatenated select string defeats supabase-js's
+        // literal-type inference, so the inferred row type does not overlap the
+        // shape we know it is.
+        const settlement = data as unknown as {
             id: string;
             status: SettlementStatus;
             on_hold: boolean;
             amount: number;
+            vendor_id: string;
+            version: number;
+            approved_version: number | null;
+            prepared_by: string | null;
+            locked_by: string | null;
+            approved_by: string | null;
+            hold_placed_by: string | null;
+            hold_is_material: boolean;
         };
         const nowIso = new Date().toISOString();
 
@@ -127,10 +147,23 @@ export const PATCH = defineRoute(
             if (body.action === "hold" && settlement.status === "paid") {
                 throw new BadRequestError("cannot hold a settlement that is already paid");
             }
+            // F-2 control (e): a MATERIAL hold exists so that someone independent
+            // looks again. Letting whoever placed it lift it makes it a
+            // self-service pause rather than a control.
+            if (body.action === "release") {
+                const gate = canReleaseHold(settlement, user.id);
+                if (!gate.allowed) throw new BadRequestError(`${gate.control}: ${gate.reason}`);
+            }
             const onHold = body.action === "hold";
             const { error: holdError } = await admin
                 .from("vendor_settlements")
-                .update({ on_hold: onHold, hold_note: body.note ?? null, updated_at: nowIso })
+                .update({
+                    on_hold: onHold,
+                    hold_note: body.note ?? null,
+                    hold_placed_by: onHold ? user.id : null,
+                    hold_is_material: onHold ? true : false,
+                    updated_at: nowIso,
+                })
                 .eq("id", body.settlement_id);
             if (holdError) throw new Error(holdError.message);
 
@@ -155,6 +188,33 @@ export const PATCH = defineRoute(
         // A held settlement cannot be paid until released (the override's whole point).
         if (body.action === "pay" && settlement.on_hold) {
             throw new BadRequestError("settlement is on hold — release it before paying");
+        }
+
+        // MAKER-CHECKER (F-2 / CD §D-4). The client's principle: no individual
+        // may prepare, verify, approve AND release the same settlement. These run
+        // BEFORE the transition — an audit trail tells you who broke the rule
+        // after the money has gone; a check stops them.
+        if (body.action === "approve") {
+            const gate = canApprove(settlement, user.id);
+            if (!gate.allowed) throw new BadRequestError(`${gate.control}: ${gate.reason}`);
+        }
+
+        if (body.action === "pay") {
+            // (a) payer ≠ approver, and (c) the approval must be for THIS version
+            // — a settlement amended after approval is unpayable until re-approved.
+            const gate = canPay(settlement, user.id);
+            if (!gate.allowed) throw new BadRequestError(`${gate.control}: ${gate.reason}`);
+
+            // (f) whoever redirected this Food Partner's bank account may not
+            // release payment to it.
+            const bankGate = await canPayToVendorAccount(
+                admin as never,
+                settlement.vendor_id,
+                user.id
+            );
+            if (!bankGate.allowed) {
+                throw new BadRequestError(`${bankGate.control}: ${bankGate.reason}`);
+            }
         }
 
         // CONTRIBUTION GATE (F-1 / B-01, CD §D-1 principle 3): a Food Partner's
@@ -185,6 +245,36 @@ export const PATCH = defineRoute(
 
         const update: Record<string, unknown> = { status: rule.to, updated_at: nowIso };
         if (rule.stampsSettledAt) update.settled_at = nowIso;
+
+        // Record WHO — without this the controls above have nothing to compare
+        // against on the next transition, and segregation stays merely auditable.
+        // `approved_version` pins the approval to the version approved, which is
+        // what makes a later amendment invalidate it (control c).
+        switch (body.action) {
+            case "lock":
+                update.locked_by = user.id;
+                if (!settlement.prepared_by) update.prepared_by = user.id;
+                break;
+            case "approve":
+                update.approved_by = user.id;
+                update.approved_version = settlement.version;
+                update.approval_invalidated_at = null;
+                update.approval_invalidated_reason = null;
+                break;
+            case "pay":
+                update.paid_by = user.id;
+                break;
+            case "unlock":
+                // Reopening to amend: bump the version and drop the approval in
+                // the same write, so there is no window where a settlement is
+                // both amendable and still carrying a valid approval (control b).
+                update.version = settlement.version + 1;
+                update.approved_by = null;
+                update.approved_version = null;
+                update.approval_invalidated_at = nowIso;
+                update.approval_invalidated_reason = body.note ?? "reopened for amendment";
+                break;
+        }
 
         const { error: updateError } = await admin
             .from("vendor_settlements")
