@@ -644,7 +644,11 @@ function ValueTable({ value }: { value: ValueBreakdown }) {
     { label: "Menu value", amount: value.menu_value },
     { label: "Difference paid", amount: value.difference_paid },
     { label: "Co-pay", amount: value.co_pay },
-    { label: "Forfeited", amount: value.forfeited },
+    // F-4 (B-03): reworded from "Forfeited". Nothing is forfeited — unspent
+    // value goes back to the Meal Pool to fund another meal. The old wording
+    // implied the Food Partner or pApAmA kept it, which is now untrue and was
+    // arguably always misleading to the vendor reading this screen.
+    { label: "Returned to Meal Pool", amount: value.forfeited },
   ];
   return (
     <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">

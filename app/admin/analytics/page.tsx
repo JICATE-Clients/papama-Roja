@@ -41,6 +41,8 @@ interface Analytics {
         settlements_paid_inr: number;
         settlements_pending_inr: number;
         forfeited_inr: number;
+        meal_pool_inr: number;
+        special_care_pool_inr: number;
     };
     fraud_open_by_severity: NameCount[];
     top_vendors: VendorPerf[];
@@ -109,7 +111,10 @@ function Dashboard({ a }: { a: Analytics }) {
                 <StatTile label="Meals served" value={a.meals_served_total.toLocaleString("en-IN")} />
                 <StatTile label="Donations (total)" value={rupee(a.donation_total_inr)} />
                 <StatTile label="Donations (count)" value={a.donation_count.toLocaleString("en-IN")} />
-                <StatTile label="Forfeited value" value={rupee(a.financial.forfeited_inr)} />
+                {/* F-4 (B-03): unspent value is pool value, not revenue and not kept.
+                    The pool balances come from the ledger, so this tile and the
+                    ledger cannot disagree. */}
+                <StatTile label="Meal Pool" value={rupee(a.financial.meal_pool_inr)} />
             </div>
 
             {/* Trends */}
@@ -139,7 +144,8 @@ function Dashboard({ a }: { a: Analytics }) {
                             label="Settlements pending"
                             value={rupee(a.financial.settlements_pending_inr)}
                         />
-                        <StatTile small label="Forfeited" value={rupee(a.financial.forfeited_inr)} />
+                        <StatTile small label="Meal Pool" value={rupee(a.financial.meal_pool_inr)} />
+                        <StatTile small label="Special Care Pool" value={rupee(a.financial.special_care_pool_inr)} />
                     </div>
                 </Card>
             </div>

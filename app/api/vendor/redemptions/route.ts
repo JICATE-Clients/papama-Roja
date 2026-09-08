@@ -213,19 +213,17 @@ export const POST = defineRoute(
                 console.error("redemption.create: forfeited-balance insert failed", forfeitError);
                 secondaryWriteWarnings.push({ step: "forfeited_balances", error: forfeitError.message });
             } else {
-                // Where the remainder goes depends on the token type (A-3 /
-                // CD §D-8).
+                // Where the remainder goes depends on the token type. NEITHER
+                // destination is revenue (A-3 / CD §D-8, F-4 / B-03): both are
+                // donated value that has not yet bought a meal, and booking
+                // either as revenue records donated money as income to pApAmA.
                 //
-                // SPECIAL CARE: a ₹100 token spent on a ₹75 meal leaves ₹25 that
-                // is NOT ours. It belongs to the Common Special Care Pool and
-                // funds future special-care meals — booking it as revenue would
-                // record donated money as income to pApAmA.
-                //
-                // STANDARD: still revenue for now. Card F-4 (B-03) moves it to
-                // the Meal Pool, and is deliberately sequenced after this card so
-                // the two ledger streams land one at a time.
+                // SPECIAL CARE: a ₹100 token on a ₹75 meal leaves ₹25 for the
+                //   Common Special Care Pool, funding future special-care meals.
+                // STANDARD: a ₹60 token on a ₹50 meal leaves ₹10 for the Meal
+                //   Pool, funding another meal for anyone.
                 const isSpecialCare = token.token_type === "special_care";
-                const ledger = isSpecialCare ? "special_care_pool" : "revenue";
+                const ledger = isSpecialCare ? "special_care_pool" : "meal_pool";
 
                 try {
                     await postLedgerEntry({
@@ -236,7 +234,7 @@ export const POST = defineRoute(
                         referenceId: redemption.id,
                         description: isSpecialCare
                             ? `Special Care surplus to pool on redemption ${redemption.id}`
-                            : `forfeited balance on redemption ${redemption.id}`,
+                            : `unspent value returned to Meal Pool on redemption ${redemption.id}`,
                     });
                 } catch (e) {
                     console.error(`redemption.create: ${ledger} ledger posting failed`, e);

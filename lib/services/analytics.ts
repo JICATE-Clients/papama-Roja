@@ -48,7 +48,17 @@ export interface AnalyticsSummary {
         donated_inr: number;
         settlements_paid_inr: number;
         settlements_pending_inr: number;
+        /**
+         * Unspent token value. F-4 (B-03) reclassified this: it used to be
+         * reported as revenue, which recorded donated money as income to
+         * pApAmA. It is now pool value awaiting another meal — the field name is
+         * kept for compatibility, but it means "returned to pool", not "kept".
+         */
         forfeited_inr: number;
+        /** Live Meal Pool balance from the ledger (F-4). */
+        meal_pool_inr: number;
+        /** Live Common Special Care Pool balance from the ledger (A-3). */
+        special_care_pool_inr: number;
     };
     fraud_open_by_severity: NameCount[];
     top_vendors: VendorPerf[];
@@ -227,6 +237,24 @@ export async function getAnalytics(admin: SupabaseClient): Promise<AnalyticsSumm
         0
     );
 
+    // F-4 (B-03) / A-3: the two POOL balances, read from the ledger rather than
+    // recomputed, so the dashboard and the ledger can never disagree. Neither is
+    // revenue — both are donated value that has not yet bought a meal.
+    const { data: poolRows } = await admin
+        .from("ledger_entries")
+        .select("ledger, amount")
+        .in("ledger", ["meal_pool", "special_care_pool"])
+        .limit(CAP);
+
+    let meal_pool_inr = 0;
+    let special_care_pool_inr = 0;
+    for (const row of (poolRows ?? []) as { ledger: string; amount: number | string }[]) {
+        // Postgres numeric arrives as a string; `+` would concatenate.
+        const amount = Number(row.amount) || 0;
+        if (row.ledger === "meal_pool") meal_pool_inr += amount;
+        else special_care_pool_inr += amount;
+    }
+
     // --- fraud: open flags by severity --------------------------------------
     const { data: fraudRows } = await admin
         .from("fraud_flags")
@@ -253,6 +281,8 @@ export async function getAnalytics(admin: SupabaseClient): Promise<AnalyticsSumm
             settlements_paid_inr,
             settlements_pending_inr,
             forfeited_inr,
+            meal_pool_inr,
+            special_care_pool_inr,
         },
         fraud_open_by_severity,
         top_vendors,

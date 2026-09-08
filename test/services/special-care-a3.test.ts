@@ -52,15 +52,21 @@ describe("A-3 — the ₹25 surplus goes to the pool, never to revenue", () => {
         expect(statement.closing).toBe(25);
     });
 
-    it("routes Special Care surplus to special_care_pool and standard to revenue", () => {
+    it("routes Special Care surplus to its own pool, never to revenue", () => {
         // Asserted against the redemption route's source: the branch is a single
         // conditional and this is what stops it silently reverting to revenue.
+        //
+        // UPDATED BY F-4 (B-03): the non-special-care arm was "revenue" when A-3
+        // shipped, because F-4 was sequenced after this card to land the two
+        // pool streams one at a time. It is now "meal_pool". A-3's own claim is
+        // unchanged and still enforced — Special Care surplus goes to the
+        // Special Care Pool, and neither arm is revenue any more.
         const src = readFileSync(
             join(ROOT, "app/api/vendor/redemptions/route.ts"),
             "utf-8"
         );
         expect(src).toContain('token.token_type === "special_care"');
-        expect(src).toMatch(/isSpecialCare \? "special_care_pool" : "revenue"/);
+        expect(src).toMatch(/isSpecialCare \? "special_care_pool" : "meal_pool"/);
     });
 });
 
