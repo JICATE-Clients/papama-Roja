@@ -28,7 +28,7 @@ export const POST = defineRoute<{ id: string }>(
         const volunteerId = params.id;
 
         const admin = createAdminClient();
-        const { volunteerUserId, movedIds } = await allocatePooledTokens(
+        const { volunteerUserId, movedIds, skippedForScope } = await allocatePooledTokens(
             admin,
             volunteerId,
             body.count,
@@ -46,9 +46,18 @@ export const POST = defineRoute<{ id: string }>(
                 channel: "admin_to_volunteer",
                 granted_count: movedIds.length,
                 token_ids: movedIds,
+                // F-5: how many pool tokens FIFO passed over because their
+                // geographic scope excludes this volunteer's zone. Logged
+                // because a silent skip is indistinguishable from an empty
+                // pool, and the two need different fixes.
+                skipped_for_scope: skippedForScope,
             },
         });
 
-        return { volunteer_id: volunteerId, granted_count: movedIds.length };
+        return {
+            volunteer_id: volunteerId,
+            granted_count: movedIds.length,
+            skipped_for_scope: skippedForScope,
+        };
     }
 );

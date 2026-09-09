@@ -53,8 +53,13 @@ export const POST = defineRoute<{ id: string }>(
             token_ids: string[] | null;
             volunteer_user_id: string | null;
             granted_count: number;
+            skipped_for_scope: number | null;
         }[])[0];
         const grantedCount = result?.granted_count ?? 0;
+        // F-5: pool tokens FIFO passed over because their geographic scope
+        // excludes this volunteer's zone. Logged on this channel too — CD
+        // §D-10A's requirement covers admin assignment AND request grants.
+        const skippedForScope = Number(result?.skipped_for_scope ?? 0);
         const movedIds = result?.token_ids ?? [];
         const volunteerUserId = result?.volunteer_user_id ?? null;
 
@@ -70,10 +75,15 @@ export const POST = defineRoute<{ id: string }>(
                 volunteer_user_id: volunteerUserId,
                 decision: body.decision,
                 granted_count: grantedCount,
+                skipped_for_scope: skippedForScope,
                 token_ids: movedIds,
             },
         });
 
-        return { request_id: requestId, granted_count: grantedCount };
+        return {
+            request_id: requestId,
+            granted_count: grantedCount,
+            skipped_for_scope: skippedForScope,
+        };
     }
 );

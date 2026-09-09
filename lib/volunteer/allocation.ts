@@ -17,6 +17,17 @@ export interface AllocationResult {
     volunteerUserId: string;
     /** The ids of the tokens actually moved into the volunteer's hands. */
     movedIds: string[];
+    /**
+     * How many pool tokens FIFO passed over because their geographic scope
+     * excludes this volunteer's zone (F-5 / B-32b).
+     *
+     * Surfaced rather than swallowed because CD's acceptance criterion is that
+     * the skip is LOGGED. A silent skip looks identical to an empty pool, and
+     * the two need completely different fixes: one is "mint more tokens", the
+     * other is "this volunteer's district is wrong, or these tokens are scoped
+     * to a district nobody covers".
+     */
+    skippedForScope: number;
 }
 
 /**
@@ -46,7 +57,8 @@ export async function allocatePooledTokens(
     admin: SupabaseClient,
     volunteerId: string,
     count: number,
-    channel: GrantChannel
+    channel: GrantChannel,
+    tokenType: "standard" | "special_care" = "standard"
 ): Promise<AllocationResult> {
     // Resolve the volunteer's user_id (the result attributes records to it) and
     // fail fast on a non-active volunteer. The RPC re-checks both under a lock.
@@ -71,14 +83,22 @@ export async function allocatePooledTokens(
         p_volunteer_id: volunteerId,
         p_count: count,
         p_channel: channel,
+        // F-5: a general allocation hands out STANDARD tokens only. A Special
+        // Care token is issued against a specific need (CD §D-8) and must not be
+        // swept up in a bulk grant.
+        p_token_type: tokenType,
     });
     if (error) {
         // The function raises plain exceptions for every business-rule failure
-        // (inactive volunteer, over-limit, pool too small); surface them as 400s.
+        // (inactive volunteer, over-limit, pool too small, nothing in scope);
+        // surface them as 400s.
         throw new BadRequestError(error.message);
     }
 
-    const movedIds = ((data ?? []) as { token_id: string }[]).map((r) => r.token_id);
+    const rows = (data ?? []) as { token_id: string; skipped_count: number | null }[];
+    const movedIds = rows.map((r) => r.token_id);
+    // Every row carries the same count — read it once rather than summing.
+    const skippedForScope = rows.length > 0 ? Number(rows[0].skipped_count ?? 0) : 0;
 
-    return { volunteerUserId, movedIds };
+    return { volunteerUserId, movedIds, skippedForScope };
 }
