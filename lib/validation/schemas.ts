@@ -203,6 +203,44 @@ export const donorProfilePatchSchema = z.object({
 export type DonorProfilePatch = z.infer<typeof donorProfilePatchSchema>;
 
 // ===========================================================================
+// Volunteer incident reporting (E-5 / B-31, CD §D-9)
+// ===========================================================================
+
+/**
+ * CD §D-9's eleven one-tap categories, verbatim and in the client's order.
+ * Not a taxonomy we designed — do not merge or rename without a client decision.
+ */
+export const volunteerIncidentCategorySchema = z.enum([
+    "no_phone",
+    "no_token",
+    "partner_closed",
+    "partner_refusing_valid_token",
+    "no_food",
+    "connectivity_failure",
+    "token_problem",
+    "urgent_need",
+    "food_safety_concern",
+    "safety_concern",
+    "other",
+]);
+export type VolunteerIncidentCategory = z.infer<typeof volunteerIncidentCategorySchema>;
+
+/**
+ * Filing an incident. `category` is the ONLY required field — that is what makes
+ * the two-tap acceptance criterion achievable. Requiring a note would push a
+ * volunteer into typing while standing in a queue in front of someone hungry,
+ * and the report simply would not get filed. The reports that never get written
+ * are the ones that matter most.
+ */
+export const volunteerIncidentCreateSchema = z.object({
+    category: volunteerIncidentCategorySchema,
+    note: z.string().trim().max(1000).optional(),
+    vendor_id: z.string().uuid().optional(),
+    geo: z.object({ lat: z.number(), lng: z.number() }).optional(),
+});
+export type VolunteerIncidentCreate = z.infer<typeof volunteerIncidentCreateSchema>;
+
+// ===========================================================================
 // Location (A-1 / B-02, CD §D-2)
 // ===========================================================================
 

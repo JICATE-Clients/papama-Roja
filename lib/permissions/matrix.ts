@@ -231,6 +231,20 @@ export const PERMISSION_MATRIX: Record<Feature, Partial<Record<UserRole, Permiss
         vendor_manager: perm({ create: "all", read: "all", update: "all" }), // CRU
         vendor: perm({ read: "own", update: "own" }), // Own (respond)
         beneficiary: perm({ create: "own" }), // C (feedback/complaint)
+        /**
+         * PERMISSION-MATRIX CHANGE (E-5 / B-31, CD §D-9) — flagged deliberately.
+         *
+         * Volunteers gain create+read on their OWN field incident reports. This
+         * mirrors the beneficiary grant directly above: an incident report is
+         * structurally the same thing as a complaint — a field report into a
+         * staff queue — so it belongs here rather than widening
+         * volunteer_management, which is about volunteer records themselves.
+         *
+         * Scope is "own": a volunteer reads back what they filed and nothing
+         * else. Incidents can name a Food Partner or describe a safety
+         * situation, and that is staff information.
+         */
+        volunteer: perm({ create: "own", read: "own" }), // C+R own incident reports
     },
 
     // [M2-9] Emergency / Disaster Mode — §6 row 19
