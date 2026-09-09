@@ -33,13 +33,42 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const getNumberMock = vi.mocked(getNumber);
 
+/**
+ * E-1 (B-26): issueEmergencyToken now gates on an ACTIVE emergency record, so
+ * the fake client must answer the `emergencies` lookup. Defaults to a live
+ * emergency; pass `emergency: null` to exercise the refusal.
+ */
+const ACTIVE_EMERGENCY = {
+    id: "em-1",
+    emergency_ref: "TN-FLOOD-2026-001",
+    title: "Test emergency",
+    status: "active",
+    ends_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+    scope_state_id: null,
+    scope_district_id: null,
+    scope_city: null,
+};
+
 function buildAdmin(opts: {
     mintResult?: { id: string; serial_number: string };
     mintError?: string;
     grantResult?: { id: string };
     grantError?: string;
+    emergency?: Record<string, unknown> | null;
 }) {
     const from = vi.fn().mockImplementation((table: string) => {
+        if (table === "emergencies") {
+            return {
+                select: vi.fn().mockReturnValue({
+                    eq: vi.fn().mockReturnValue({
+                        maybeSingle: vi.fn().mockResolvedValue({
+                            data: opts.emergency === undefined ? ACTIVE_EMERGENCY : opts.emergency,
+                            error: null,
+                        }),
+                    }),
+                }),
+            };
+        }
         if (table === "tokens") {
             const single = vi.fn().mockResolvedValue(
                 opts.mintError
@@ -80,7 +109,7 @@ describe("issueEmergencyToken", () => {
 
     it("mints a token and returns result", async () => {
         const client = buildAdmin({});
-        const result = await issueEmergencyToken({}, admin, client);
+        const result = await issueEmergencyToken({ emergencyId: "em-1" }, admin, client);
 
         expect(result.token_id).toBe("tok-1");
         expect(result.serial_number).toBe("PPM-EMG-TEST");
@@ -90,7 +119,7 @@ describe("issueEmergencyToken", () => {
 
     it("writes an audit log", async () => {
         const client = buildAdmin({});
-        await issueEmergencyToken({ reason: "Flood relief" }, admin, client);
+        await issueEmergencyToken({ emergencyId: "em-1", reason: "Flood relief" }, admin, client);
 
         expect(writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
             action: "emergency.token.grant",
@@ -102,28 +131,64 @@ describe("issueEmergencyToken", () => {
         getNumberMock.mockRejectedValue(new MissingConfigError("standard_token_value", "missing"));
         const client = buildAdmin({});
 
-        await expect(issueEmergencyToken({}, admin, client)).rejects.toThrow();
+        await expect(issueEmergencyToken({ emergencyId: "em-1" }, admin, client)).rejects.toThrow();
     });
 
     it("throws when mint fails", async () => {
         const client = buildAdmin({ mintError: "insert failed" });
 
-        await expect(issueEmergencyToken({}, admin, client)).rejects.toThrow("insert failed");
+        await expect(issueEmergencyToken({ emergencyId: "em-1" }, admin, client)).rejects.toThrow("insert failed");
     });
 
     it("rolls back token when grant recording fails", async () => {
         const client = buildAdmin({ grantError: "grant insert failed" });
 
-        await expect(issueEmergencyToken({}, admin, client)).rejects.toThrow("grant insert failed");
+        await expect(issueEmergencyToken({ emergencyId: "em-1" }, admin, client)).rejects.toThrow("grant insert failed");
         // Token delete should have been called for rollback
         expect(client.from).toHaveBeenCalledWith("tokens");
     });
 
     it("passes reason to grant trail", async () => {
         const client = buildAdmin({});
-        await issueEmergencyToken({ reason: "Cyclone Michaung" }, admin, client);
+        await issueEmergencyToken({ emergencyId: "em-1", reason: "Cyclone Michaung" }, admin, client);
 
         expect(client.from).toHaveBeenCalledWith("emergency_token_grants");
+    });
+
+    // --- E-1 (B-26) gate: no emergency token without an active emergency ----
+    it("REFUSES to mint without an Emergency ID", async () => {
+        const client = buildAdmin({});
+        await expect(issueEmergencyToken({}, admin, client)).rejects.toThrow(
+            /requires an Emergency ID/i
+        );
+        // Nothing was minted — the gate runs before any write.
+        expect(client.from).not.toHaveBeenCalledWith("tokens");
+    });
+
+    it("REFUSES when the named emergency does not exist", async () => {
+        const client = buildAdmin({ emergency: null });
+        await expect(issueEmergencyToken({ emergencyId: "em-x" }, admin, client)).rejects.toThrow(
+            /not found/i
+        );
+        expect(client.from).not.toHaveBeenCalledWith("tokens");
+    });
+
+    it("REFUSES when the emergency is closed", async () => {
+        const client = buildAdmin({ emergency: { ...ACTIVE_EMERGENCY, status: "closed" } });
+        await expect(issueEmergencyToken({ emergencyId: "em-1" }, admin, client)).rejects.toThrow(
+            /is closed/i
+        );
+    });
+
+    it("REFUSES when the emergency's end date has passed", async () => {
+        // Relaxed limits must not outlive the emergency just because a closure
+        // job was late (CD §D-6 forbids indefinite emergency mode).
+        const client = buildAdmin({
+            emergency: { ...ACTIVE_EMERGENCY, ends_at: "2020-01-01T00:00:00.000Z" },
+        });
+        await expect(issueEmergencyToken({ emergencyId: "em-1" }, admin, client)).rejects.toThrow(
+            /ended on/i
+        );
     });
 });
 
@@ -150,14 +215,14 @@ describe("issueEmergencyToken — spec-derived", () => {
             throw new MissingConfigError(key, "missing");
         });
         const client = buildAdmin({});
-        const result = await issueEmergencyToken({}, actor, client);
+        const result = await issueEmergencyToken({ emergencyId: "em-1" }, actor, client);
 
         expect(result.value_inr).toBe(75);
     });
 
     it("writes audit log for every emergency action (spec §7.1: fully audited)", async () => {
         const client = buildAdmin({});
-        await issueEmergencyToken({ reason: "Earthquake" }, actor, client);
+        await issueEmergencyToken({ emergencyId: "em-1", reason: "Earthquake" }, actor, client);
 
         expect(writeAuditLog).toHaveBeenCalledTimes(1);
         expect(writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({

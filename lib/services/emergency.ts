@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { deriveQrPayload, qrHashOf } from "@/app/api/_lib/tokenQr";
 import { BadRequestError } from "@/lib/api/handler";
+import { checkEmergencyGate } from "@/lib/services/emergencyEvent";
 import type { AppUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/services/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -51,6 +52,14 @@ type Client = SupabaseClient;
 export interface IssueEmergencyTokenInput {
     /** Free-text justification recorded on the grant + audit trail. */
     reason?: string | null;
+    /**
+     * The emergency this token is issued under (E-1 / CD §D-6). REQUIRED in
+     * practice: an emergency token cannot exist without an active emergency
+     * record. Typed optional only so existing callers fail with the clear
+     * message from the gate rather than a type error at a call site that has no
+     * emergency to give.
+     */
+    emergencyId?: string | null;
 }
 
 export interface IssueEmergencyTokenResult {
@@ -79,6 +88,17 @@ export async function issueEmergencyToken(
 ): Promise<IssueEmergencyTokenResult> {
     const admin = client ?? (createAdminClient() as unknown as Client);
 
+    // E-1 (CD §D-6): an emergency token cannot be issued without an ACTIVE
+    // emergency record. Checked FIRST, before anything is minted — the whole
+    // point is that relaxed limits and waived contributions never apply with no
+    // authorised emergency behind them. The gate also rejects a row still
+    // flagged active whose end date has passed: that is the indefinite emergency
+    // mode CD §D-6 forbids.
+    const gate = await checkEmergencyGate(admin as never, input.emergencyId);
+    if (!gate.allowed || !gate.emergency) {
+        throw new BadRequestError(gate.reason);
+    }
+
     // Value from config — never invented (throws MissingConfigError → 5xx if unset).
     const value = await getNumber("standard_token_value", admin as never);
 
@@ -104,6 +124,9 @@ export async function issueEmergencyToken(
             status: "in_admin_pool",
             is_emergency: true,
             expires_at: expiresAt,
+            // Tag the token to its emergency so closure reconciliation can
+            // account for it (CD §D-6).
+            emergency_id: gate.emergency.id,
         })
         .select("id, serial_number")
         .single();
