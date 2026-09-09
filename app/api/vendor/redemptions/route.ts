@@ -19,6 +19,7 @@ import { resolveServiceLocation } from "@/lib/services/serviceLocation";
 import { embeddingFingerprint, toVectorLiteral } from "@/lib/face/embedding";
 import { faceCaptureSchema } from "@/lib/validation/schemas";
 import { dispatchNotification } from "@/lib/notifications/dispatch";
+import { buildDonorNotificationPayload } from "@/lib/notifications/donorWhitelist";
 import { incrementUsage } from "@/lib/services/vendorCapacity";
 import { postLedgerEntry } from "@/lib/services/ledger";
 import { getNumber } from "@/lib/system-config";
@@ -391,22 +392,34 @@ export const POST = defineRoute(
                 .select("serial_number")
                 .eq("id", token.id)
                 .maybeSingle();
-            const meta = {
-                token_reference: tk?.serial_number ?? null,
-                // Keys MUST match the donor notifications UI reader
-                // (app/donor/notifications/page.tsx) and NotificationMeta:
-                // it reads `vendor_name` + `meal_info` — the old `vendor` key
-                // and the missing `meal_info` rendered as `undefined`.
-                vendor_name: v?.name ?? null,
-                meal_info: result.menuItem?.item_name ?? null,
-                location: v?.city ?? null,
-                // `time` is the canonical scan timestamp the UI reads; `redeemed_at`
-                // is kept as an alias so neither reader falls back to created_at.
-                time: nowIso,
-                redeemed_at: nowIso,
-                value_inr: value.menu_value,
-                beneficiary_category: result.beneficiary?.category ?? null,
-            };
+            // P-1 (B-29a, CD §D-10): the donor payload is BUILT, not assembled
+            // inline. It previously carried `beneficiary_category`, which told a
+            // donor that the person who ate their meal was a `patient` or
+            // `pregnant_women` — health information about an identifiable event,
+            // disclosed to a stranger who happened to pay for a meal.
+            //
+            // The builder's return type has no slot for it, so it cannot come
+            // back: adding a forbidden field is now a compile error rather than
+            // something a reviewer has to notice. Keys still match the donor UI
+            // reader (app/donor/notifications/page.tsx): vendor_name, meal_info,
+            // time/redeemed_at.
+            //
+            // Location is City + State from the A-1 service snapshot, per CD's
+            // worked example — a Coimbatore-sponsored token redeemed in Mumbai
+            // reads "Mumbai, Maharashtra". It says where the MEAL was served,
+            // never where the beneficiary lives.
+            const meta = buildDonorNotificationPayload({
+                tokenReference: tk?.serial_number ?? null,
+                tokenType: token.token_type,
+                valueInr: value.menu_value,
+                redeemedAt: nowIso,
+                serviceCity: serviceLocation.service_city,
+                serviceState: serviceLocation.service_state,
+                vendorName: v?.name ?? null,
+                mealInfo: result.menuItem?.item_name ?? null,
+                emergencyRef: relaxation.emergencyRef,
+                programme: token.token_type === "special_care" ? "Special Care" : null,
+            });
 
             await dispatchNotification(admin, {
                 donorId: token.donor_id,
@@ -416,7 +429,7 @@ export const POST = defineRoute(
                 // notification that renders the re-donate ("Donate again") CTA in the
                 // donor UI, so the gratitude + ask land together (TRANS-2).
                 message: `A token you funded was redeemed at ${v?.name ?? "a partner vendor"} for a ₹${value.menu_value} meal. Thank you for making it possible.`,
-                metadata: meta,
+                metadata: { ...meta },
                 // Default channels = ['in_app']. Pass ['in_app','email','sms'] here once
                 // the email/SMS provider is configured (ASSUMPTIONS.md open item Q4).
             });
@@ -430,7 +443,7 @@ export const POST = defineRoute(
                 kind: "thank_you",
                 title: "Thank you — your gift became a meal",
                 message: `Thanks to you, someone was served a meal at ${v?.name ?? "a partner vendor"}. Tap to donate again and fund the next one.`,
-                metadata: meta,
+                metadata: { ...meta },
             });
         }
 
