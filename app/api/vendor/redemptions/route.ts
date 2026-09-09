@@ -10,6 +10,11 @@ import {
     initialContributionStatus,
     resolveExpectedContribution,
 } from "@/lib/services/contribution";
+import {
+    recordEmergencyWaiver,
+    resolveEmergencyRelaxation,
+    resolveVerificationLevel,
+} from "@/lib/services/emergencyRelaxation";
 import { resolveServiceLocation } from "@/lib/services/serviceLocation";
 import { embeddingFingerprint, toVectorLiteral } from "@/lib/face/embedding";
 import { faceCaptureSchema } from "@/lib/validation/schemas";
@@ -42,7 +47,15 @@ const createSchema = z.object({
     geo: z.object({ lat: z.number(), lng: z.number() }).optional(),
     // Face capture is REQUIRED to redeem (owner §4.6 — the vendor captures a photo).
     // This closes the prior "validations bypassable by omitting the face" gap.
-    face_capture: faceCaptureSchema,
+    /**
+     * E-2 (CD §D-7): OPTIONAL at the schema level so an emergency can relax it.
+     * It remains effectively mandatory — the handler refuses a redemption with
+     * no face unless an active, in-scope emergency has verification relaxation
+     * switched on. Making it optional here and enforcing in the handler is the
+     * only way to distinguish "no face, emergency authorised" (allowed, Level 1)
+     * from "no face, no emergency" (refused).
+     */
+    face_capture: faceCaptureSchema.optional(),
     co_pay: z.number().int().min(0).optional(),
 });
 
@@ -55,7 +68,32 @@ export const POST = defineRoute(
         const vendorId = await resolveVendorId(user, admin);
         if (!vendorId) throw new BadRequestError("no vendor profile for this account");
 
-        const faceFingerprint = embeddingFingerprint(body.face_capture.embedding);
+        // E-2 (CD §D-7): resolve what an active, in-scope emergency relaxes
+        // BEFORE validating, because the answer decides whether a missing face
+        // is permissible. Checked against the SERVICE location — where the meal
+        // is served — for the same reason A-2 does: a beneficiary may have
+        // travelled from anywhere, and testing their location would make relief
+        // conditional on where someone lives.
+        const serviceLocation = await resolveServiceLocation(admin as never, vendorId);
+        const relaxation = await resolveEmergencyRelaxation(admin as never, serviceLocation);
+
+        // The face step is relaxable ONLY under an authorised emergency. Outside
+        // one this is the same hard requirement as before — CD §D-7 relaxes
+        // documentation, never the core controls.
+        if (!body.face_capture && !relaxation.faceSkipAllowed) {
+            throw new BadRequestError(
+                "face verification is required to redeem — it may only be skipped during an authorised emergency with verification relaxation enabled"
+            );
+        }
+
+        const faceProvided = Boolean(body.face_capture);
+        const faceFingerprint = faceProvided
+            ? embeddingFingerprint(body.face_capture!.embedding)
+            : null;
+        const verificationLevel = resolveVerificationLevel({
+            faceProvided,
+            emergencyActive: relaxation.emergencyId != null,
+        });
 
         const result = await validateRedemption(
             {
@@ -72,12 +110,24 @@ export const POST = defineRoute(
         if (!result.ok || !result.token || !result.menuItem) {
             const failed = result.checks.find((c) => c.hard && !c.pass);
             // Real-time fraud signal: a repeat-beneficiary attempt (cooldown / daily limit).
-            if (failed && (failed.name === "cooldown" || failed.name === "meal_limit")) {
+            //
+            // E-2: with the face skipped under an emergency there may be NO
+            // identifier at all — no beneficiary matched and no face
+            // fingerprint. Flagging with a fabricated id would fill the fraud
+            // queue with entries nobody can act on, so the flag is raised only
+            // when something can actually be pointed at, and the detection
+            // method reflects which signal fired.
+            const repeatIdentifier = result.beneficiary?.id ?? faceFingerprint;
+            if (
+                failed &&
+                (failed.name === "cooldown" || failed.name === "meal_limit") &&
+                repeatIdentifier
+            ) {
                 await flagFraud(admin, {
                     flag_type: "beneficiary_duplicate",
                     severity: "medium",
-                    detection_method: "face_hash_repeat",
-                    entity: { kind: "face", id: result.beneficiary?.id ?? faceFingerprint },
+                    detection_method: faceFingerprint ? "face_hash_repeat" : "pattern_analysis",
+                    entity: { kind: "face", id: repeatIdentifier },
                 });
             }
             throw new BadRequestError(
@@ -90,10 +140,9 @@ export const POST = defineRoute(
         const beneficiaryId = result.beneficiary?.id ?? null;
         const nowIso = new Date().toISOString();
 
-        // A-1: freeze WHERE the meal was served, from the Food Partner's
-        // operating address as it stands right now. Never re-derived later — a
-        // vendor moving premises must not relocate historical redemptions.
-        const serviceLocation = await resolveServiceLocation(admin as never, vendorId);
+        // A-1: the service-location snapshot resolved above is frozen onto the
+        // row below. Never re-derived later — a vendor moving premises must not
+        // relocate historical redemptions.
 
         // F-1 (CD §D-1): freeze what the ₹10 contribution was under policy AT
         // THIS MOMENT. Frozen per row so a later policy change cannot re-price
@@ -121,7 +170,12 @@ export const POST = defineRoute(
                 co_pay_inr: value.co_pay,
                 geo_lat: body.geo?.lat ?? null,
                 geo_lng: body.geo?.lng ?? null,
-                face_hash_checked: true, // capture required + liveness-gated + vector-matched
+                // Must reflect what ACTUALLY happened. It was unconditionally
+                // true when a face was mandatory; now that E-2 lets an
+                // authorised emergency skip it, writing true regardless would
+                // assert a verification that never ran — and post-emergency
+                // audit reads this column.
+                face_hash_checked: faceProvided,
                 ...serviceLocation,
                 // Starts OUTSTANDING even when the beneficiary paid at the
                 // counter: the Food Partner holds that ₹10 as pApAmA's agent
@@ -129,7 +183,19 @@ export const POST = defineRoute(
                 // remitted AND reconciled. Marking it collected here would
                 // release settlements against money pApAmA has not received.
                 contribution_expected_inr: contributionExpected,
-                contribution_status: initialContributionStatus(contributionExpected),
+                // E-2: an emergency auto-waiver settles the contribution
+                // immediately. The Food Partner still receives the FULL meal
+                // value through normal settlement (CD §D-7) — the waiver
+                // forgives the beneficiary, never the payout.
+                contribution_status: relaxation.contributionWaived
+                    ? "waived"
+                    : initialContributionStatus(contributionExpected),
+                contribution_waived: relaxation.contributionWaived,
+                // E-2 tagging (CD §D-7's stated field list).
+                emergency_id: relaxation.emergencyId,
+                emergency_mode: relaxation.emergencyId != null,
+                verification_level: verificationLevel,
+                face_verification_skipped: !faceProvided,
             })
             .select("id, payment_status")
             .single();
@@ -150,8 +216,15 @@ export const POST = defineRoute(
             .from("redemption_cooldown_log")
             .insert({
                 beneficiary_id: beneficiaryId,
+                // Null when the face was skipped under an emergency. The
+                // cooldown row is still written — cooldown and the daily meal
+                // limit are CORE controls that CD §D-7 keeps running even under
+                // relaxed verification. It simply carries no face signal, so
+                // repeat-detection falls back to beneficiary_id.
                 face_hash: faceFingerprint,
-                face_embedding: toVectorLiteral(body.face_capture.embedding),
+                face_embedding: body.face_capture
+                    ? toVectorLiteral(body.face_capture.embedding)
+                    : null,
                 token_id: token.id,
                 vendor_id: vendorId,
             })
@@ -201,6 +274,33 @@ export const POST = defineRoute(
         // vendor. Instead we capture the error and surface it in the audit metadata so
         // a silent failure can't quietly weaken forfeiture tracking.
         const secondaryWriteWarnings: { step: string; error: string }[] = [];
+
+        // 3b. E-2 (CD §D-7): record the emergency auto-waiver against this
+        // redemption. `authorised_by` is deliberately NULL — a system-indicated
+        // waiver has no human authoriser, and naming a person who did not decide
+        // would be worse than naming nobody. `emergency_id` is what tells it
+        // apart in the audit from a discretionary humanitarian waiver.
+        //
+        // A failure here leaves the contribution recorded as waived on the
+        // redemption but with no waiver row. That is visible rather than lost:
+        // the reconciliation report will show a waived contribution with no
+        // supporting record, which is exactly the kind of thing an audit is for.
+        if (relaxation.contributionWaived && relaxation.emergencyId && contributionExpected > 0) {
+            const waiver = await recordEmergencyWaiver(admin as never, {
+                redemptionId: redemption.id,
+                vendorId,
+                mealValueInr: value.menu_value,
+                contributionApplicableInr: contributionExpected,
+                emergencyId: relaxation.emergencyId,
+                emergencyRef: relaxation.emergencyRef ?? relaxation.emergencyId,
+            });
+            if (!waiver.recorded && waiver.reason !== "already waived") {
+                secondaryWriteWarnings.push({
+                    step: "contribution_waivers",
+                    error: waiver.reason ?? "unknown",
+                });
+            }
+        }
 
         // 4. Forfeited remainder when token value > menu value (owner §4.4).
         if (value.forfeited > 0) {
