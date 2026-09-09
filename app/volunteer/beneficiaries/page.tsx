@@ -25,7 +25,6 @@ import {
 type RegistrationRow = {
     id: string;
     full_name: string | null;
-    category: string;
     status: string;
     face_hash_present: boolean;
     aadhaar_present: boolean;
@@ -61,16 +60,17 @@ export default function VolunteerBeneficiariesPage() {
                 resourceLabel="registrations"
                 emptyHint="Submit a registration above — it will appear here pending admin review."
             >
-                <TableShell hideCols={[5]}>
-                    <TableHead columns={["Name", "Category", "Identity", "Status", "Submitted"]} />
+                <TableShell hideCols={[4]}>
+                    {/* P-2 (CD §D-10): the Category column is gone. A volunteer
+                        needs to find the registration they assisted with — not to
+                        know why someone qualifies. Vulnerability category is
+                        restricted to authorised personnel on a need-to-know basis. */}
+                    <TableHead columns={["Name", "Identity", "Status", "Submitted"]} />
                     <tbody className="divide-y divide-slate-100">
                         {items.map((r) => (
                             <tr key={r.id} className="hover:bg-slate-50">
                                 <td className="px-4 py-3 text-slate-800">
                                     <Dash>{r.full_name}</Dash>
-                                </td>
-                                <td className="px-4 py-3 capitalize text-slate-700">
-                                    {r.category.replace(/_/g, " ")}
                                 </td>
                                 <td className="px-4 py-3 text-xs text-slate-500">
                                     {r.face_hash_present ? "face ✓" : "no face"}

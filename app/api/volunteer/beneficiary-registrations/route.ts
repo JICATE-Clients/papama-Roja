@@ -40,10 +40,27 @@ export const GET = defineRoute(
     { feature: "beneficiary_registration", action: "read", scope: "own" },
     async () => {
         const supabase = await createClient();
+        // P-2 (B-29b, CD §D-10): "volunteer screens transaction-minimum", and
+        // "Special Care categories shall remain restricted to authorised PAPAMA
+        // personnel on a need-to-know basis".
+        //
+        // `category` was returned raw here. Because this feature grants the
+        // volunteer role read scope "all" (the assist capability), that exposed
+        // the vulnerability category — pregnant_women, patient, disability — of
+        // EVERY registration in the system, not only the ones a given volunteer
+        // helped with. A volunteer needs to find and follow up the registration
+        // they assisted; they do not need to know why someone qualifies.
+        //
+        // `category` is no longer selected at all, rather than selected and
+        // dropped in the map: a field that never leaves the database cannot be
+        // re-exposed by a later edit to the mapping.
+        //
+        // The identity hashes were already handled correctly — selected only to
+        // derive presence booleans, never returned. That is kept.
         const { data, error } = await supabase
             .from("beneficiary_registrations")
             .select(
-                "id, full_name, category, contact, location_hint, registration_status, face_hash, aadhaar_hash, document_refs, beneficiary_id, review_notes, created_at"
+                "id, full_name, contact, location_hint, registration_status, face_hash, aadhaar_hash, document_refs, beneficiary_id, review_notes, created_at"
             )
             .order("created_at", { ascending: false });
         if (error) throw new Error(error.message);
@@ -51,7 +68,6 @@ export const GET = defineRoute(
         const registrations = (data ?? []).map((r) => ({
             id: r.id,
             full_name: r.full_name,
-            category: r.category,
             contact: r.contact,
             location_hint: r.location_hint,
             status: r.registration_status,
