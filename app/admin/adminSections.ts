@@ -181,6 +181,26 @@ export const ADMIN_SECTIONS: AdminSection[] = [
         action: "read",
     },
     {
+        // E-6 (B-26 b,c). An unapproved template has no send path at all.
+        href: "/admin/appeal-templates",
+        group: "Operations",
+        title: "Appeal templates",
+        description: "Donor appeal wording. Only approved templates can be sent.",
+        navLabel: "Appeals",
+        feature: "emergency_disaster_mode",
+        action: "read",
+    },
+    {
+        // F-3 (B-25). Evidence of how each sample was drawn, not a worklist.
+        href: "/admin/audit-selections",
+        group: "Oversight",
+        title: "Audit selections",
+        description: "How each audit cycle's sample was drawn: population, size, rate, timestamp.",
+        navLabel: "Audit draws",
+        feature: "audit_reports",
+        action: "read",
+    },
+    {
         // E-4 (B-30). The device list matters as much as the queue: a device
         // that captured and never returned means meals served with no record.
         href: "/admin/offline-transactions",
