@@ -138,6 +138,39 @@ export const ADMIN_SECTIONS: AdminSection[] = [
         action: "read",
     },
     {
+        // E-5 (B-31). Safety concerns sort first — enforced server-side, not
+        // left to the screen.
+        href: "/admin/volunteer-incidents",
+        group: "Operations",
+        title: "Volunteer incidents",
+        description: "Field reports from volunteers. Safety concerns lead the queue.",
+        navLabel: "Incidents",
+        feature: "quality_feedback_complaints_inspections",
+        action: "read",
+    },
+    {
+        // F-3 (B-25), shared with E-3 and E-4 per the Work Order's build-once note.
+        href: "/admin/exception-queue",
+        group: "Oversight",
+        title: "Exception queue",
+        description:
+            "Inherently risky transactions — reissues, bank changes, waivers, offline duplicates.",
+        navLabel: "Exceptions",
+        feature: "audit_reports",
+        action: "read",
+    },
+    {
+        // E-4 (B-30). The device list matters as much as the queue: a device
+        // that captured and never returned means meals served with no record.
+        href: "/admin/offline-transactions",
+        group: "Operations",
+        title: "Offline captures",
+        description: "Emergency transactions recorded without connectivity, awaiting validation.",
+        navLabel: "Offline",
+        feature: "token_redemption",
+        action: "read",
+    },
+    {
         href: "/admin/reports",
         group: "Oversight",
         title: "Reports",
