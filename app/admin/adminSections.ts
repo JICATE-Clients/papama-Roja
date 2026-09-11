@@ -149,6 +149,27 @@ export const ADMIN_SECTIONS: AdminSection[] = [
         action: "read",
     },
     {
+        // E-1 (B-26). Declaring one can switch on relaxed verification and the
+        // ₹10 waiver for everyone in scope — the screen says so.
+        href: "/admin/emergencies",
+        group: "Operations",
+        title: "Emergencies",
+        description: "Declare, extend and close authorised humanitarian emergencies.",
+        navLabel: "Emergencies",
+        feature: "emergency_disaster_mode",
+        action: "read",
+    },
+    {
+        // F-1 (B-01). CD §D-1's seven lines.
+        href: "/admin/contribution-report",
+        group: "Money",
+        title: "Contribution report",
+        description: "The ₹10 contribution: expected, collected, remitted, outstanding, waived.",
+        navLabel: "Contribution",
+        feature: "financial_ledgers_reconciliation",
+        action: "read",
+    },
+    {
         // F-3 (B-25), shared with E-3 and E-4 per the Work Order's build-once note.
         href: "/admin/exception-queue",
         group: "Oversight",
