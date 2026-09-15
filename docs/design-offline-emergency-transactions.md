@@ -58,7 +58,7 @@ CD §D-9's eleven fields, plus the source field confirmed 18 Aug:
 | # | Field | Notes |
 |---|---|---|
 | 1 | `offline_txn_id` | Generated **on the device** (UUIDv4). The device cannot ask the server for an id. |
-| 2 | `token_id` | From the scanned QR. |
+| 2 | `token_id` | Resolved **by the server at sync** from `qr_hash` (see correction below). |
 | 3 | `volunteer_id` | Null for the Food Partner route. |
 | 4 | `food_partner_id` | Null when a volunteer captures with no partner present. |
 | 5 | `beneficiary_identifier` | **Where available.** Often null — see §7. |
@@ -154,8 +154,20 @@ The design principle is **store as little as possible**:
   identified online before connectivity was lost**, and then only as the
   existing opaque id. In the common field case it is null, and CD §D-9 accepts
   this ("where available").
-- A stolen device therefore yields: token ids, a partner id, timestamps and an
+- A stolen device therefore yields: QR hashes, a partner id, timestamps and an
   emergency id. That is operational data, not personal data.
+
+> **Correction made during build (15 Sept).** Earlier drafts said the device
+> stores the token id "from the scanned QR". It cannot: the QR payload is
+> `PAPAMA:` + an HMAC over the token id with a **server** secret, so the id is not
+> recoverable on the device. The device therefore stores `sha256(payload)` —
+> which is exactly `tokens.qr_hash` — and the server resolves the token at sync
+> (migration `20260915000001`). This is also safer than the original plan: the
+> raw payload is a bearer credential and is **never** written to the device; a
+> hash cannot be presented at a till, because redemption hashes what is scanned.
+> A hash matching no token is rejected as a forged or mistyped QR. Two devices
+> scanning the same QR still collide, because resolution runs before conflict
+> detection.
 
 ### Encryption at rest
 
@@ -313,6 +325,17 @@ JICATE's and the client's to make.** See §11.
 5. Service worker + IndexedDB queue, Food Partner route (primary)
 6. Volunteer App route (secondary)
 7. Post-emergency review **by source** (extends E-3)
+
+**Build status (15 Sept):** steps 1–5 are built. Step 5 lives in
+`lib/offline/captureRules.ts` (pure, tested), `lib/offline/deviceQueue.ts`
+(IndexedDB), `public/offline-sync-sw.js` (Background Sync relay only — caches
+nothing) and `components/vendor/OfflineCapturePanel.tsx` on the scan screen,
+fed by `GET /api/offline/authorisation`. The capturer's identity (food partner /
+volunteer) is stamped from the session at sync, never taken from the device.
+Step 6 is served by the same sync endpoint but has no volunteer screen yet;
+step 7 still needs the by-source split. The capability ships switched OFF
+(`offline_capture_enabled = false`) and the four limits stay NULL until JICATE
+answers §11.
 
 **Steps 1–4 are server-side and carry the controls.** They should land and be
 verifiable before any client can capture anything — so that the day a device

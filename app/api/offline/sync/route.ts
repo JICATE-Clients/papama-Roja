@@ -4,6 +4,8 @@ import { BadRequestError, defineRoute, parseBody } from "@/lib/api/handler";
 import { syncOfflineBatch, type OfflineCapture } from "@/lib/services/offlineSync";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getBoolean, getNumber } from "@/lib/system-config";
+import { resolveVendorId } from "@/lib/vendor/server-identity";
+import { resolveVolunteerId } from "@/lib/volunteer/server-identity";
 
 /**
  * POST /api/offline/sync — upload a batch of offline emergency captures
@@ -26,7 +28,12 @@ const captureSchema = z.object({
     // Device-generated (it cannot ask the server for one) and the primary key,
     // so a re-uploaded batch is idempotent rather than duplicated.
     id: z.string().uuid(),
-    token_id: z.string().uuid().nullable(),
+    // A real device sends qr_hash and no token_id — it cannot derive the id from
+    // an HMAC payload. token_id stays accepted for tooling and tests.
+    token_id: z.string().uuid().nullable().optional(),
+    // sha256 hex of the scanned payload. Never the raw payload: that is a bearer
+    // credential and must not travel from, or sit on, a field device.
+    qr_hash: z.string().regex(/^[0-9a-f]{64}$/, "qr_hash must be a sha256 hex digest").nullable().optional(),
     volunteer_id: z.string().uuid().nullable().optional(),
     food_partner_id: z.string().uuid().nullable().optional(),
     beneficiary_identifier: z.string().trim().max(200).nullable().optional(),
@@ -41,10 +48,18 @@ const captureSchema = z.object({
 });
 
 const syncSchema = z.object({
+    // (each capture must identify its token one way or the other)
     // Batched rather than one-at-a-time so conflicts can be detected across the
     // WHOLE batch before anything validates. Capped so a compromised device
     // cannot flood the queue in a single request.
-    captures: z.array(captureSchema).min(1).max(200),
+    captures: z
+        .array(
+            captureSchema.refine((c) => Boolean(c.token_id || c.qr_hash), {
+                message: "each capture needs a qr_hash (or token_id)",
+            })
+        )
+        .min(1)
+        .max(200),
 });
 
 export const POST = defineRoute(
@@ -77,9 +92,28 @@ export const POST = defineRoute(
             maxSyncWindowHours = null;
         }
 
+        // WHO captured is taken from the session, never from the device. The
+        // food partner id decides which emergency's geography applies at
+        // validation, so a device that could claim one could pick its emergency.
+        const vendorId = await resolveVendorId(user, admin);
+        const volunteerId = vendorId ? null : await resolveVolunteerId(user, admin);
+        for (const c of body.captures) {
+            if (c.source === "food_partner" && !vendorId) {
+                throw new BadRequestError("food_partner captures must be synced by a signed-in Food Partner");
+            }
+            if (c.source === "volunteer" && !volunteerId) {
+                throw new BadRequestError("volunteer captures must be synced by a signed-in volunteer");
+            }
+        }
+
         const result = await syncOfflineBatch(
             admin,
-            body.captures as OfflineCapture[],
+            body.captures.map((c) => ({
+                ...c,
+                token_id: c.token_id ?? null,
+                food_partner_id: c.source === "food_partner" ? vendorId : null,
+                volunteer_id: c.source === "volunteer" ? volunteerId : null,
+            })) as OfflineCapture[],
             { maxSyncWindowHours }
         );
 

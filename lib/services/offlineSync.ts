@@ -30,7 +30,14 @@ export type OfflineTxnSource = "food_partner" | "volunteer";
 /** One capture as it arrives from a device. */
 export interface OfflineCapture {
     id: string;
+    /**
+     * Usually NULL from a real device. The QR payload is an HMAC over the token id
+     * with a server secret, so a device offline cannot derive the id — it sends
+     * `qr_hash` instead and the server resolves the token here.
+     */
     token_id: string | null;
+    /** sha256 of the scanned QR payload, computed on the device. */
+    qr_hash?: string | null;
     volunteer_id?: string | null;
     food_partner_id?: string | null;
     beneficiary_identifier?: string | null;
@@ -173,19 +180,46 @@ export interface SyncBatchResult {
  */
 export async function syncOfflineBatch(
     client: Client,
-    captures: readonly OfflineCapture[],
+    incoming: readonly OfflineCapture[],
     opts: { maxSyncWindowHours: number | null }
 ): Promise<SyncBatchResult> {
     const result: SyncBatchResult = {
-        received: captures.length,
+        received: incoming.length,
         validated: 0,
         rejected: 0,
         duplicates: 0,
         results: [],
     };
-    if (captures.length === 0) return result;
+    if (incoming.length === 0) return result;
 
     const receivedAt = new Date().toISOString();
+
+    // --- 0. Resolve token ids from QR hashes ---------------------------------
+    // A device cannot turn a QR payload into a token id (it is an HMAC with a
+    // server secret), so real captures arrive with `qr_hash` and no token_id.
+    // Resolved BEFORE conflict detection, so two devices scanning the same
+    // physical QR collide on the same token id rather than slipping past as
+    // two unrelated hashes.
+    const hashes = [
+        ...new Set(
+            incoming
+                .filter((c) => !c.token_id && c.qr_hash)
+                .map((c) => c.qr_hash as string)
+        ),
+    ];
+    const tokenByHash = new Map<string, string>();
+    if (hashes.length > 0) {
+        const { data: tokenRows } = await client
+            .from("tokens")
+            .select("id, qr_hash")
+            .in("qr_hash", hashes);
+        for (const t of (tokenRows ?? []) as { id: string; qr_hash: string | null }[]) {
+            if (t.qr_hash) tokenByHash.set(t.qr_hash, t.id);
+        }
+    }
+    const captures: OfflineCapture[] = incoming.map((c) =>
+        c.token_id || !c.qr_hash ? c : { ...c, token_id: tokenByHash.get(c.qr_hash) ?? null }
+    );
 
     // --- 1. Which tokens are already spoken for? -----------------------------
     const tokenIds = captures.map((c) => c.token_id).filter((t): t is string => Boolean(t));
@@ -256,7 +290,12 @@ export async function syncOfflineBatch(
             reason = "captured on a device reported compromised";
         } else if (!capture.token_id) {
             outcome = "rejected";
-            reason = "no token reference on the capture";
+            // Either nothing identified the token, or the scanned QR matches no
+            // token at all — a forged or mistyped QR, which is exactly what must
+            // not become a redemption.
+            reason = capture.qr_hash
+                ? "the scanned QR does not match any token"
+                : "no token reference on the capture";
         } else {
             const period = capture.emergency_id ? periods.get(capture.emergency_id) : undefined;
             const window = checkCaptureWindow({
@@ -283,6 +322,7 @@ export async function syncOfflineBatch(
             {
                 id: capture.id,
                 token_id: capture.token_id,
+                qr_hash: capture.qr_hash ?? null,
                 volunteer_id: capture.volunteer_id ?? null,
                 food_partner_id: capture.food_partner_id ?? null,
                 beneficiary_identifier: capture.beneficiary_identifier ?? null,

@@ -212,6 +212,7 @@ function fakeSyncClient(opts: {
     compromisedDevices?: string[];
     emergencyPeriod?: { start: string; end: string } | null;
     upsertError?: string;
+    tokensByHash?: Record<string, string>;
 } = {}) {
     const upsert = vi.fn().mockResolvedValue({ error: opts.upsertError ? { message: opts.upsertError } : null });
     const exceptionInsert = vi.fn().mockResolvedValue({ error: null });
@@ -256,6 +257,20 @@ function fakeSyncClient(opts: {
                         }),
                     }),
                     upsert,
+                };
+            }
+            if (table === "tokens") {
+                return {
+                    select: vi.fn().mockReturnValue({
+                        in: vi.fn().mockImplementation((_col: string, hashes: string[]) =>
+                            Promise.resolve({
+                                data: hashes
+                                    .filter((h) => opts.tokensByHash?.[h])
+                                    .map((h) => ({ id: opts.tokensByHash![h], qr_hash: h })),
+                                error: null,
+                            })
+                        ),
+                    }),
                 };
             }
             if (table === "emergencies") {
@@ -380,5 +395,58 @@ describe("E-4 — a batch syncs to Pending Offline Validation", () => {
             expect.objectContaining({ id: capture().id }),
             expect.objectContaining({ onConflict: "id" })
         );
+    });
+});
+
+describe("E-4 — a real device sends the QR HASH, not a token id", () => {
+    // The QR payload is an HMAC with a server secret, so a field device cannot
+    // turn it into a token id. It uploads sha256(payload); the server resolves.
+    const HASH_A = "a".repeat(64);
+    const HASH_B = "b".repeat(64);
+    const TOKEN = "aaaaaaaa-1111-4111-8111-111111111111";
+
+    it("resolves the token from the hash and queues it for validation", async () => {
+        const { client, upsert } = fakeSyncClient({ tokensByHash: { [HASH_A]: TOKEN } });
+        const result = await syncOfflineBatch(
+            client as never,
+            [capture({ token_id: null, qr_hash: HASH_A })],
+            { maxSyncWindowHours: null }
+        );
+        expect(result.results[0].outcome).toBe("pending_offline_validation");
+        expect(upsert).toHaveBeenCalledWith(
+            expect.objectContaining({ token_id: TOKEN, qr_hash: HASH_A }),
+            expect.anything()
+        );
+    });
+
+    it("rejects a hash that matches no token — a forged or mistyped QR", async () => {
+        const { client } = fakeSyncClient({ tokensByHash: {} });
+        const result = await syncOfflineBatch(
+            client as never,
+            [capture({ token_id: null, qr_hash: HASH_B })],
+            { maxSyncWindowHours: null }
+        );
+        expect(result.rejected).toBe(1);
+        expect(result.results[0].reason).toMatch(/does not match any token/i);
+    });
+
+    it("two devices scanning the SAME QR collide as a duplicate", async () => {
+        // Resolution happens before conflict detection, so the same physical
+        // QR on two devices cannot slip past as two unrelated hashes.
+        const { client } = fakeSyncClient({ tokensByHash: { [HASH_A]: TOKEN } });
+        const result = await syncOfflineBatch(
+            client as never,
+            [
+                capture({ token_id: null, qr_hash: HASH_A, device_reference: "device-a" }),
+                capture({
+                    id: "22222222-2222-4222-8222-222222222222",
+                    token_id: null,
+                    qr_hash: HASH_A,
+                    device_reference: "device-b",
+                }),
+            ],
+            { maxSyncWindowHours: null }
+        );
+        expect(result.duplicates).toBe(2);
     });
 });
