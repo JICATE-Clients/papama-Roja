@@ -67,7 +67,7 @@ export function PrintableToken({ token }: { token: TokenItem }) {
         <div className="flex items-center justify-between border-b border-dashed border-zinc-300 pb-3">
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400">
-              pApAmA Food Token
+              pApAmA Food Token{token.display ? ` · ${token.display.token_type_label}` : ""}
             </p>
             <p className="mt-0.5 text-lg font-bold tracking-tight">{inr(token.value)} Meal Voucher</p>
           </div>
@@ -104,7 +104,14 @@ export function PrintableToken({ token }: { token: TokenItem }) {
         </div>
 
         {/* Area lock — only printed when the token declares one (owner §4.3) */}
-        {token.area_lock ? (
+        {token.display && token.display.geographic_scope !== "PAN_INDIA" ? (
+          <div className="mt-3 flex items-center justify-between rounded-lg border border-amber-400 bg-amber-50 px-3 py-2">
+            <span className="text-[9px] font-bold uppercase tracking-wide text-amber-700">
+              Area-Locked
+            </span>
+            <span className="text-xs font-semibold text-amber-800">{token.display.scope_label}</span>
+          </div>
+        ) : token.area_lock ? (
           <div className="mt-3 flex items-center justify-between rounded-lg border border-amber-400 bg-amber-50 px-3 py-2">
             <span className="text-[9px] font-bold uppercase tracking-wide text-amber-700">
               Area-Locked
@@ -120,9 +127,11 @@ export function PrintableToken({ token }: { token: TokenItem }) {
         {/* Footer */}
         <div className="mt-3 border-t border-dashed border-zinc-300 pt-3 text-center">
           <p className="text-[9px] font-medium text-zinc-500">
-            {token.expires_at
-              ? `Valid until ${shortDate(token.expires_at)}`
-              : "One-time use · non-transferable"}
+            {token.display
+              ? `Validity: ${token.display.validity_label}`
+              : token.expires_at
+                ? `Valid until ${shortDate(token.expires_at)}`
+                : "One-time use · non-transferable"}
           </p>
           <p className="mt-0.5 text-[8px] text-zinc-400">
             High-security QR · single redemption · reproduction prohibited

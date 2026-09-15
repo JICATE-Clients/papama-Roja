@@ -266,10 +266,12 @@ export default function TokenDetailPage({
                       {token.status === "expired" && (
                         <>
                           <h4 className="text-sm font-semibold text-zinc-900 ">
-                            Token Expired
+                            {token.display?.status_label ?? "Expired – Not Redeemed"}
                           </h4>
                           <p className="mt-1 text-xs text-zinc-500 ">
-                            This token expired unused.
+                            {token.display?.replaced_by_serial
+                              ? "This token expired unused. Its value was reissued as a new token."
+                              : "This token expired unused. Its value has returned to the Meal Pool."}
                           </p>
                           {token.expires_at && (
                             <span className="mt-2 inline-block font-mono text-[11px] text-zinc-400 bg-zinc-50 px-2 py-0.5 rounded ">
@@ -287,6 +289,11 @@ export default function TokenDetailPage({
                           <p className="mt-1 text-xs text-zinc-500 ">
                             Voucher is live and ready to be presented at any participating Anna Canteen or kitchen counter.
                           </p>
+                          {token.display && (
+                            <p className="mt-1 text-xs text-zinc-500 ">
+                              {token.display.token_type_label} · {token.display.scope_label}
+                            </p>
+                          )}
                           {token.expires_at && (
                             <span className="mt-2 inline-block font-mono text-[11px] text-blue-600 bg-blue-50/50 px-2 py-0.5 rounded font-semibold">
                               Expires On: {shortDate(token.expires_at)}

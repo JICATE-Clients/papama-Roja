@@ -1,4 +1,5 @@
 import { defineRoute, NotFoundError } from "@/lib/api/handler";
+import { buildTokenDisplayPayload, type TokenDisplayInput } from "@/lib/services/tokenDisplay";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -24,7 +25,7 @@ export const GET = defineRoute<{ id: string }>(
         const { data: token, error: tokenError } = await admin
             .from("tokens")
             .select(
-                "id, serial_number, qr_hash, token_type, value_inr, status, donor_id, beneficiary_id, special_instructions, expires_at, minted_at, distributed_at, redeemed_at, expired_at, cancelled_at"
+                "id, serial_number, qr_hash, token_type, value_inr, status, donor_id, beneficiary_id, special_instructions, expires_at, minted_at, distributed_at, redeemed_at, expired_at, cancelled_at, distribution_mode, geographic_scope, scope_state_id, scope_district_id, scope_city, scope_pincode, activated_at, is_emergency, replacement_for_token_id, reissue_reason, reissued_at, value_returned_to_pool_at"
             )
             .eq("id", tokenId)
             .maybeSingle();
@@ -88,6 +89,48 @@ export const GET = defineRoute<{ id: string }>(
             .maybeSingle();
         if (forfeitError) throw new Error(forfeitError.message);
 
+        // A-2 reissue links, both directions, and the display payload.
+        const { data: replacedBy } = await admin
+            .from("tokens")
+            .select("id, serial_number")
+            .eq("replacement_for_token_id", tokenId)
+            .maybeSingle();
+        let reissuedFrom: { id: string; serial_number: string } | null = null;
+        if (token.replacement_for_token_id) {
+            const { data: src } = await admin
+                .from("tokens")
+                .select("id, serial_number")
+                .eq("id", token.replacement_for_token_id)
+                .maybeSingle();
+            reissuedFrom = (src as { id: string; serial_number: string } | null) ?? null;
+        }
+        let stateName: string | null = null;
+        let districtName: string | null = null;
+        if (token.scope_district_id) {
+            const { data: dRow } = await admin
+                .from("districts")
+                .select("name, state:states(name)")
+                .eq("id", token.scope_district_id)
+                .maybeSingle();
+            const d = dRow as unknown as { name: string; state: { name: string } | null } | null;
+            districtName = d?.name ?? null;
+            stateName = d?.state?.name ?? null;
+        } else if (token.scope_state_id) {
+            const { data: sRow } = await admin
+                .from("states")
+                .select("name")
+                .eq("id", token.scope_state_id)
+                .maybeSingle();
+            stateName = (sRow as { name: string } | null)?.name ?? null;
+        }
+        const replacedByRow = (replacedBy as { id: string; serial_number: string } | null) ?? null;
+        const display = buildTokenDisplayPayload(token as unknown as TokenDisplayInput, {
+            stateName,
+            districtName,
+            reissuedFromSerial: reissuedFrom?.serial_number ?? null,
+            replacedBySerial: replacedByRow?.serial_number ?? null,
+        });
+
         // Audit trail for this token (entity_id is text in audit_logs).
         const { data: audit, error: auditError } = await admin
             .from("audit_logs")
@@ -116,7 +159,15 @@ export const GET = defineRoute<{ id: string }>(
                 redeemed_at: token.redeemed_at,
                 expired_at: token.expired_at,
                 cancelled_at: token.cancelled_at,
+                distribution_mode: token.distribution_mode,
+                activated_at: token.activated_at,
+                reissue_reason: token.reissue_reason,
+                reissued_at: token.reissued_at,
+                value_returned_to_pool_at: token.value_returned_to_pool_at,
             },
+            display,
+            reissued_from: reissuedFrom,
+            replaced_by: replacedByRow,
             handoffs: (handoffs ?? []).map((h) => {
                 const actor = h.distributed_by ? actorById.get(h.distributed_by as string) : null;
                 return {

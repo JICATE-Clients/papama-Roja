@@ -161,6 +161,48 @@ await fetch('/api/offline/sync', { method:'POST',
 person, or deliberate reuse. Picking the earliest would silently discard a real
 meal or silently accept fraud. A human decides.
 
+### A16 · A-2 — Controlled reissue of an expired token
+Needs an **expired** token. If none exists, set a test token's `expires_at` to
+yesterday and run **Run expire-sweep** on `/admin/tokens`.
+
+**On `/admin/tokens`:** open the expired token → *Controlled reissue* box.
+1. Leave the reason empty → **Approve reissue** is disabled.
+2. Type a real reason → approve.
+
+**Expect:** toast *"Reissued as PPM-RIS-…"*. Open the original again: it is
+still **expired**, shows **Replaced by PPM-RIS-…**, and has no reissue box. The
+new token shows **Reissued from** the original, the **same value and scope**,
+and the reason.
+- A pApAmA-distributed original → new token is **in the admin pool** with no
+  expiry yet (its 60 days start at distribution).
+- A donor-controlled original → new token is **live**, expiring in 60 days.
+
+**Then:** `/admin/exception-queue` has a `token_reissue` row, and
+`/admin/ledgers` shows a Meal Pool **debit** of the value (it had been returned
+there at expiry). Reissuing the same original twice → refused.
+
+### A17 · A-2 — Token display payload
+**As a donor:** open a token. A live one shows its type and scope (*"Valid
+across India"* or the district). **Print** it → the card shows the scope and a
+*Validity* line. An expired one reads **"Expired – Not Redeemed"** (or
+*"Expired – Reissued as …"* once reissued).
+
+### A18 · E-4 — Offline recording on the scan screen
+With `offline_capture_enabled` **true** and an active emergency covering the
+partner's district, sign in as that **Food Partner** → `/vendor/scan`.
+
+**Expect:** an amber *Emergency offline recording* box naming the emergency and
+when offline recording ends. With no emergency, the box does not appear at all.
+
+1. Scan (or paste) a real token code.
+2. DevTools → Network → **Offline**. Press **Record offline**.
+   **Expect:** *"Recorded offline…"*, and *1 record(s) waiting to sync*.
+3. Switch Network back **Online**.
+   **Expect:** within a moment *"Synced 1 offline record(s)…"*, count back to 0,
+   and the capture in `/admin/offline-transactions` as pending validation.
+4. DevTools → Application → IndexedDB → `papama-offline`: the record holds a
+   64-character **hash**, never the `PAPAMA:` code.
+
 ### A15 · F-3 — Clearing needs a note
 **On `/admin/exception-queue`:** press **Clear** with the note box empty.
 **Expect:** the button is disabled. An unexplained clear is not a review.
@@ -246,10 +288,11 @@ second admin before the demo — you have 3 admin users already.
 
 ## Known limits — say these before anyone finds them
 
-- **A-2 is partial.** Reissue admin flow and token display payload not built.
-- **E-4 is partial.** Server side works; the **client capture queue** (service
-  worker + IndexedDB) does not exist, so nothing can capture offline for real
-  yet. The sync API is testable, as in A13.
+- **Volunteer offline route has no screen.** The Food Partner route (primary)
+  is built (A18). Volunteers also lack `token_redemption/create` in the
+  permission matrix, so they cannot sync at all today — granting it is a
+  permissions decision, not something to change quietly.
+- **Post-emergency review is not yet split by source** (E-4 design step 7).
 - **Q-5 held** by the Work Order's own instruction, pending Lane 1 design.
 - **`max_tokens_per_volunteer` is unset**, so the volunteer cap will correctly
   test as *not enforced*. A missing client value, not a bug.
@@ -282,6 +325,9 @@ second admin before the demo — you have 3 admin users already.
 | A13 | E-4 | | |
 | A14 | E-4 | | |
 | A15 | F-3 | | |
+| A16 | A-2 | | |
+| A17 | A-2 | | |
+| A18 | E-4 | | |
 | B1–B8 | rules | | |
 | C happy | F-2 | | |
 | C exc 1–5 | F-2 | | |

@@ -69,6 +69,8 @@ export interface ConvertResponse {
 
 export interface TokenItem {
   token_id: string;
+  /** A-2 display payload — type, value, scope, activation, expiry. */
+  display?: import("@/lib/services/tokenDisplay").TokenDisplayPayload;
   serial_number?: string;
   type: 'standard' | 'special_care';
   status: TokenStatus;

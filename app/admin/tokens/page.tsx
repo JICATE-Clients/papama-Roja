@@ -59,7 +59,21 @@ interface TokenDetail {
         redeemed_at: string | null;
         expired_at: string | null;
         cancelled_at: string | null;
+        distribution_mode?: string;
+        activated_at?: string | null;
+        reissue_reason?: string | null;
+        reissued_at?: string | null;
     };
+    /** A-2 display payload — the same wording the token itself shows. */
+    display?: {
+        token_type_label: string;
+        scope_label: string;
+        validity_label: string;
+        status_label: string;
+        distribution_mode_label: string;
+    };
+    reissued_from?: { id: string; serial_number: string } | null;
+    replaced_by?: { id: string; serial_number: string } | null;
     handoffs: {
         id: string;
         channel: string;
@@ -209,12 +223,45 @@ export default function AdminTokensPage() {
         successMessage: () => "Token revoked back to the admin pool.",
     });
 
+    // A-2 controlled reissue: an expired token → a NEW linked token. The reason
+    // is mandatory, so it is typed here rather than hidden behind a confirm().
+    const [reissueReason, setReissueReason] = useState("");
+    useEffect(() => setReissueReason(""), [drawer.selected]);
+    const reissue = useAction({
+        method: "POST",
+        endpoint: (id) => `/api/admin/tokens/${id}/reissue`,
+        onDone: async () => {
+            await reload();
+            drawer.close();
+        },
+        successMessage: (d) => `Reissued as ${String(d.new_serial ?? "a new token")}.`,
+    });
+    const canReissue =
+        canSweep && detail?.token.status === "expired" && !detail.replaced_by && !detail.redemption;
+
     const t = detail?.token;
     const sections: DetailSection[] = t
         ? [
               { label: "Serial", value: t.serial_number, mono: true },
               { label: "Type", value: t.token_type.replace(/_/g, " ") },
               { label: "Value", value: rupee(t.value_inr) },
+              ...(detail?.display
+                  ? [
+                        { label: "Shows as", value: `${detail.display.token_type_label} · ${detail.display.status_label}` },
+                        { label: "Mode", value: detail.display.distribution_mode_label },
+                        { label: "Scope", value: detail.display.scope_label },
+                        { label: "Validity", value: detail.display.validity_label },
+                    ]
+                  : []),
+              ...(detail?.reissued_from
+                  ? [{ label: "Reissued from", value: detail.reissued_from.serial_number, mono: true }]
+                  : []),
+              ...(detail?.replaced_by
+                  ? [{ label: "Replaced by", value: detail.replaced_by.serial_number, mono: true }]
+                  : []),
+              ...(t.reissue_reason
+                  ? [{ label: "Reissue reason", value: t.reissue_reason, full: true }]
+                  : []),
               { label: "Holder", value: holderOf(t.status) },
               ...(t.donor_name ? [{ label: "Donor", value: t.donor_name }] : []),
               { label: "Minted", value: date(t.minted_at) },
@@ -382,6 +429,42 @@ export default function AdminTokensPage() {
             >
                 {detail && (
                     <div className="space-y-5">
+                        {canReissue && (
+                            <section className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                                <h3 className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+                                    Controlled reissue
+                                </h3>
+                                <p className="mt-1 text-sm text-amber-900">
+                                    This token stays permanently expired. Approving mints a new token with a new QR,
+                                    carrying the same value and scope, linked to this one.
+                                </p>
+                                <label htmlFor="reissue-reason" className="mt-2 block text-xs font-medium text-amber-900">
+                                    Reason (required, at least 10 characters)
+                                </label>
+                                <textarea
+                                    id="reissue-reason"
+                                    value={reissueReason}
+                                    onChange={(e) => setReissueReason(e.target.value)}
+                                    rows={2}
+                                    className="mt-1 w-full rounded-md border border-amber-300 bg-white px-2 py-1.5 text-sm text-slate-900"
+                                />
+                                <div className="mt-2">
+                                    <ActionButton
+                                        tone="warn"
+                                        disabled={reissue.busyId === detail.token.id || reissueReason.trim().length < 10}
+                                        onClick={() =>
+                                            reissue.run(
+                                                detail.token.id,
+                                                { reason: reissueReason.trim() },
+                                                "Approve this reissue? A new token will be minted and this one stays expired."
+                                            )
+                                        }
+                                    >
+                                        {reissue.busyId === detail.token.id ? "Reissuing…" : "Approve reissue"}
+                                    </ActionButton>
+                                </div>
+                            </section>
+                        )}
                         {/* Hand-off history */}
                         <section>
                             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">

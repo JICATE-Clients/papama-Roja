@@ -95,14 +95,21 @@ export const POST = defineRoute(
         // WHO captured is taken from the session, never from the device. The
         // food partner id decides which emergency's geography applies at
         // validation, so a device that could claim one could pick its emergency.
-        const vendorId = await resolveVendorId(user, admin);
-        const volunteerId = vendorId ? null : await resolveVolunteerId(user, admin);
-        for (const c of body.captures) {
-            if (c.source === "food_partner" && !vendorId) {
-                throw new BadRequestError("food_partner captures must be synced by a signed-in Food Partner");
-            }
-            if (c.source === "volunteer" && !volunteerId) {
-                throw new BadRequestError("volunteer captures must be synced by a signed-in volunteer");
+        //
+        // An administrator is the exception: already trusted with every record,
+        // and the only way to exercise the pipeline by hand (test script A13/A14)
+        // — so admin uploads keep the ids they send.
+        const isAdmin = user.role === "admin";
+        const vendorId = isAdmin ? null : await resolveVendorId(user, admin);
+        const volunteerId = isAdmin || vendorId ? null : await resolveVolunteerId(user, admin);
+        if (!isAdmin) {
+            for (const c of body.captures) {
+                if (c.source === "food_partner" && !vendorId) {
+                    throw new BadRequestError("food_partner captures must be synced by a signed-in Food Partner");
+                }
+                if (c.source === "volunteer" && !volunteerId) {
+                    throw new BadRequestError("volunteer captures must be synced by a signed-in volunteer");
+                }
             }
         }
 
@@ -111,8 +118,12 @@ export const POST = defineRoute(
             body.captures.map((c) => ({
                 ...c,
                 token_id: c.token_id ?? null,
-                food_partner_id: c.source === "food_partner" ? vendorId : null,
-                volunteer_id: c.source === "volunteer" ? volunteerId : null,
+                ...(isAdmin
+                    ? {}
+                    : {
+                          food_partner_id: c.source === "food_partner" ? vendorId : null,
+                          volunteer_id: c.source === "volunteer" ? volunteerId : null,
+                      }),
             })) as OfflineCapture[],
             { maxSyncWindowHours }
         );

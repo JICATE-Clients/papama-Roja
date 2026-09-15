@@ -556,6 +556,8 @@ export const ApiClient = {
         special_instructions: t.special_instructions as string | undefined,
         // Printed-token area-lock (DIST-5): pass through when the API surfaces it.
         area_lock: (t.area_lock as string | null) ?? undefined,
+        // A-2 display payload (type, value, scope, activation, expiry).
+        display: (t.display as TokenItem['display']) ?? undefined,
       })),
     };
   },
