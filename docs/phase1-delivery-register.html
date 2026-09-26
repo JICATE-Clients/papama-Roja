@@ -8,17 +8,17 @@
 
   Published: https://claude.ai/artifact/Q6gZrEkqgR4SAdmgwCyi8n
   The generated PDF sits beside this file as phase1-delivery-register.pdf —
-  regenerate it whenever this file changes, or the two drift apart.
-  To reprint the PDF (Chrome, print backgrounds honoured by the @media print
-  block at the end of the stylesheet):
+  regenerate it whenever this file changes, or the two drift apart:
     chrome --headless=new --no-pdf-header-footer --print-to-pdf=out.pdf file:///<abs-path>
+
+  The acceptance figures come from the results table in test-script-phase1.md
+  (26 checks: 21 pass, 5 blocked). Keep them in step with that table.
 
   NOTE: published as an Artifact, the hosting layer supplies <!doctype>, <head>
   and <body>; this file deliberately starts at <title>. Opened directly in a
   browser it still renders, but wrap it if you need a standalone page.
 
-  Figures current as of 26 September 2026. If they change, update this file and
-  republish rather than editing the PDF.
+  Figures current as of 26 September 2026.
 -->
 <title>Phase 1 Delivery Register</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -277,7 +277,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
     <div class="col">
       <p class="eyebrow">Development status for the client</p>
       <h1>The 23 work orders, and what is left</h1>
-      <p class="lede">Every work order raised from the Technical Administration Guide and the client decisions of 18 August has been built, with one exception the Work Order itself asks the client to decide. The acceptance pass has now been run against the live system: 20 of the 25 checks passed, five wait on test data or a second login, and one genuine defect was found and fixed the same day.</p>
+      <p class="lede">Every work order raised from the Technical Administration Guide and the client decisions of 18 August has been built, with one exception the Work Order itself asks the client to decide. The acceptance pass has now been run against the live system: 21 of the 26 checks pass, five wait on test data or a second login, and one of the 21 failed at first — a genuine defect, found and fixed the same day.</p>
     </div>
     <div class="tiles">
       <div class="tile">
@@ -290,7 +290,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
       </div>
       <div class="tile">
         <div class="k">Acceptance checks passed</div>
-          <div class="v good">20 <span class="n">of 25</span></div>
+          <div class="v good">21 <span class="n">of 26</span></div>
       </div>
       <div class="tile">
         <div class="k">Automated checks passing</div>
@@ -340,24 +340,24 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
         </thead>
         <tbody>
           <tr>
-            <td class="what"><b>Configuration integrity</b>The ₹10 ceiling refusing a higher value, a written reason on every change, the warning that names a missing setting, and the counter screen reading the same limit the server enforces.</td>
-            <td>5</td><td class="st"><span class="chip built">All passed</span></td>
-          </tr>
-          <tr>
-            <td class="what"><b>Tokens</b>A Food Partner refused without district and PIN, 60-day validity in place, and a full controlled reissue — a too-short reason refused, approval minting a linked replacement, and a second attempt refused.</td>
-            <td>5</td><td class="st"><span class="chip built">All passed</span></td>
-          </tr>
-          <tr>
-            <td class="what"><b>Money and audit</b>Unspent value showing in the Meal Pool rather than revenue, the contribution report with its outstanding figure, every export logged, and the exception queue carrying what it flagged.</td>
+            <td class="what"><b>Configuration integrity</b>The ₹10 ceiling refusing a higher value, a written reason recorded on every change, the warning that names a setting nobody has filled in, and the counter screen reading the same limit the server enforces.</td>
             <td>4</td><td class="st"><span class="chip built">All passed</span></td>
           </tr>
           <tr>
-            <td class="what"><b>Emergency</b>Declaring one, an appeal template that cannot be sent before approval, offline capture accepted inside the emergency window and refused outside it, and a device with a wrong clock refused.</td>
+            <td class="what"><b>Tokens</b>A Food Partner refused without district and PIN, 60-day validity in place, a controlled reissue (a too-short reason refused, approval minting a linked replacement, a second attempt refused), and the original left permanently expired but linked to what replaced it.</td>
+            <td>4</td><td class="st"><span class="chip built">All passed</span></td>
+          </tr>
+          <tr>
+            <td class="what"><b>Money and audit</b>Unspent value showing in the Meal Pool rather than revenue, the contribution report with its outstanding figure, every export written to the audit trail, and the exception queue holding what it flagged.</td>
+            <td>4</td><td class="st"><span class="chip built">All passed</span></td>
+          </tr>
+          <tr>
+            <td class="what"><b>Emergency</b>Declaring one, an appeal template that cannot be sent before approval, offline capture accepted inside the emergency window and refused outside it, a device with a wrong clock refused, and the counter&rsquo;s offline panel appearing only while capture is switched on.</td>
             <td>6</td><td class="st"><span class="chip built">All passed</span></td>
           </tr>
           <tr>
-            <td class="what"><b>Volunteers and privacy</b>An incident filed in two taps arriving in the administrator’s queue as a safety report, and no beneficiary category anywhere on the volunteer’s list.</td>
-            <td>3</td><td class="st"><span class="chip built">All passed</span></td>
+            <td class="what"><b>Volunteers and privacy</b>An incident filed in two taps arriving in the administrator&rsquo;s queue as a safety report, and no beneficiary category anywhere on the volunteer&rsquo;s list.</td>
+            <td>2</td><td class="st"><span class="chip built">All passed</span></td>
           </tr>
           <tr>
             <td class="what"><b>Duplicate offline captures</b>The same token recorded on two devices.</td>
@@ -601,7 +601,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
           <li><div><b>Concurrent tokens per volunteer</b>Unset, so the cap correctly tests as not enforced. We will not invent a number for how many tokens one volunteer may hold.</div></li>
           <li><div><b>Four offline limits</b>Maximum pending records per device and per volunteer, the sync window, and the alert threshold. Unset for the same reason.</div></li>
           <li><div><b>Rejected offline captures at settlement</b>Currently set to “review”, which deliberately decides nothing. The real choice — pay, withhold, or review case by case — is the client's.</div></li>
-          <li><div><b>One Food Partner has no address</b>“Dhruv” cannot be area-checked until an address is on record. Data entry, not code.</div></li>
+          <li><div><b>One Food Partner has no address</b>&ldquo;Dhruv&rdquo; cannot be area-checked until an address is on record — it only needs adding to the partner&rsquo;s details.</div></li>
           <li><div><b>The payment route</b>SB Collect, SBIePay or a commercial gateway. Assessed separately; SBIePay charges nothing on UPI, which is where most donations will come from. A written quote settles it.</div></li>
         </ol>
       </div>
