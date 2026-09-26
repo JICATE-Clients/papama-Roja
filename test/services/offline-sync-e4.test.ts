@@ -215,6 +215,14 @@ function fakeSyncClient(opts: {
     tokensByHash?: Record<string, string>;
 } = {}) {
     const upsert = vi.fn().mockResolvedValue({ error: opts.upsertError ? { message: opts.upsertError } : null });
+    // The real client has `update`, and the same-batch conflict links use it.
+    const updated: { patch: Record<string, unknown>; id: unknown }[] = [];
+    const update = vi.fn().mockImplementation((patch: Record<string, unknown>) => ({
+        eq: vi.fn().mockImplementation((_col: string, id: unknown) => {
+            updated.push({ patch, id });
+            return Promise.resolve({ error: null });
+        }),
+    }));
     const exceptionInsert = vi.fn().mockResolvedValue({ error: null });
 
     const client = {
@@ -236,13 +244,14 @@ function fakeSyncClient(opts: {
                             in: vi.fn().mockResolvedValue({
                                 data: (opts.priorOfflineTokenIds ?? []).map((t) => ({
                                     token_id: t,
-                                    id: "prior",
+                                    id: "prior-capture-row",
                                 })),
                                 error: null,
                             }),
                         }),
                     }),
                     upsert,
+                    update,
                 };
             }
             if (table === "offline_devices") {
@@ -292,10 +301,10 @@ function fakeSyncClient(opts: {
                     }),
                 };
             }
-            return { insert: exceptionInsert, upsert };
+            return { insert: exceptionInsert, upsert, update };
         }),
     };
-    return { client, upsert, exceptionInsert };
+    return { client, upsert, exceptionInsert, updated };
 }
 
 describe("E-4 — a batch syncs to Pending Offline Validation", () => {
@@ -394,6 +403,51 @@ describe("E-4 — a batch syncs to Pending Offline Validation", () => {
         expect(upsert).toHaveBeenCalledWith(
             expect.objectContaining({ id: capture().id }),
             expect.objectContaining({ onConflict: "id" })
+        );
+    });
+});
+
+describe("E-4 — the duplicate LINK must point at a row that exists", () => {
+    /**
+     * Found by running the manual test script (step A14) against the real
+     * database: `offline_transactions.conflicts_with` is a foreign key to
+     * another capture row, and the code wrote a TOKEN id into it. Postgres
+     * refused the insert, so the capture was rejected with a raw database error
+     * and the duplicate was never flagged — the exact outcome the card forbids.
+     * The mocked client could not see it, because a mock has no constraints.
+     */
+    it("links to the capture row that already claims the token, never the token id", async () => {
+        const tokenId = "aaaaaaaa-1111-4111-8111-111111111111";
+        const { client, upsert } = fakeSyncClient({ priorOfflineTokenIds: [tokenId] });
+        await syncOfflineBatch(client as never, [capture({ token_id: tokenId })], {
+            maxSyncWindowHours: null,
+        });
+        const written = upsert.mock.calls[0][0] as { conflicts_with: string | null; status: string };
+        expect(written.status).toBe("duplicate");
+        expect(written.conflicts_with).toBe("prior-capture-row");
+        expect(written.conflicts_with).not.toBe(tokenId);
+    });
+
+    it("links two captures in the SAME batch only after both rows are stored", async () => {
+        // Neither row exists when the first is written, so the insert must carry
+        // no link at all; the cross-reference is made afterwards.
+        const { client, upsert, updated } = fakeSyncClient();
+        const a = capture({ id: "aaaa1111-1111-4111-8111-111111111111", device_reference: "device-a" });
+        const b = capture({ id: "bbbb2222-2222-4222-8222-222222222222", device_reference: "device-b" });
+        const result = await syncOfflineBatch(client as never, [a, b], { maxSyncWindowHours: null });
+
+        expect(result.duplicates).toBe(2);
+        // The same mock serves the device roster, so look only at capture rows.
+        const captureWrites = upsert.mock.calls
+            .map((c) => c[0] as Record<string, unknown>)
+            .filter((w) => "status" in w && "captured_at" in w);
+        expect(captureWrites).toHaveLength(2);
+        for (const w of captureWrites) expect(w.conflicts_with).toBeNull();
+        expect(updated).toEqual(
+            expect.arrayContaining([
+                { patch: { conflicts_with: b.id }, id: a.id },
+                { patch: { conflicts_with: a.id }, id: b.id },
+            ])
         );
     });
 });

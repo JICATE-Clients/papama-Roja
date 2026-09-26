@@ -224,6 +224,8 @@ export async function syncOfflineBatch(
     // --- 1. Which tokens are already spoken for? -----------------------------
     const tokenIds = captures.map((c) => c.token_id).filter((t): t is string => Boolean(t));
     const seen = new Set<string>();
+    /** token id -> an EXISTING capture row that already claims it. */
+    const priorCaptureByToken = new Map<string, string>();
 
     if (tokenIds.length > 0) {
         const { data: redeemed } = await client
@@ -237,12 +239,20 @@ export async function syncOfflineBatch(
             .select("token_id, id")
             .in("token_id", tokenIds)
             .in("status", ["pending_offline_validation", "validated", "duplicate"]);
-        for (const r of (priorOffline ?? []) as { token_id: string | null }[]) {
-            if (r.token_id) seen.add(r.token_id);
+        for (const r of (priorOffline ?? []) as { token_id: string | null; id: string }[]) {
+            if (r.token_id) {
+                seen.add(r.token_id);
+                // `conflicts_with` is a foreign key to another capture ROW, so the
+                // link must be that row's id. Writing the token id here (as this
+                // did) makes Postgres refuse the insert, and the duplicate is
+                // never flagged at all — found running test-script step A14.
+                if (!priorCaptureByToken.has(r.token_id)) priorCaptureByToken.set(r.token_id, r.id);
+            }
         }
     }
 
     const conflicts = findConflicts(captures, seen);
+    const batchIds = new Set(captures.map((c) => c.id));
 
     // --- 2. Compromised devices ----------------------------------------------
     // Design §7: once a device is physically gone, marking it compromised is the
@@ -280,9 +290,22 @@ export async function syncOfflineBatch(
     for (const capture of captures) {
         let outcome: ValidationOutcome = "pending_offline_validation";
         let reason = "";
-        const conflictsWith = conflicts.get(capture.id) ?? null;
+        // Two captures in the SAME batch point at each other, so neither row
+        // exists yet when the first is written. Those links are made in a second
+        // pass below; here only an already-stored row may be referenced.
+        const rawPartner = conflicts.get(capture.id) ?? null;
+        // findConflicts reports a same-batch partner's capture id, or (for a
+        // token already claimed elsewhere) the token id. Only the former is a
+        // row; the latter is resolved to the row that actually holds the claim.
+        const batchPartner = rawPartner && batchIds.has(rawPartner) ? rawPartner : null;
+        const conflictPartner =
+            batchPartner ?? (capture.token_id ? (priorCaptureByToken.get(capture.token_id) ?? null) : null);
+        const isConflict = rawPartner !== null;
+        const conflictsWith = capture.token_id
+            ? (priorCaptureByToken.get(capture.token_id) ?? null)
+            : null;
 
-        if (conflictsWith) {
+        if (isConflict) {
             outcome = "duplicate";
             reason = "the same token was captured more than once — needs a human decision";
         } else if (compromised.has(capture.device_reference)) {
@@ -363,7 +386,16 @@ export async function syncOfflineBatch(
             result.rejected += 1;
         }
 
-        result.results.push({ id: capture.id, outcome, reason, conflictsWith });
+        result.results.push({ id: capture.id, outcome, reason, conflictsWith: conflictPartner });
+    }
+
+    // --- 4b. Link same-batch conflicts, now that both rows exist -------------
+    // Best-effort: the rows are already stored and flagged as duplicates, so a
+    // failed link costs the reviewer a cross-reference, not the record itself.
+    const storedIds = new Set(result.results.filter((r) => r.outcome !== "rejected").map((r) => r.id));
+    for (const [captureId, partnerId] of conflicts) {
+        if (!storedIds.has(captureId) || !storedIds.has(partnerId)) continue;
+        await client.from("offline_transactions").update({ conflicts_with: partnerId }).eq("id", captureId);
     }
 
     // --- 5. Device bookkeeping so the unsynced view stays honest -------------
