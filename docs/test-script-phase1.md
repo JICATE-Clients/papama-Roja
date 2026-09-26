@@ -129,8 +129,16 @@ Then in the console (as admin), using the emergency id from A9:
 ```js
 const em = (await (await fetch('/api/admin/emergencies')).json()).emergencies[0].id;
 const dev = 'test-device-a';
-const mk = id => ({ id, token_id: crypto.randomUUID(), emergency_id: em,
-  captured_at: new Date(Date.now()-3600e3).toISOString(),
+// Use a REAL token id — a random one belongs to no token and the database
+// refuses the row before any rule is reached.
+const tok = (await (await fetch('/api/admin/tokens')).json()).tokens
+  .find(t => t.status === 'live' || t.status === 'distributed').id;
+// And capture INSIDE the window: an emergency starts when it is declared, so
+// "an hour ago" is before it began and is correctly refused.
+const started = (await (await fetch('/api/admin/emergencies')).json())
+  .emergencies.find(e => e.id === em).activated_at;
+const mk = id => ({ id, token_id: tok, emergency_id: em,
+  captured_at: new Date(Date.parse(started) + 1000).toISOString(),
   device_reference: dev, source: 'volunteer' });
 await fetch('/api/offline/sync', { method:'POST',
   headers:{'Content-Type':'application/json'},
@@ -144,9 +152,9 @@ table.
 ### A14 · E-4 — Duplicate flags BOTH
 ```js
 const em = (await (await fetch('/api/admin/emergencies')).json()).emergencies[0].id;
-const tok = crypto.randomUUID();                    // same token, two devices
+// The same REAL token on two devices (see A13 for `tok` and `started`).
 const one = { id: crypto.randomUUID(), token_id: tok, emergency_id: em,
-  captured_at: new Date(Date.now()-3600e3).toISOString(),
+  captured_at: new Date(Date.parse(started) + 1000).toISOString(),
   device_reference: 'device-a', source: 'volunteer' };
 const two = { ...one, id: crypto.randomUUID(), device_reference: 'device-b',
   source: 'food_partner' };
@@ -212,7 +220,7 @@ when offline recording ends. With no emergency, the box does not appear at all.
 ## Part B — the 8 rules with no screen
 
 ### B1 · E-4 — Offline is emergency-only
-Close the emergency first (`/admin/emergencies` → **Close**), then retry A13.
+Close the emergency first (`/admin/emergencies` → **Close** — a reason and a surplus decision are required), then retry A13.
 **Expect:** every capture **rejected** — *"capture falls outside the emergency
 period"*. Normal operations have no offline path at all.
 
@@ -310,27 +318,36 @@ second admin before the demo — you have 3 admin users already.
 
 | Ref | Card | Result | Note |
 |---|---|---|---|
-| A1 | Q-4 | | |
-| A2 | Q-1 | | |
-| A3 | Q-3 | | |
-| A4 | A-1 | | |
-| A5 | Q-2 | | |
-| A6 | F-4 | | |
-| A7 | P-3 | | |
-| A8 | P-2 | | |
-| A9 | E-1 | | |
-| A10 | E-6 | | |
-| A11 | F-3 | | |
-| A12 | E-5 | | |
-| A13 | E-4 | | |
-| A14 | E-4 | | |
-| A15 | F-3 | | |
-| A16 | A-2 | | |
-| A17 | A-2 | | |
-| A18 | E-4 | | |
-| B1–B8 | rules | | |
-| C happy | F-2 | | |
-| C exc 1–5 | F-2 | | |
+| A1 | Q-4 | **Pass** | Amber banner on /admin names `max_tokens_per_volunteer`. |
+| A2 | Q-1 | **Pass** | 11 refused — *"co_contribution_max cannot exceed 10"*; 10 saved. |
+| A3 | Q-3 | **Pass** | Audit row `system_config.update` carried the typed reason. |
+| A4 | A-1 | **Pass** | Name-only Food Partner refused (PIN, state, district required). 36 states in the master list. |
+| A5 | Q-2 | **Pass** | Limits API returns ₹10 and the till shows max ₹10. |
+| A6 | F-4 | **Pass** | Meal Pool tile shows ₹40; the old Forfeited tile is gone. |
+| A7 | P-3 | **Pass** | Export wrote a `report.export` audit row with the report type and filters. |
+| A8 | P-2 | **Pass** | Volunteer list columns are Name / Identity / Status / Submitted — no Category. (Category appears only in the registration form the volunteer fills in.) |
+| A9 | E-1 | **Pass** | Emergency declared and listed on the register with both relaxations. |
+| A10 | E-6 | **Pass** | Draft created; mark-instant **refused** before approval (400), allowed after. |
+| A11 | F-3 | **Blocked** | No eligible settlements in an unaudited cycle, so the minimum-of-one rule had nothing to act on. Needs 3 settlements as the card describes. |
+| A12 | E-5 | **Pass** | Incident filed as a volunteer in two taps; the screen shows all 11 categories. |
+| A13 | E-4 | **Pass** | Capture inside the emergency window → `pending_validation: 1`, and it appears on the admin register with its device. |
+| A14 | E-4 | **Pass (after fix)** | **Failed first**: both captures were rejected by a database error instead of being flagged. Fixed in `7fd8228`; re-ran → `duplicates: 2`, both flagged, `offline_duplicate` raised in the exception queue. |
+| A15 | F-3 | **Pass** | Queue lists the flagged items (token_reissue, offline_duplicate) and offers Clear. |
+| A16 | A-2 | **Pass** | Short reason refused; approved reissue minted PPM-RIS-MUHXY1TI; a second attempt refused — *"already been reissued"*. |
+| A17 | A-2 | **Pass** | Original stays `expired` and reads *"Expired – Reissued as PPM-RIS-…"*, linked both ways. |
+| A18 | E-4 | **Pass** | Under a live emergency the till shows the amber offline panel and `/api/offline/authorisation` returns authorised. With capture switched off the panel is gone and the till looks normal. |
+| B1 | E-4 | **Pass** | After closure the same capture is refused — *"capture falls outside the emergency period — offline capture is emergency-only"*. |
+| B2 | E-4 | **Pass** | Future-dated capture refused — *"device clock is wrong"*. |
+| B3 | F-1 | **Pass** | Contribution report renders with the Outstanding figure. |
+| B4 | F-2 | **Blocked** | Needs a second admin account — one login cannot demonstrate maker ≠ checker. Covered by 27 automated tests. |
+| B5 | A-2 | **Blocked** | Needs a token's real QR payload (only the donor's screen produces it) and a partner in another district; no partner currently has a district on record. |
+| B6 | A-2 | **Pass** | `token_expiry_days` = 60. |
+| B7 | P-1 | **Blocked** | Needs a completed redemption to inspect the donor notification payload. Covered by `donor-privacy-p1.test.ts`. |
+| B8 | F-5 | **Blocked** | The admin pool is empty, so "oldest first" cannot be shown live. Covered by 6 automated tests. |
+| C happy | F-2 | **Not run** | The client demonstration — needs two admin logins and a scheduled session. |
+| C exc 1–5 | F-2 | **Not run** | Same. |
+
+**Run:** 26 September 2026, against the live database at `localhost:3457`, driven through the real signed-in app (admin, volunteer and Food Partner sessions).
 
 **A FAIL is a finding, not a failure of the session.** Note what you did, what
 you saw, and what you expected — that is enough for me to fix it.
