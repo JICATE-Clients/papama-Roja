@@ -1,0 +1,638 @@
+<!--
+  pApAmA — Phase 1 Delivery Register (client-facing status document).
+
+  Published for the client as an Artifact and printed to PDF from this same
+  file, so the three stay in step. Kept in the repo because the figures it
+  quotes come from here: the 23 work orders, the acceptance-pass results, and
+  what is still waiting on the client.
+
+  Published: https://claude.ai/artifact/Q6gZrEkqgR4SAdmgwCyi8n
+  To reprint the PDF (Chrome, print backgrounds honoured by the @media print
+  block at the end of the stylesheet):
+    chrome --headless=new --no-pdf-header-footer --print-to-pdf=out.pdf file:///<abs-path>
+
+  NOTE: published as an Artifact, the hosting layer supplies <!doctype>, <head>
+  and <body>; this file deliberately starts at <title>. Opened directly in a
+  browser it still renders, but wrap it if you need a standalone page.
+
+  Figures current as of 26 September 2026. If they change, update this file and
+  republish rather than editing the PDF.
+-->
+<title>Phase 1 Delivery Register</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+/* ===========================================================================
+   pApAmA document language — the same tokens as the SB Collect assessment the
+   client already holds (lifted from components/landing/theme.ts): ivory ground,
+   brand green spent only where something is settled, saffron/chilli demoted to
+   caution/critical. Consistency across the two documents is the point.
+   ========================================================================= */
+:root {
+  --ground:      #F8F2E7;
+  --surface:     #FCF8F0;
+  --surface-2:   #F1E8D7;
+  --sunk:        #EADFC9;
+  --ink:         #1C2B24;
+  --ink-soft:    #5B6B63;
+  --ink-faint:   #8C9A93;
+  --rule:        #E0D5C0;
+  --rule-strong: #CDBFA4;
+  --accent:      #0B7A55;
+  --accent-soft: #EAF3EE;
+  --warn:        #A86A12;
+  --warn-bg:     #FBF0DC;
+  --crit:        #B14A26;
+  --crit-bg:     #FBEAE3;
+
+  --measure: 66ch;
+  --step--2: 0.6875rem;
+  --step--1: 0.8125rem;
+  --step-0:  1.0625rem;
+  --step-1:  1.1875rem;
+  --step-2:  1.4375rem;
+  --step-3:  clamp(1.45rem, 3.2vw, 1.95rem);
+  --step-4:  clamp(1.9rem, 5.4vw, 2.9rem);
+}
+
+/* Dark: the ink/ground roles swap, the green lifts enough to hold on a dark
+   ground, and the caution hues brighten rather than invert. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:      #14191A;
+    --surface:     #1B2122;
+    --surface-2:   #232A2A;
+    --sunk:        #2A3231;
+    --ink:         #ECE6DA;
+    --ink-soft:    #A9B2AC;
+    --ink-faint:   #7F8983;
+    --rule:        #313937;
+    --rule-strong: #46504D;
+    --accent:      #4FC594;
+    --accent-soft: #153026;
+    --warn:        #E0A94A;
+    --warn-bg:     #332714;
+    --crit:        #E8845C;
+    --crit-bg:     #3A2018;
+  }
+}
+:root[data-theme="dark"] {
+  --ground:      #14191A;
+  --surface:     #1B2122;
+  --surface-2:   #232A2A;
+  --sunk:        #2A3231;
+  --ink:         #ECE6DA;
+  --ink-soft:    #A9B2AC;
+  --ink-faint:   #7F8983;
+  --rule:        #313937;
+  --rule-strong: #46504D;
+  --accent:      #4FC594;
+  --accent-soft: #153026;
+  --warn:        #E0A94A;
+  --warn-bg:     #332714;
+  --crit:        #E8845C;
+  --crit-bg:     #3A2018;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "Spectral", Georgia, "Times New Roman", serif;
+  font-size: var(--step-0);
+  line-height: 1.66;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 1060px; margin: 0 auto; padding: 0 clamp(16px, 5vw, 40px); }
+.col  { max-width: var(--measure); }
+
+h1, h2, h3, .ui, .eyebrow, th, .chip, .tile .k, .tile .v, .who, .num {
+  font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+}
+.mono, .ref, code { font-family: "IBM Plex Mono", Consolas, monospace; }
+
+h1 { font-size: var(--step-4); font-weight: 700; letter-spacing: -0.032em; line-height: 1.04; margin: 0; text-wrap: balance; }
+h2 { font-size: var(--step-3); font-weight: 700; letter-spacing: -0.024em; line-height: 1.14; margin: 0; text-wrap: balance; }
+h3 { font-size: var(--step-1); font-weight: 600; letter-spacing: -0.012em; margin: 0; text-wrap: balance; }
+p  { margin: 0; }
+strong { font-weight: 600; }
+
+.eyebrow {
+  font-size: var(--step--2); font-weight: 600; letter-spacing: 0.17em;
+  text-transform: uppercase; color: var(--accent); margin: 0;
+}
+.eyebrow.mute { color: var(--ink-faint); }
+.lede { font-size: var(--step-1); line-height: 1.56; color: var(--ink-soft); }
+
+/* --- masthead ------------------------------------------------------------ */
+.masthead { border-bottom: 1px solid var(--rule); background: var(--surface); }
+.masthead .wrap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 20px; padding-block: 15px; }
+.brand { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 700; font-size: 14px; letter-spacing: -0.01em; }
+.brand span { color: var(--accent); }
+.masthead .meta {
+  margin-left: auto; font-family: "IBM Plex Mono", monospace; font-size: 11px;
+  letter-spacing: 0.04em; color: var(--ink-faint); text-transform: uppercase;
+}
+
+/* --- hero + tiles -------------------------------------------------------- */
+.hero { padding-top: clamp(38px, 7vw, 68px); }
+.hero .col { display: flex; flex-direction: column; gap: 18px; }
+
+.tiles {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+  border-radius: 4px; margin-top: clamp(28px, 5vw, 44px); overflow: hidden;
+}
+.tile { background: var(--surface); padding: 18px 20px; display: flex; flex-direction: column; }
+.tile .k {
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--ink-faint);
+}
+.tile .v {
+  font-size: 26px; font-weight: 600; letter-spacing: -0.02em;
+  margin-top: auto; padding-top: 10px; line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.tile .v.good { color: var(--accent); }
+.tile .v.hold { color: var(--warn); }
+.tile .n { font-size: var(--step--1); color: var(--ink-soft); font-family: "IBM Plex Sans", sans-serif; }
+
+/* --- sections ------------------------------------------------------------ */
+section { padding-top: clamp(40px, 6.5vw, 66px); }
+.shead { display: flex; flex-direction: column; gap: 11px; margin-bottom: 22px; }
+.shead .rule { height: 2px; width: 40px; background: var(--ink); }
+.stack { display: flex; flex-direction: column; gap: 16px; }
+
+/* --- the register -------------------------------------------------------- */
+.lane { margin-top: 26px; }
+.lane-head {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px;
+  padding-bottom: 8px; border-bottom: 2px solid var(--rule-strong);
+}
+.lane-head h3 { font-size: var(--step-0); }
+.lane-head .count {
+  margin-left: auto; font-family: "IBM Plex Mono", monospace;
+  font-size: 11px; color: var(--ink-faint); letter-spacing: 0.04em;
+}
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 520px; }
+th, td {
+  text-align: left; padding: 12px 14px 12px 0; border-bottom: 1px solid var(--rule);
+  vertical-align: top; font-size: var(--step--1); line-height: 1.56;
+}
+th {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--ink-faint); white-space: nowrap; padding-top: 10px; padding-bottom: 8px;
+}
+td.code { font-family: "IBM Plex Mono", monospace; font-weight: 500; color: var(--ink); white-space: nowrap; }
+td.what { color: var(--ink); }
+td.what b { font-family: "IBM Plex Sans", sans-serif; font-weight: 600; }
+td.st { white-space: nowrap; }
+
+.chip {
+  display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 3px 8px; border-radius: 3px; border: 1px solid;
+}
+.chip.built { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.chip.held  { color: var(--warn);   border-color: var(--warn);   background: var(--warn-bg); }
+
+/* --- callouts ------------------------------------------------------------ */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 20px 22px; border-radius: 0 4px 4px 0;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.callout.warn { border-left-color: var(--warn); background: var(--warn-bg); }
+.callout h3 { font-size: var(--step-0); }
+.callout p { font-size: var(--step--1); line-height: 1.6; color: var(--ink-soft); }
+.callout p strong, .callout li strong { color: var(--ink); }
+
+/* --- owner lists --------------------------------------------------------- */
+.owners { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: clamp(22px, 4vw, 40px); }
+.owner { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.owner-head { display: flex; align-items: baseline; gap: 10px; padding-bottom: 10px; border-bottom: 2px solid currentColor; }
+.owner-head h3 { font-size: var(--step-0); }
+.owner-head .count { margin-left: auto; font-family: "IBM Plex Mono", monospace; font-size: 12px; }
+.owner.us { color: var(--accent); }
+.owner.them { color: var(--warn); }
+.owner ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; counter-reset: item; }
+.owner li { display: grid; grid-template-columns: 20px 1fr; gap: 12px; counter-increment: item; }
+.owner li::before {
+  content: counter(item); font-family: "IBM Plex Mono", monospace; font-size: 11px;
+  font-weight: 600; padding-top: 3px; color: currentColor;
+}
+.owner li > div { color: var(--ink); font-size: var(--step--1); line-height: 1.58; }
+.owner li b {
+  display: block; font-family: "IBM Plex Sans", sans-serif; font-weight: 600;
+  font-size: var(--step-0); letter-spacing: -0.01em; color: var(--ink); margin-bottom: 2px;
+}
+
+/* --- footer -------------------------------------------------------------- */
+footer {
+  margin-top: clamp(52px, 8vw, 84px); border-top: 1px solid var(--rule);
+  background: var(--surface); padding-block: 30px 42px;
+}
+footer .col { display: flex; flex-direction: column; gap: 10px; }
+footer p { font-size: var(--step--1); color: var(--ink-soft); }
+.ref {
+  background: var(--sunk); border: 1px solid var(--rule); border-radius: 3px;
+  padding: 1px 6px; font-size: 12px; color: var(--ink);
+}
+
+a { color: var(--accent); }
+a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+
+@media (max-width: 560px) {
+  th, td { padding-right: 10px; }
+}
+
+@media print {
+  body { background: #fff; font-size: 10.5pt; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .masthead, footer { background: #fff; }
+  /* Keep a row, a callout or a list item whole; let the lanes themselves flow,
+     or every lane starts a fresh page and the register runs half-empty. */
+  section { padding-top: 16pt; }
+  tr, .callout, .owner li, .tiles { page-break-inside: avoid; }
+  .lane-head, .shead, h2, h3 { page-break-after: avoid; }
+}
+</style>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="brand">pApAmA<span>.</span></div>
+    <div class="meta">Phase&nbsp;1&nbsp;·&nbsp;Delivery register&nbsp;·&nbsp;26 Sept 2026</div>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="col">
+      <p class="eyebrow">Development status for the client</p>
+      <h1>The 23 work orders, and what is left</h1>
+      <p class="lede">Every work order raised from the Technical Administration Guide and the client decisions of 18 August has been built, with one exception the Work Order itself asks the client to decide. The acceptance pass has now been run against the live system: 20 of the 25 checks passed, five wait on test data or a second login, and one genuine defect was found and fixed the same day.</p>
+    </div>
+    <div class="tiles">
+      <div class="tile">
+        <div class="k">Work orders built</div>
+        <div class="v good">22 <span class="n">of 23</span></div>
+      </div>
+      <div class="tile">
+        <div class="k">Awaiting a client decision</div>
+        <div class="v hold">1</div>
+      </div>
+      <div class="tile">
+        <div class="k">Acceptance checks passed</div>
+          <div class="v good">20 <span class="n">of 25</span></div>
+      </div>
+      <div class="tile">
+        <div class="k">Automated checks passing</div>
+        <div class="v">2,840</div>
+      </div>
+      <div class="tile">
+        <div class="k">Client answers still open</div>
+        <div class="v hold">6</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="col">
+      <div class="callout">
+        <h3>How to read this document</h3>
+        <p><strong>Built</strong> means the behaviour exists and is covered by automated checks that assert the work order's own acceptance criteria — 2,840 of them run on every change.</p>
+        <p><strong>Built is not the same as accepted.</strong> Those checks prove rules; they cannot prove a screen works in a Food Partner’s hands. So a separate pass was run by hand through the real signed-in application — as an administrator, a volunteer and a Food Partner — and section one records exactly what happened, including what failed.</p>
+        <p>The client demonstration of the financial controls is the part still to be scheduled: it needs two administrator logins, because its whole point is that one person cannot both prepare and approve.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="col shead">
+      <div class="rule"></div>
+      <p class="eyebrow mute">Section one</p>
+      <h2>The acceptance pass</h2>
+      <p class="lede" style="font-size:var(--step-0)">Run on 26 September against the live system, step by step in the real application rather than in a test harness.</p>
+    </div>
+    <div class="col stack">
+      <div class="callout warn">
+        <h3>What it found — and why that is the good news</h3>
+        <p>One real defect surfaced, in offline emergency capture. Two devices recording the same token are supposed to flag <strong>both</strong> and accept neither. In the live system both were instead <strong>refused outright by the database</strong>, so the duplicate was never flagged at all — the exact outcome the requirement forbids.</p>
+        <p>The cause was an internal link written to the wrong kind of record. It was corrected and re-tested the same day, and two new automated checks now hold it in place.</p>
+        <p><strong>No automated test could have caught this.</strong> Those tests run against a stand-in for the database, and a stand-in has none of the real one’s rules. It took a person doing the thing for real — which is what this pass is for, and the reason the remaining five checks are worth scheduling.</p>
+      </div>
+    </div>
+    <div class="tablewrap" style="margin-top:24px;">
+      <table>
+        <thead>
+          <tr><th>What was checked</th><th>Checks</th><th>Result</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="what"><b>Configuration integrity</b>The ₹10 ceiling refusing a higher value, a written reason on every change, the warning that names a missing setting, and the counter screen reading the same limit the server enforces.</td>
+            <td>5</td><td class="st"><span class="chip built">All passed</span></td>
+          </tr>
+          <tr>
+            <td class="what"><b>Tokens</b>A Food Partner refused without district and PIN, 60-day validity in place, and a full controlled reissue — a too-short reason refused, approval minting a linked replacement, and a second attempt refused.</td>
+            <td>5</td><td class="st"><span class="chip built">All passed</span></td>
+          </tr>
+          <tr>
+            <td class="what"><b>Money and audit</b>Unspent value showing in the Meal Pool rather than revenue, the contribution report with its outstanding figure, every export logged, and the exception queue carrying what it flagged.</td>
+            <td>4</td><td class="st"><span class="chip built">All passed</span></td>
+          </tr>
+          <tr>
+            <td class="what"><b>Emergency</b>Declaring one, an appeal template that cannot be sent before approval, offline capture accepted inside the emergency window and refused outside it, and a device with a wrong clock refused.</td>
+            <td>6</td><td class="st"><span class="chip built">All passed</span></td>
+          </tr>
+          <tr>
+            <td class="what"><b>Volunteers and privacy</b>An incident filed in two taps arriving in the administrator’s queue as a safety report, and no beneficiary category anywhere on the volunteer’s list.</td>
+            <td>3</td><td class="st"><span class="chip built">All passed</span></td>
+          </tr>
+          <tr>
+            <td class="what"><b>Duplicate offline captures</b>The same token recorded on two devices.</td>
+            <td>1</td><td class="st"><span class="chip held">Failed, fixed, passed</span></td>
+          </tr>
+          <tr>
+            <td class="what"><b>Waiting on data or a second login</b>Audit sampling needs several settlements in one cycle; the maker-checker rule needs a second administrator; the area restriction needs a Food Partner with a district on record; donor privacy needs a completed meal; oldest-first allocation needs tokens in the pool.</td>
+            <td>5</td><td class="st"><span class="chip held">Not yet possible</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="col shead">
+      <div class="rule"></div>
+      <p class="eyebrow mute">Section two</p>
+      <h2>The register</h2>
+      <p class="lede" style="font-size:var(--step-0)">Grouped by the five delivery lanes, in the order they were built — each lane depended on the one before it.</p>
+    </div>
+
+    <div class="lane">
+      <div class="lane-head">
+        <h3>Lane 0 — Configuration integrity</h3>
+        <span class="count">4 built · 1 held</span>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Ref</th><th>What it does</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="code">Q-1</td>
+              <td class="what"><b>₹10 ceiling holds.</b> The voluntary contribution can never be configured above ₹10; an attempt is refused and recorded against the person who tried.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">Q-2</td>
+              <td class="what"><b>One limit, not two.</b> The Food Partner's counter screen reads its contribution ceiling from the same setting the server enforces, so screen and server cannot drift apart.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">Q-3</td>
+              <td class="what"><b>Every setting change carries a reason.</b> Recorded in the audit trail; an emergency override extended without a reason is refused.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">Q-4</td>
+              <td class="what"><b>Missing settings are named, not hidden.</b> The admin dashboard warns which mandatory value is still unset, and the warning disappears only when all are set.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">Q-5</td>
+              <td class="what"><b>City lock at registration — the client's decision.</b> The original scope predates the PAN-India token model, which treats city lock as a pilot-phase control to be superseded. The Work Order asks for a choice: a soft warn-and-confirm at registration, or drop it and rely on onboarding control plus the new address capture. Our recommendation is the soft warning. Building either without that answer would be inventing it.</td>
+              <td class="st"><span class="chip held">Held</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-head">
+        <h3>Lane 1 — Token and location model</h3>
+        <span class="count">4 built</span>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Ref</th><th>What it does</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="code">A-1</td>
+              <td class="what"><b>Real places, not free text.</b> All 36 states and union territories and Tamil Nadu's 38 districts are held as master data, addresses are structured, and every redemption keeps its own city / district / state snapshot — so correcting a Food Partner's address later cannot rewrite history.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">A-2</td>
+              <td class="what"><b>Where a token works, and for how long.</b> Scope runs from PAN-India down to a single PIN code and is checked against the Food Partner's location, never the beneficiary's. Validity is 60 days — counted from issue for donor-controlled tokens, and from distribution for tokens pApAmA hands out, so a token waiting in the pool does not burn its own life. An expired token is permanently dead; the only way back is a controlled reissue, which an administrator approves with a written reason and which mints a new token linked to the original. Revalidation has been retired, as confirmed on 18 August.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">A-3</td>
+              <td class="what"><b>Special Care kept separate.</b> A configurable category master, a fixed ₹100 token value, and a Common Special Care Pool with its own eight-line statement. A ₹100 token spent on a ₹75 meal credits ₹25 to that pool and nothing to revenue.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">A-4</td>
+              <td class="what"><b>Donor-controlled or pApAmA-distributed, fixed at creation.</b> The mode cannot be changed afterwards, and the donor sees it on their token list along with “Expired — Not Redeemed” wording where it applies.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-head">
+        <h3>Lane 2 — Financial controls</h3>
+        <span class="count">5 built</span>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Ref</th><th>What it does</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="code">F-1</td>
+              <td class="what"><b>The ₹10 contribution, tracked to the rupee.</b> Every redemption carries a status — collected, waived or outstanding — with waiver records, remittance and reconciliation. A settlement cannot be paid while any line's contribution is unresolved, and the blocking lines are named. The contribution is pApAmA's and is never deducted from the Food Partner's payout.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">F-2</td>
+              <td class="what"><b>Nobody pays themselves.</b> The preparer cannot approve their own settlement; a locked settlement can only be amended by reopening it into a new version that needs fresh approval; a material change after approval voids that approval; a rejection needs a reason; whoever placed a hold cannot release it; and a Food Partner bank-account change needs four eyes, with the person who changed it barred from approving payment to the new account. The checker sees the evidence — meal value, difference, contribution status and, where waived, who authorised it and why — beside a three-way reconciliation of pApAmA's records against the claim against the contribution position.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">F-3</td>
+              <td class="what"><b>Audit that cannot be quietly undone.</b> Each cycle records its selection — population, sample, who, when — with at least one settlement always selected and no way to remove a row once chosen. Risky transactions raise themselves into an exception queue: reissues, bank changes, unusual waivers, duplicate offline captures. Clearing one requires a note.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">F-4</td>
+              <td class="what"><b>Unspent value returns to the Meal Pool.</b> A ₹60 token spent on a ₹50 meal moves ₹10 to the pool, not to revenue; expired value goes the same way instead of being written off. The counter screen now says “returned to Meal Pool” rather than “forfeited”, because that is what happens.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">F-5</td>
+              <td class="what"><b>Oldest token first.</b> Allocation serves the oldest eligible pool token, honouring scope and type; a token whose area excludes the volunteer's district is skipped and the skip is counted, so nothing disappears silently.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-head">
+        <h3>Lane 3 — Emergency framework</h3>
+        <span class="count">6 built</span>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Ref</th><th>What it does</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="code">E-1</td>
+              <td class="what"><b>An emergency is a record, not a switch.</b> Each one carries an ID in the form <span class="ref">TN-FLOOD-2026-001</span>, its area, its period, who activated it and its closure reconciliation. Every donation, token and redemption during it is traceable to that ID, and an emergency token cannot be issued without an active record.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">E-2</td>
+              <td class="what"><b>Relief without relaxing the books.</b> Inside an active emergency the face step can be skipped with the verification level recorded, and the ₹10 is waived automatically by the system — never at a Food Partner's or volunteer's discretion. The partner is still settled the full meal value, and the waiver ends when the emergency does.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">E-3</td>
+              <td class="what"><b>After the emergency, a review queue.</b> Closure populates it with flagged transactions only — rapid repeats, reused identifiers, volume and waiver anomalies — while ordinary transactions stay under the 10% random audit.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">E-4</td>
+              <td class="what"><b>Offline capture, emergency only.</b> When the network drops during an emergency, the Food Partner's counter records the meal on the device and it syncs later as <em>Pending Offline Validation</em> — never as a completed redemption. The same token captured on two devices flags both and accepts neither. Expiry, area and status are re-checked on the server, and the device stores a one-way fingerprint of the token, never the redeemable code, so a lost phone yields nothing. It ships switched <strong>off</strong>: an exception that is on by default is not an exception.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">E-5</td>
+              <td class="what"><b>A volunteer facing a problem has somewhere to put it.</b> Eleven one-tap categories — partner closed, no food, token refused, safety concern and the rest — filed in two taps, with the note optional because nobody types while standing in a queue. Safety reports sort to the top of the admin queue regardless of age.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">E-6</td>
+              <td class="what"><b>Appeals that cannot be sent by accident.</b> Templates need approval before dispatch; the pre-approved instant template raises a post-send review task; donations that arrive from an appeal carry the Emergency ID. Dispatch is built channel-abstract, so adding SMS or WhatsApp in Phase 2 is a new adapter rather than a redesign.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-head">
+        <h3>Lane 4 — Privacy</h3>
+        <span class="count">3 built</span>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Ref</th><th>What it does</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="code">P-1</td>
+              <td class="what"><b>Donors learn about the meal, not the person.</b> Notifications carry only the permitted fields — token type and value, date and time, Food Partner at city and state, Emergency ID, programme. A Special Care redemption tells the donor “SPECIAL CARE” and “City, State”; the beneficiary's category is structurally unable to reach the message, which is asserted on the payload itself rather than on the template wording.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">P-2</td>
+              <td class="what"><b>Need-to-know screens.</b> The counter sees token type, value and validity; volunteer screens carry the transaction minimum; category data stays with the admin roles whose work requires it.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+            <tr>
+              <td class="code">P-3</td>
+              <td class="what"><b>Every export is logged.</b> Who exported which report, when, and with which filters.</td>
+              <td class="st"><span class="chip built">Built</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="col shead">
+      <div class="rule"></div>
+      <p class="eyebrow mute">Section three</p>
+      <h2>What remains</h2>
+      <p class="lede" style="font-size:var(--step-0)">Two lists, because they move at different speeds. Ours is work; the client's is answers.</p>
+    </div>
+    <div class="owners">
+      <div class="owner us">
+        <div class="owner-head">
+          <h3>With us</h3>
+          <span class="count">5</span>
+        </div>
+        <ol>
+          <li><div><b>The last five acceptance checks</b>Twenty of twenty-five are done. The five that remain are held up only by missing test data and a second administrator login, both of which we can arrange with the client’s help.</div></li>
+          <li><div><b>The maker-checker demonstration</b>Ten happy-path steps and five exception scenarios, shown live. The client’s sign-off on the financial controls depends on seeing it; it needs two administrator logins, and a date is ours to propose.</div></li>
+          <li><div><b>Post-emergency review split by source</b>Offline captures are reviewed after an emergency; the review does not yet separate Food Partner captures from volunteer ones, which the design requires.</div></li>
+          <li><div><b>Volunteer offline capture</b>The Food Partner route is built and is the primary one. The volunteer route shares the same server controls but volunteers do not currently hold the permission to use it. We have not granted it quietly — it is a permissions decision to take deliberately.</div></li>
+          <li><div><b>Donation reconciliation screen</b>Outside the 23, and the one we would start first. Today a donor's own payment reference is accepted with no review, and in pApAmA an unverified donation does not merely inflate a total — it mints tokens that get eaten, leaving a Food Partner owed real money. No donation should become spendable credit without an administrator approving it.</div></li>
+        </ol>
+      </div>
+      <div class="owner them">
+        <div class="owner-head">
+          <h3>With the client</h3>
+          <span class="count">6</span>
+        </div>
+        <ol>
+          <li><div><b>Q-5 — city lock at registration</b>Soft warning, or drop it? Our recommendation is warn-and-confirm.</div></li>
+          <li><div><b>Concurrent tokens per volunteer</b>Unset, so the cap correctly tests as not enforced. We will not invent a number for how many tokens one volunteer may hold.</div></li>
+          <li><div><b>Four offline limits</b>Maximum pending records per device and per volunteer, the sync window, and the alert threshold. Unset for the same reason.</div></li>
+          <li><div><b>Rejected offline captures at settlement</b>Currently set to “review”, which deliberately decides nothing. The real choice — pay, withhold, or review case by case — is the client's.</div></li>
+          <li><div><b>One Food Partner has no address</b>“Dhruv” cannot be area-checked until an address is on record. Data entry, not code.</div></li>
+          <li><div><b>The payment route</b>SB Collect, SBIePay or a commercial gateway. Assessed separately; SBIePay charges nothing on UPI, which is where most donations will come from. A written quote settles it.</div></li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="col shead">
+      <div class="rule"></div>
+      <p class="eyebrow mute">Section four</p>
+      <h2>Stated plainly</h2>
+    </div>
+    <div class="col stack">
+      <div class="callout warn">
+        <h3>Four things are deliberately not finished, and should not surprise anyone later</h3>
+        <p><strong>Payment is still simulated</strong> apart from manual UPI reference entry — no real money moves until the gateway decision above is made. <strong>No email is sent</strong>; the official account is an external dependency. <strong>Offline capture ships switched off</strong>, by design, and stays off until the client sets its four limits. <strong>SMS and WhatsApp appeals are Phase 2</strong>, pending DLT and WhatsApp Business registration — the Phase 1 architecture is built so they slot in without rework.</p>
+      </div>
+      <div class="callout">
+        <h3>What the 18 August decisions changed, and where</h3>
+        <p>All of them are reflected in the register above: validity dated from issue for donor-controlled tokens and from distribution for pApAmA-distributed ones; both offline capture routes with a mandatory source on every record; revalidation retired in favour of controlled reissue; the existing settlement status names kept with a documented mapping, and approval and payment recorded as separate events; the appeal workflow split with the channel-extensibility requirement honoured.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="col">
+      <p><strong>Basis of this register.</strong> The Technical Administration Guide, the Phase 1 specification, and the client decisions confirmed on 18 August 2026, as carried into the developer work order of 23 cards. Each entry above was checked against that work order's own acceptance criteria rather than against a summary.</p>
+      <p><strong>The acceptance pass</strong> was run on 26 September 2026 against the live system, signed in as a real administrator, volunteer and Food Partner. Its full step-by-step record, including the failure and its fix, is kept with the project as <span class="ref">docs/test-script-phase1.md</span>.</p>
+      <p>Prepared by the development team · 26 September 2026 · figures current as of this date.</p>
+    </div>
+  </div>
+</footer>
