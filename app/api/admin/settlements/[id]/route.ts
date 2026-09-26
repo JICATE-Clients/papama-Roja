@@ -1,4 +1,6 @@
 import { defineRoute, NotFoundError } from "@/lib/api/handler";
+import type { ContributionStatus } from "@/lib/services/contribution";
+import { buildThreeWayReconciliation } from "@/lib/services/settlementReconciliation";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -43,9 +45,52 @@ export const GET = defineRoute<{ id: string }>(
         if (redemptionIds.length > 0) {
             const { data: reds } = await admin
                 .from("token_redemptions")
-                .select("id, token_value_inr, menu_value_inr, difference_paid_inr, co_pay_inr, redeemed_at")
+                .select(
+                    "id, token_value_inr, menu_value_inr, difference_paid_inr, co_pay_inr, redeemed_at, " +
+                        // F-2 (g): the checker's evidence view must show the ₹10
+                        // position per line, not only the meal figures.
+                        "contribution_status, contribution_expected_inr"
+                )
                 .in("id", redemptionIds);
-            for (const r of (reds ?? []) as { id: string }[]) redemptionById.set(r.id, r);
+            // A concatenated select string defeats supabase-js's row inference,
+            // so the shape is asserted here (same pattern as elsewhere in the repo).
+            for (const r of (reds ?? []) as unknown as { id: string }[]) {
+                redemptionById.set(r.id, r as unknown as Record<string, unknown>);
+            }
+        }
+
+        // Waiver evidence per line (F-2 (g)): a waived contribution must show WHO
+        // authorised it and WHY, on the same screen the checker approves from.
+        const waiverByRedemption = new Map<string, { reason: string; authorised_by: string | null }>();
+        if (redemptionIds.length > 0) {
+            const { data: waivers } = await admin
+                .from("contribution_waivers")
+                .select("redemption_id, reason, authorised_by")
+                .in("redemption_id", redemptionIds);
+            const authorIds = [
+                ...new Set(
+                    ((waivers ?? []) as { authorised_by: string | null }[])
+                        .map((w) => w.authorised_by)
+                        .filter(Boolean) as string[]
+                ),
+            ];
+            const authorName = new Map<string, string>();
+            if (authorIds.length > 0) {
+                const { data: us } = await admin.from("users").select("id, full_name").in("id", authorIds);
+                for (const u of (us ?? []) as { id: string; full_name: string | null }[]) {
+                    authorName.set(u.id, u.full_name ?? u.id);
+                }
+            }
+            for (const w of (waivers ?? []) as {
+                redemption_id: string;
+                reason: string;
+                authorised_by: string | null;
+            }[]) {
+                waiverByRedemption.set(w.redemption_id, {
+                    reason: w.reason,
+                    authorised_by: w.authorised_by ? (authorName.get(w.authorised_by) ?? null) : null,
+                });
+            }
         }
 
         const lineRows = (lines ?? []).map((l) => {
@@ -58,7 +103,21 @@ export const GET = defineRoute<{ id: string }>(
                 menu_value_inr: (r.menu_value_inr as number) ?? null,
                 difference_paid_inr: (r.difference_paid_inr as number) ?? null,
                 co_pay_inr: (r.co_pay_inr as number) ?? null,
+                contribution_status: ((r.contribution_status as ContributionStatus) ??
+                    "outstanding") as ContributionStatus,
+                contribution_expected_inr: Number(r.contribution_expected_inr ?? 0),
+                waiver_reason: waiverByRedemption.get(l.redemption_id as string)?.reason ?? null,
+                waiver_authorised_by:
+                    waiverByRedemption.get(l.redemption_id as string)?.authorised_by ?? null,
             };
+        });
+
+        // F-2 (h): three-way reconciliation — platform records vs this claim vs
+        // the contribution records, with CD §D-1's five ₹10 figures.
+        const reconciliation = buildThreeWayReconciliation({
+            claimedAmountInr: Number(s.amount),
+            headerLineItems: (s.line_item_count as number) ?? null,
+            lines: lineRows,
         });
         const payoutTotal = lineRows.reduce((sum, l) => sum + l.amount_inr, 0);
 
@@ -80,6 +139,7 @@ export const GET = defineRoute<{ id: string }>(
             },
             lines: lineRows,
             payout_total: payoutTotal,
+            reconciliation,
         };
     }
 );

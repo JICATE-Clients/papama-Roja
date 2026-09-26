@@ -13,6 +13,9 @@ import { createClient } from "@/lib/supabase/client";
 const NAV: ConsoleNavItem[] = [
   { href: "/volunteer", label: "Dashboard", exact: true },
   { href: "/volunteer/beneficiaries", label: "Register beneficiary" },
+  // E-5 (B-31): the safe outlet CD §D-9 requires — reachable in one tap from
+  // anywhere, because a volunteer needing it is already under pressure.
+  { href: "/volunteer/incidents", label: "Report a problem" },
 ];
 
 /**
@@ -67,6 +70,11 @@ export function VolunteerHeader() {
         }}
         tabs={[
           { href: "/volunteer", label: "Home", icon: <SectionIcon href="/volunteer" size={22} /> },
+          {
+            href: "/volunteer/incidents",
+            label: "Report",
+            icon: <SectionIcon href="/volunteer/incidents" size={22} />,
+          },
           { label: "Sign out", icon: <SectionIcon name="signout" size={22} color="#7c7367" />, onClick: signOut },
         ]}
       />

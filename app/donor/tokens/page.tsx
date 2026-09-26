@@ -188,8 +188,16 @@ export default function TokensLedgerPage() {
                       </td>
                       <td className="px-2 py-4 md:px-6 uppercase font-semibold text-[11px]">
                         <span className={token.type === "special_care" ? "text-rose-600 " : "text-zinc-600"}>
-                          {token.type.replace("_", " ")}
+                          {token.display?.token_type_label ?? token.type.replace("_", " ")}
                         </span>
+                        {/* A-4 (B-32a): the distribution mode is fixed at creation
+                            and decides when validity starts, so the donor sees it
+                            on the list, not only in the detail view. */}
+                        {token.display && (
+                          <p className="mt-0.5 text-[10px] font-medium normal-case text-zinc-400">
+                            {token.display.distribution_mode_label}
+                          </p>
+                        )}
                       </td>
                       <td className="px-2 py-4 md:px-6">
                         <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase ${statusBadges[token.status]}`}>
@@ -211,7 +219,16 @@ export default function TokensLedgerPage() {
                             </p>
                           </div>
                         ) : token.status === "expired" ? (
-                          <span className="text-red-500 font-semibold">Expired</span>
+                          <div>
+                            <span className="text-red-500 font-semibold">
+                              {token.display?.status_label ?? "Expired – Not Redeemed"}
+                            </span>
+                            {token.expires_at && (
+                              <p className="text-[11px] text-zinc-400 font-normal">
+                                {shortDate(token.expires_at)}
+                              </p>
+                            )}
+                          </div>
                         ) : (
                           <div>
                             <span className="font-medium text-blue-600 capitalize">

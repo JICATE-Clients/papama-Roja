@@ -41,8 +41,26 @@ interface SettlementDetail {
         menu_value_inr: number | null;
         difference_paid_inr: number | null;
         co_pay_inr: number | null;
+        contribution_status: "collected" | "waived" | "outstanding";
+        contribution_expected_inr: number;
+        waiver_reason: string | null;
+        waiver_authorised_by: string | null;
     }[];
     payout_total: number;
+    /** F-2 (h) - the three sides a checker compares before approving. */
+    reconciliation?: {
+        platform: { redemptions: number; meal_value_inr: number };
+        claim: { line_items: number; claimed_amount_inr: number; line_total_inr: number };
+        contribution: {
+            expected_inr: number;
+            received_inr: number;
+            waived_inr: number;
+            outstanding_inr: number;
+            final_payable_inr: number;
+        };
+        matches: boolean;
+        mismatches: string[];
+    };
 }
 
 const rupee = (n: number | null | undefined) => (n != null ? `₹${n.toLocaleString("en-IN")}` : "—");
@@ -279,6 +297,79 @@ export default function AdminSettlementsPage() {
                         : null
                 }
             >
+                {detail?.reconciliation && (
+                    <section className="mb-6">
+                        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                            Three-way reconciliation
+                        </h3>
+                        <div className="grid gap-2 sm:grid-cols-3">
+                            <div className="rounded-lg border border-slate-200 p-3">
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                                    Platform records
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                    {rupee(detail.reconciliation.platform.meal_value_inr)}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                    {detail.reconciliation.platform.redemptions} redemption(s) recorded
+                                </p>
+                            </div>
+                            <div className="rounded-lg border border-slate-200 p-3">
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                                    Settlement claim
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                    {rupee(detail.reconciliation.claim.claimed_amount_inr)}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                    {detail.reconciliation.claim.line_items} line(s), attached total{" "}
+                                    {rupee(detail.reconciliation.claim.line_total_inr)}
+                                </p>
+                            </div>
+                            <div className="rounded-lg border border-slate-200 p-3">
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                                    Contribution
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                    {rupee(detail.reconciliation.contribution.expected_inr)} expected
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                    {rupee(detail.reconciliation.contribution.received_inr)} received &middot;{" "}
+                                    {rupee(detail.reconciliation.contribution.waived_inr)} waived &middot;{" "}
+                                    <span
+                                        className={
+                                            detail.reconciliation.contribution.outstanding_inr > 0
+                                                ? "font-semibold text-orange-600"
+                                                : ""
+                                        }
+                                    >
+                                        {rupee(detail.reconciliation.contribution.outstanding_inr)} outstanding
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                        <p className="mt-2 text-xs text-slate-500">
+                            Final payable{" "}
+                            <strong className="text-slate-900">
+                                {rupee(detail.reconciliation.contribution.final_payable_inr)}
+                            </strong>{" "}
+                            &mdash; the contribution belongs to pApAmA and is never deducted from the
+                            partner&rsquo;s payout.
+                        </p>
+                        {detail.reconciliation.matches ? (
+                            <p className="mt-2 text-xs font-medium text-green-700">All three sides agree.</p>
+                        ) : (
+                            <ul className="mt-2 space-y-1">
+                                {detail.reconciliation.mismatches.map((m) => (
+                                    <li key={m} className="text-xs font-medium text-orange-600">
+                                        &#9888; {m}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </section>
+                )}
+
                 {detail && (
                     <section>
                         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -295,6 +386,10 @@ export default function AdminSettlementsPage() {
                                             <th className="px-2 py-1.5 text-right font-medium">Menu</th>
                                             <th className="px-2 py-1.5 text-right font-medium">Diff</th>
                                             <th className="px-2 py-1.5 text-right font-medium">Co-pay</th>
+                                            {/* F-2 (g): the contribution position is
+                                                evidence the checker needs here, not in
+                                                a separate report. */}
+                                            <th className="px-2 py-1.5 text-left font-medium">Contribution</th>
                                             <th className="px-2 py-1.5 text-right font-medium">Payout</th>
                                         </tr>
                                     </thead>
@@ -313,6 +408,33 @@ export default function AdminSettlementsPage() {
                                                 <td className="px-2 py-1.5 text-right text-slate-700">
                                                     {rupee(l.co_pay_inr)}
                                                 </td>
+                                                <td className="px-2 py-1.5 text-slate-700">
+                                                    <span
+                                                        className={
+                                                            l.contribution_status === "outstanding"
+                                                                ? "font-medium text-orange-600"
+                                                                : l.contribution_status === "waived"
+                                                                  ? "font-medium text-amber-700"
+                                                                  : "font-medium text-green-700"
+                                                        }
+                                                    >
+                                                        {l.contribution_status}
+                                                    </span>
+                                                    {l.contribution_expected_inr > 0 && (
+                                                        <span className="text-slate-400">
+                                                            {" "}
+                                                            {rupee(l.contribution_expected_inr)}
+                                                        </span>
+                                                    )}
+                                                    {l.waiver_reason && (
+                                                        <p className="text-[11px] text-amber-700">
+                                                            {l.waiver_reason}
+                                                            {l.waiver_authorised_by
+                                                                ? ` \u2014 ${l.waiver_authorised_by}`
+                                                                : ""}
+                                                        </p>
+                                                    )}
+                                                </td>
                                                 <td className="px-2 py-1.5 text-right font-medium text-slate-900">
                                                     {rupee(l.amount_inr)}
                                                 </td>
@@ -321,7 +443,7 @@ export default function AdminSettlementsPage() {
                                     </tbody>
                                     <tfoot className="bg-slate-50">
                                         <tr>
-                                            <td className="px-2 py-1.5 font-medium text-slate-700" colSpan={4}>
+                                            <td className="px-2 py-1.5 font-medium text-slate-700" colSpan={5}>
                                                 Payout total
                                             </td>
                                             <td className="px-2 py-1.5 text-right font-semibold text-slate-900">
