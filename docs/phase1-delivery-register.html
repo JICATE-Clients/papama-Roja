@@ -254,13 +254,15 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
 }
 
 @media print {
+  @page { margin: 11mm 12mm; }
   body { background: #fff; font-size: 10.5pt; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .masthead, footer { background: #fff; }
   /* Keep a row, a callout or a list item whole; let the lanes themselves flow,
      or every lane starts a fresh page and the register runs half-empty. */
-  section { padding-top: 16pt; }
+  section { padding-top: 13pt; }
   tr, .callout, .owner li, .tiles { page-break-inside: avoid; }
+  footer { padding-top: 14pt; }
   .lane-head, .shead, h2, h3 { page-break-after: avoid; }
 }
 </style>
@@ -324,6 +326,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
       <p class="eyebrow mute">Section one</p>
       <h2>The acceptance pass</h2>
       <p class="lede" style="font-size:var(--step-0)">Run on 26 September against the live system, step by step in the real application rather than in a test harness.</p>
+      <p class="lede" style="font-size:var(--step--1)">The 23 are the work orders — the jobs to build. The 26 are the checks used to test them: several work orders need more than one check, and a few checks cover more than one.</p>
     </div>
     <div class="col stack">
       <div class="callout warn">
@@ -632,8 +635,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
 <footer>
   <div class="wrap">
     <div class="col">
-      <p><strong>Basis of this register.</strong> The Technical Administration Guide, the Phase 1 specification, and the client decisions confirmed on 18 August 2026, as carried into the developer work order of 23 cards. Each entry above was checked against that work order's own acceptance criteria rather than against a summary.</p>
-      <p><strong>The acceptance pass</strong> was run on 26 September 2026 against the live system, signed in as a real administrator, volunteer and Food Partner. Its full step-by-step record, including the failure and its fix, is kept with the project as <span class="ref">docs/test-script-phase1.md</span>.</p>
+      <p><strong>Basis of this register.</strong> The Technical Administration Guide, the Phase 1 specification, and the client decisions confirmed on 18 August 2026, as carried into the developer work order of 23 cards. Each entry above was checked against that work order’s own acceptance criteria rather than against a summary. The acceptance pass of 26 September was run against the live system, signed in as a real administrator, volunteer and Food Partner, and its step-by-step record is held with the project.</p>
       <p>Prepared by the development team · 26 September 2026 · figures current as of this date.</p>
     </div>
   </div>
