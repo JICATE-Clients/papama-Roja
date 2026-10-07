@@ -300,10 +300,22 @@ the single settlement was `pending` until B4 moved it.
 | B7 | P-1 | **Pass** | A real redemption's donor notification carried time, location "Coimbatore, Tamil Nadu", meal, value, token type, vendor, Emergency ID and token reference. **No beneficiary category.** |
 | B8 | F-5 | **Pass** | Pool oldest-first `…G-6023`, `…G-1495`; the grant moved **`…G-6023`** to `assigned_to_volunteer` and left the newer one in the pool. |
 
-**Data seeded to make these runnable**, and still present: a vendor login
-`greenbowl@papama.test` for Green Bowl Mess, one approved menu item (Sambar
-rice, ₹40), and three minted pool tokens. One of those tokens was **redeemed** —
-B7 cannot be checked without a meal actually being served.
+**Data seeded to make these runnable** was removed afterwards: the three minted
+tokens, the redemption B7 needed, its contribution waiver, its forfeited-balance
+row, its ledger entry and its donor notifications, plus the seeded menu item.
+The offline captures and exception rows from earlier runs went with them.
+
+**What could NOT be removed, and should not be.** The cleanup ran into the
+platform's own controls, which is the best evidence they work:
+
+| Left behind | Refused by |
+|---|---|
+| 7 audit selections | `settlement_audit_selection_items` is permanent — F-3's "no way to remove a row once chosen" |
+| 16 closed test emergencies | their closure records are permanent — E-1's reconciliation |
+| the `greenbowl@papama.test` account | deleting it would null its id on `audit_logs`, which is append-only |
+
+The account's vendor link was cleared, so it owns nothing. The settlement B4
+moved was returned to `pending` with its lock and approval cleared.
 
 **Two traps worth remembering for the next run:**
 
