@@ -40,6 +40,7 @@ export default function BeneficiaryRegisterForm({
     const [category, setCategory] = useState<string>("pregnant_women");
     const [fullName, setFullName] = useState("");
     const [contact, setContact] = useState("");
+    const [city, setCity] = useState("");
     const [locationHint, setLocationHint] = useState("");
     const [face, setFace] = useState<FaceCaptureValue | null>(null);
     const [busy, setBusy] = useState(false);
@@ -59,6 +60,7 @@ export default function BeneficiaryRegisterForm({
                     category,
                     full_name: fullName.trim() || undefined,
                     contact: contact.trim() || undefined,
+                    city: city.trim() || undefined,
                     location_hint: locationHint.trim() || undefined,
                     face_capture: face ?? undefined,
                 }),
@@ -99,6 +101,7 @@ export default function BeneficiaryRegisterForm({
                 </label>
                 <Field label="Full name (optional)" value={fullName} onChange={setFullName} disabled={busy} />
                 <Field label="Contact (optional)" value={contact} onChange={setContact} disabled={busy} />
+                <Field label="City" value={city} onChange={setCity} disabled={busy} />
                 <Field label="Location hint (optional)" value={locationHint} onChange={setLocationHint} disabled={busy} />
             </div>
 

@@ -49,7 +49,7 @@ Version 1.1 described the platform as it stood in August 2026. Between then and 
 
 Seven administration screens are documented here for the first time: the contribution report, the exception queue, audit selections, the emergency register, the offline transaction register, volunteer incidents and appeal templates. Their sections are 3.15 to 3.21.
 
-One work order — city lock at registration (Q-5) — is deliberately not built and is with the client to decide. It is marked as such wherever it appears.
+All twenty-three work orders are now built. The last one — city lock at registration (Q-5) — was held for a client decision and answered on 7 October 2026: the pilot serves Coimbatore only, and registration from another city is refused outright rather than warned.
 
 ---
 
@@ -182,7 +182,7 @@ Before the platform goes into production, every setting below must be reviewed a
 | `meal_window_enforcement_enabled` | Recommended | Enable and configure meal windows at `/admin/meal-windows` before activating. |
 | `settlement_random_audit_rate` | Mandatory | Set to **0.10** (10% baseline per approved audit policy). |
 | `emergency_mode_enabled` | Review | Default OFF. Review emergency values before any activation: `emergency_max_meals_per_day` = 4, `emergency_meal_cooldown_hours` = 3, `emergency_mode_max_duration_days` = 7. |
-| `city_lock_enabled` / `operating_city` | Review | For pilot: enable city lock and set operating city. City lock is enforced at redemption only. Whether registration should also be gated is work order Q-5, which is with the client to decide (see the note in Section 9.6). |
+| `city_lock_enabled` / `operating_city` | **Mandatory together** | Set both, or neither does anything. `city_lock_enabled` on its own with no `operating_city` enforces nothing — the check cannot be evaluated and is skipped. Currently: lock **on**, city **Coimbatore**. The lock applies at registration (refused outright) and at redemption (meal refused). |
 | `transparency_dashboard_enabled` | Review | Enable when public transparency page is ready. |
 | `proof_phash_dup_distance` | Recommended | Set a threshold for duplicate proof-photo detection (perceptual hash distance). |
 | `audit_log_retention_days` | Review | Leave NULL for permanent retention (recommended). |
@@ -1637,7 +1637,7 @@ These settings are managed by an authorised administrator at `/admin/system-conf
 
 **City lock enforcement scope:** City lock is enforced **only at token redemption** — the system compares the Food Partner's city against the operating city (case-insensitive) and hard-blocks mismatches. Beneficiary registration, Food Partner onboarding and volunteer registration are **not** gated by city lock.
 
-> **Awaiting a client decision (work order Q-5, B-15):** Extend city-lock enforcement to registration flows — currently, out-of-city registrations succeed but redemptions fail later.
+> **Built — October 2026 (work order Q-5, B-15):** City lock now applies at registration as well as at redemption. The client chose a hard block over a warning (7 October 2026): while `city_lock_enabled` is on and `operating_city` is set, a beneficiary, volunteer or Food Partner registering from another city is refused, and the city is a required field. With the lock off, or with no operating city configured, the field is ignored and registration is unrestricted.
 
 **Geographic hierarchy:** The approved geographic structure for Phase 1 is Country → State → District → City/Town/Village/Locality with 6-digit PIN validation and location IDs. Current build uses city string + coordinates.
 
@@ -1868,7 +1868,7 @@ A: pApAmA maintains transaction records, token records, redemption records, sett
 **Q38: Can pApAmA operate in more than one city?**
 A: Yes. The initial pilot operates within a defined city boundary using the city lock feature (enforced at redemption only). The approved geographic structure supports: Country → State → District → City/Town/Village/Locality → PIN Code, allowing pApAmA to expand in a controlled manner while maintaining location-wise reporting and accountability. Current build uses city string + coordinates.
 
-> **Built — September 2026 (work order A-1, B-02):** Full geographic hierarchy with State/District masters, location IDs and PIN validation. **Planned (B-15):** City lock enforcement extended to registration flows (currently gates redemption only).
+> **Built — September 2026 (work order A-1, B-02):** Full geographic hierarchy with State/District masters, location IDs and PIN validation. **Built (Q-5 / B-15, October 2026):** City lock is enforced at registration as well as at redemption.
 
 **Q39: What is the basic philosophy of pApAmA?**
 A: pApAmA is designed to enable meals with dignity. It connects donors, beneficiaries, Food Partners and volunteers through a controlled technology platform so that charitable contributions can be converted into freshly prepared meals for people in need. The platform creates an accountable pathway from: Donation → Donor Credit → Meal Token → Distribution → Beneficiary → Food Partner → Meal Served → Proof → Settlement → Donor Impact Notification.

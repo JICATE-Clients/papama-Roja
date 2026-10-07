@@ -18,6 +18,7 @@ export default function VolunteerRegisterPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [city, setCity] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,6 +36,7 @@ export default function VolunteerRegisterPage() {
           full_name: fullName,
           email,
           phone: phone.trim() || undefined,
+          city: city.trim() || undefined,
           password,
         }),
       });
@@ -83,6 +85,8 @@ export default function VolunteerRegisterPage() {
             type="text" autoComplete="name" placeholder="Your name" required />
           <Field id="email" label="Email" value={email} onChange={setEmail}
             type="email" autoComplete="email" placeholder="you@example.com" required />
+          <Field id="city" label="City" value={city} onChange={setCity}
+            type="text" autoComplete="address-level2" placeholder="Coimbatore" required />
           <Field id="phone" label="Phone (optional)" value={phone} onChange={setPhone}
             type="tel" autoComplete="tel" placeholder="9876543210" />
           <Field id="password" label="Password" value={password} onChange={setPassword}

@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { embeddingFingerprint, toVectorLiteral } from "@/lib/face/embedding";
 import { assertLiveness } from "@/lib/face/liveness";
 import { writeAuditLog } from "@/lib/services/audit";
+import { assertWithinOperatingCity } from "@/lib/services/operatingCity";
 import { faceCaptureSchema } from "@/lib/validation/schemas";
 
 /**
@@ -33,6 +34,13 @@ const schema = z.object({
     face_hash: z.string().trim().min(1).optional(),
     aadhaar_hash: z.string().trim().min(1).optional(),
     contact: z.string().trim().max(120).optional(),
+    /**
+     * Q-5 (B-15): checked against the operating city while the city lock is
+     * on. Optional in the schema because the lock may be off; the rule below
+     * requires it when the lock is on, which is where "required" belongs —
+     * a schema cannot read configuration.
+     */
+    city: z.string().trim().max(120).optional(),
     location_hint: z.string().trim().max(200).optional(),
     document_refs: z.array(z.string()).optional(),
 });
@@ -41,6 +49,10 @@ export async function POST(req: Request) {
     try {
         const body = await parseBody(req as never, schema);
         const admin = createAdminClient();
+
+        // Q-5 (B-15): refuse a sign-up from outside the operating city before
+        // any account or face record is created.
+        await assertWithinOperatingCity(body.city, admin as never);
 
         // On-device face capture (preferred): gate liveness (fail-safe — see
         // lib/face/liveness.ts), then store the embedding. Identical handling to
@@ -64,6 +76,7 @@ export async function POST(req: Request) {
                 face_embedding: faceEmbedding,
                 aadhaar_hash: body.aadhaar_hash ?? null,
                 contact: body.contact ?? null,
+                city: body.city ?? null,
                 location_hint: body.location_hint ?? null,
                 document_refs: body.document_refs ?? [],
                 submitted_by: null,

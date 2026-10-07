@@ -279,16 +279,16 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
     <div class="col">
       <p class="eyebrow">Development status for the client</p>
       <h1>The 23 work orders, and what is left</h1>
-      <p class="lede">Every work order raised from the Technical Administration Guide and the client decisions of 18 August has been built, with one exception the Work Order itself asks the client to decide. The acceptance pass has now been run against the live system: 21 of the 26 checks pass, five wait on test data or a second login, and one of the 21 failed at first — a genuine defect, found and fixed the same day.</p>
+      <p class="lede">Every work order raised from the Technical Administration Guide and the client decisions of 18 August has been built, and the one exception — city lock at registration — was answered on 7 October and built. The acceptance pass has now been run against the live system: 21 of the 26 checks pass, five wait on test data or a second login, and one of the 21 failed at first — a genuine defect, found and fixed the same day.</p>
     </div>
     <div class="tiles">
       <div class="tile">
         <div class="k">Work orders built</div>
-        <div class="v good">22 <span class="n">of 23</span></div>
+        <div class="v good">23 <span class="n">of 23</span></div>
       </div>
       <div class="tile">
         <div class="k">Awaiting a client decision</div>
-        <div class="v hold">1</div>
+        <div class="v">0</div>
       </div>
       <div class="tile">
         <div class="k">Acceptance checks passed</div>
@@ -300,7 +300,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
       </div>
       <div class="tile">
         <div class="k">Client answers still open</div>
-        <div class="v hold">6</div>
+        <div class="v hold">5</div>
       </div>
     </div>
   </div>
@@ -388,7 +388,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
     <div class="lane">
       <div class="lane-head">
         <h3>Lane 0 — Configuration integrity</h3>
-        <span class="count">4 built · 1 held</span>
+        <span class="count">5 built</span>
       </div>
       <div class="tablewrap">
         <table>
@@ -416,8 +416,8 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
             </tr>
             <tr>
               <td class="code">Q-5</td>
-              <td class="what"><b>City lock at registration — the client's decision.</b> The original scope predates the PAN-India token model, which treats city lock as a pilot-phase control to be superseded. The Work Order asks for a choice: a soft warn-and-confirm at registration, or drop it and rely on onboarding control plus the new address capture. Our recommendation is the soft warning. Building either without that answer would be inventing it.</td>
-              <td class="st"><span class="chip held">Held</span></td>
+              <td class="what"><b>City lock at registration — answered, and built.</b> The client confirmed on 7 October that the pilot serves Coimbatore only, and chose a hard block over a warning. Someone registering from another city is now refused at sign-up rather than finding out at the counter, and the city is a required field while the lock is on. The same rule already governed redemption — it was switched on in the same session, having been enabled with no city set and therefore enforcing nothing.</td>
+              <td class="st"><span class="chip built">Built</span></td>
             </tr>
           </tbody>
         </table>
@@ -587,7 +587,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
           <span class="count">5</span>
         </div>
         <ol>
-          <li><div><b>The last five acceptance checks</b>Twenty of twenty-five are done. The five that remain are held up only by missing test data and a second administrator login, both of which we can arrange with the client’s help.</div></li>
+          <li><div><b>The last five acceptance checks</b>Twenty-one of twenty-six are done. The five that remain are held up only by missing test data and a second administrator login, both of which we can arrange with the client’s help.</div></li>
           <li><div><b>The maker-checker demonstration</b>Ten happy-path steps and five exception scenarios, shown live. The client’s sign-off on the financial controls depends on seeing it; it needs two administrator logins, and a date is ours to propose.</div></li>
           <li><div><b>Post-emergency review split by source</b>Offline captures are reviewed after an emergency; the review does not yet separate Food Partner captures from volunteer ones, which the design requires.</div></li>
           <li><div><b>Volunteer offline capture</b>The Food Partner route is built and is the primary one. The volunteer route shares the same server controls but volunteers do not currently hold the permission to use it. We have not granted it quietly — it is a permissions decision to take deliberately.</div></li>
@@ -597,10 +597,9 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
       <div class="owner them">
         <div class="owner-head">
           <h3>With the client</h3>
-          <span class="count">6</span>
+          <span class="count">5</span>
         </div>
         <ol>
-          <li><div><b>Q-5 — city lock at registration</b>Soft warning, or drop it? Our recommendation is warn-and-confirm.</div></li>
           <li><div><b>Concurrent tokens per volunteer</b>Unset, so the cap correctly tests as not enforced. We will not invent a number for how many tokens one volunteer may hold.</div></li>
           <li><div><b>Four offline limits</b>Maximum pending records per device and per volunteer, the sync window, and the alert threshold. Unset for the same reason.</div></li>
           <li><div><b>Rejected offline captures at settlement</b>Currently set to “review”, which deliberately decides nothing. The real choice — pay, withhold, or review case by case — is the client's.</div></li>

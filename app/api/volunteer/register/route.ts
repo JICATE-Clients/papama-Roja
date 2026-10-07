@@ -3,6 +3,7 @@ import { z } from "zod";
 import { BadRequestError, parseBody, toErrorResponse } from "@/lib/api/handler";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { writeAuditLog } from "@/lib/services/audit";
+import { assertWithinOperatingCity } from "@/lib/services/operatingCity";
 
 /**
  * POST /api/volunteer/register — self-service volunteer onboarding (PUBLIC, no session).
@@ -25,12 +26,17 @@ const schema = z.object({
     password: z.string().min(8, "password must be at least 8 characters"),
     full_name: z.string().trim().min(1, "your name is required"),
     phone: z.string().trim().optional(),
+    /** Q-5 (B-15): matched against the operating city while the lock is on. */
+    city: z.string().trim().max(120).optional(),
 });
 
 export async function POST(req: Request) {
     try {
         const body = await parseBody(req as never, schema);
         const admin = createAdminClient();
+
+        // Q-5 (B-15): a volunteer works where pApAmA operates.
+        await assertWithinOperatingCity(body.city, admin as never);
 
         // 1. Create the auth user (email pre-confirmed). Trigger provisions a donor.
         const { data: created, error: createError } = await admin.auth.admin.createUser({
@@ -87,6 +93,7 @@ export async function POST(req: Request) {
                     full_name: body.full_name,
                     phone: body.phone ?? null,
                     email: body.email,
+                    city: body.city ?? null,
                     status: "pending",
                 })
                 .select("id, status")

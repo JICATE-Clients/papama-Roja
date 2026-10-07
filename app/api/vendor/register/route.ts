@@ -3,6 +3,7 @@ import { z } from "zod";
 import { BadRequestError, parseBody, toErrorResponse } from "@/lib/api/handler";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { writeAuditLog } from "@/lib/services/audit";
+import { assertWithinOperatingCity } from "@/lib/services/operatingCity";
 
 /**
  * POST /api/vendor/register — self-service vendor onboarding (PUBLIC, no session).
@@ -34,6 +35,7 @@ const schema = z.object({
     name: z.string().trim().min(1, "business name is required"),
     legal_name: z.string().trim().optional(),
     address: z.string().trim().optional(),
+    /** Q-5 (B-15): matched against the operating city while the lock is on. */
     city: z.string().trim().optional(),
     pincode: z.string().trim().optional(),
     phone: z.string().trim().optional(),
@@ -52,6 +54,10 @@ export async function POST(req: Request) {
     try {
         const body = await parseBody(req as never, schema);
         const admin = createAdminClient();
+
+        // Q-5 (B-15): a Food Partner outside the operating city cannot serve a
+        // token there anyway (redemption refuses it), so refuse at sign-up.
+        await assertWithinOperatingCity(body.city, admin as never);
 
         // 1. Create the auth user (email pre-confirmed). The handle_new_user trigger
         //    provisions users(role 'donor') + donors + donor_credits.
