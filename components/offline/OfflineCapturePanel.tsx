@@ -11,7 +11,12 @@ import {
 } from "@/lib/offline/deviceQueue";
 
 /**
- * Offline emergency capture on the Food Partner scan screen (E-4 / B-30).
+ * Offline emergency capture, for BOTH routes (E-4 / B-30, CD §D-9).
+ *
+ * Shared by the Food Partner scan screen (the primary route) and the volunteer
+ * app (the secondary one). The panel never decides which it is: the server
+ * stamps the source on the authorisation it returns, so a device cannot claim
+ * to be the other kind.
  *
  * Renders NOTHING unless the server has authorised this device for an active
  * emergency, or records are still waiting to sync. In normal operation the

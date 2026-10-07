@@ -63,7 +63,10 @@ const syncSchema = z.object({
 });
 
 export const POST = defineRoute(
-    { feature: "token_redemption", action: "create", scope: "own" },
+    // Read + the offline_capture capability, NOT create: a volunteer records
+    // captures (CD §D-9's secondary route) without gaining the online redemption
+    // that `create` would also unlock.
+    { feature: "token_redemption", action: "read", scope: "own", cap: "offline_capture" },
     async ({ req, user, audit }) => {
         const body = await parseBody(req, syncSchema);
         const admin = createAdminClient();

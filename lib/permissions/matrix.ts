@@ -63,7 +63,17 @@ export type Capability =
     | "scan_proof"
     | "assist"
     | "self_register"
-    | "donate";
+    | "donate"
+    /**
+     * Record a meal offline during an emergency (E-4 / B-30, CD §D-9).
+     *
+     * Deliberately a capability rather than `token_redemption/create`: that
+     * permission also opens `/api/vendor/redemptions`, which burns a token and
+     * raises a settlement claim. A volunteer recording a capture must not gain
+     * the power to redeem online, so the two are separated here rather than
+     * guarded twice downstream.
+     */
+    | "offline_capture";
 
 export interface Permission {
     create: Scope;
@@ -115,11 +125,15 @@ export const PERMISSION_MATRIX: Record<Feature, Partial<Record<UserRole, Permiss
         guest: perm({ create: "own", caps: ["self_register"] }), // Self-register
     },
     token_redemption: {
-        admin: CRUD_ALL,
+        admin: perm({ create: "all", read: "all", update: "all", delete: "all", caps: ["offline_capture"] }),
         compliance: R_ALL,
         vendor_manager: R_ALL,
-        vendor: perm({ create: "own", read: "own", caps: ["scan_proof"] }), // CR (scan/proof)
-        volunteer: R_ALL,
+        // CR (scan/proof) + offline capture at the till — the primary route.
+        vendor: perm({ create: "own", read: "own", caps: ["scan_proof", "offline_capture"] }),
+        // Read, plus offline capture in the field — the secondary route (CD §D-9,
+        // confirmed 18 Aug). Note what is NOT granted: `create`, so a volunteer
+        // still cannot redeem a token online.
+        volunteer: perm({ read: "all", caps: ["offline_capture"] }),
         beneficiary: perm({ read: "own" }), // Own
     },
     vendor_management: {

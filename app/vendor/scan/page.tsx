@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { PageHeader, Notice } from "../_ui";
 import FaceCapture from "@/components/face/FaceCapture";
 import QrScanner from "@/components/vendor/QrScanner";
-import OfflineCapturePanel from "@/components/vendor/OfflineCapturePanel";
+import OfflineCapturePanel from "@/components/offline/OfflineCapturePanel";
 import type { FaceCapture as FaceCaptureValue } from "@/lib/validation/schemas";
 import { inr } from "@/lib/format";
 

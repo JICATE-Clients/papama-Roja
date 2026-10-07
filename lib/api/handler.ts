@@ -6,8 +6,10 @@ import { ZodError, type ZodType } from "zod";
 import { requireAppUser, UnauthorizedError, type AppUser } from "@/lib/auth";
 import {
     assertCan,
+    assertCapability,
     ForbiddenError,
     type Action,
+    type Capability,
     type Feature,
     type Scope,
 } from "@/lib/permissions";
@@ -52,6 +54,12 @@ export interface RouteGuard {
     action: Action;
     /** "all" (default) or "own"; never "none". */
     scope?: Exclude<Scope, "none">;
+    /**
+     * A capability the role must also hold. Use it when the thing being guarded
+     * is narrower than the CRUD verb — offline capture, for instance, is not
+     * "create a redemption" and must not require that permission.
+     */
+    cap?: Capability;
 }
 
 /** What a handler receives once auth + authz have passed. */
@@ -94,6 +102,7 @@ export function defineRoute<P = Record<string, string>>(
         try {
             const user = await requireAppUser();
             assertCan(user, guard.feature, guard.action, guard.scope ?? "all");
+            if (guard.cap) assertCapability(user, guard.feature, guard.cap);
 
             const params = ((segment?.params
                 ? await segment.params

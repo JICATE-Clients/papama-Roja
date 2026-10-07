@@ -972,7 +972,9 @@ When the network drops during an emergency, a Food Partner's counter can record 
 
 **What the device stores:** a one-way fingerprint of the token, never the redeemable code. A lost phone yields nothing usable.
 
-**It ships switched off.** `offline_capture_enabled` is `false` by default, and the panel does not appear on the counter screen until it is switched on and an emergency is active. An exception that is on by default is not an exception.
+**Both routes are open.** The Food Partner till is the primary route; a volunteer records in the field at `/volunteer/offline` when there is no connected Food Partner. The two share one panel and one set of server controls, and the source is stamped from the session at sync, so a device cannot claim to be the other kind. A volunteer holds a narrow `offline_capture` capability and **still cannot redeem a token online** — the two permissions are deliberately separate.
+
+**It ships switched off.** `offline_capture_enabled` is `false` by default, and the panel does not appear on either screen until it is switched on and an emergency is active. An exception that is on by default is not an exception.
 
 `offline_rejected_settlement_policy` decides what happens to a rejected capture at settlement. It is currently `review`, which deliberately decides nothing — the real choice between paying, withholding and reviewing case by case is the client's.
 

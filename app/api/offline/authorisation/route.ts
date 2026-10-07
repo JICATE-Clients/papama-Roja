@@ -27,7 +27,7 @@ import { resolveVendorId } from "@/lib/vendor/server-identity";
  * window against its own records (lib/services/offlineSync.ts).
  */
 export const GET = defineRoute(
-    { feature: "token_redemption", action: "read", scope: "own" },
+    { feature: "token_redemption", action: "read", scope: "own", cap: "offline_capture" },
     async ({ user }) => {
         const admin = createAdminClient();
 

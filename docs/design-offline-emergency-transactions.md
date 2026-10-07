@@ -332,7 +332,9 @@ JICATE's and the client's to make.** See §11.
 nothing) and `components/vendor/OfflineCapturePanel.tsx` on the scan screen,
 fed by `GET /api/offline/authorisation`. The capturer's identity (food partner /
 volunteer) is stamped from the session at sync, never taken from the device.
-Step 6 is served by the same sync endpoint but has no volunteer screen yet.
+**Step 6 landed on 7 October 2026**: volunteers hold a narrow `offline_capture`
+capability (not `token_redemption/create`, which would also have opened online
+redemption), and `/volunteer/offline` carries the same shared panel as the till.
 **Step 7 landed on 7 October 2026**: `runOfflineCaptureReview()` reviews each
 source as its own population and returns a result per source rather than a
 total, and every queued flag is prefixed with the source it came from. A

@@ -58,6 +58,13 @@ export function hasCapability(role: UserRole, feature: Feature, cap: Capability)
     return getPermission(role, feature).caps.includes(cap);
 }
 
+/** Throw unless `user` holds `cap` on `feature`. The capability twin of assertCan. */
+export function assertCapability(user: AppUser, feature: Feature, cap: Capability): void {
+    if (!hasCapability(user.role, feature, cap)) {
+        throw new ForbiddenError(`role '${user.role}' does not hold '${cap}' on '${feature}'`);
+    }
+}
+
 /**
  * Roles the /admin console is for. Used by the admin layout to gate the whole
  * area server-side (coarse "may you enter at all"); per-feature access is still
