@@ -279,3 +279,307 @@ export async function runPostEmergencyReview(
 
     return result;
 }
+
+/* -------------------------------------------------------------------------
+ * Offline captures, reviewed SEPARATELY BY SOURCE
+ *
+ * CD §D-9 (confirmed 18 Aug) and the offline design §2: every offline
+ * transaction records its source, and post-emergency review runs separately by
+ * source, because "a Food Partner recording at their own till and a volunteer
+ * recording in a field are different risk profiles and must not be pooled".
+ *
+ * Pooling them is not a cosmetic shortcut, it is the failure the requirement
+ * names. A till that records thirty captures in an evening is ordinary; a
+ * volunteer device that records thirty is not. Mixed into one population, the
+ * volunteer hides inside the Food Partner's volume and the Food Partner is
+ * dragged over the line by the volunteer's rarity. Each cohort is therefore
+ * measured against its own peers, and every flag says which cohort it came
+ * from so a reviewer never has to guess.
+ * ---------------------------------------------------------------------- */
+
+/** The two routes an offline capture can arrive by (`offline_txn_source`). */
+export type CaptureSource = "food_partner" | "volunteer";
+
+export const CAPTURE_SOURCES: readonly CaptureSource[] = ["food_partner", "volunteer"] as const;
+
+/** The capture fields the offline rules read. */
+export interface EmergencyCapture {
+    id: string;
+    source: CaptureSource;
+    device_reference: string;
+    food_partner_id: string | null;
+    volunteer_id: string | null;
+    beneficiary_identifier: string | null;
+    captured_at: string;
+    received_at: string | null;
+    waiver_status: boolean;
+    status: string;
+}
+
+export interface CaptureFlag {
+    captureId: string;
+    source: CaptureSource;
+    vendorId: string | null;
+    pattern: string;
+    severity: "critical" | "major" | "minor";
+    detail: string;
+}
+
+export interface CaptureThresholds {
+    /** A device's share of ITS OWN source's captures that counts as a volume anomaly. */
+    deviceVolumeShare: number;
+    /** A device's rejection rate that is worth a look. */
+    rejectionRateThreshold: number;
+    /** A device's waiver rate that is worth a look. */
+    waiverRateThreshold: number;
+    /** Minimum captures from a device before any RATE about it means anything. */
+    minimumSampleForRate: number;
+    /** Hours between capture and sync beyond which the delay itself is a flag. */
+    lateSyncHours: number;
+}
+
+/**
+ * As conservative as the redemption thresholds, and for the same reason: a
+ * false positive costs a reviewer two minutes, a missed pattern costs the
+ * Trust its credibility. These are starting points for the pilot, not findings.
+ */
+export const DEFAULT_CAPTURE_THRESHOLDS: CaptureThresholds = {
+    deviceVolumeShare: 0.5,
+    rejectionRateThreshold: 0.3,
+    waiverRateThreshold: 0.9,
+    minimumSampleForRate: 5,
+    lateSyncHours: 48,
+};
+
+/**
+ * Detect patterns within ONE source's captures.
+ *
+ * The caller passes a single cohort. Handing this function a mixed list is the
+ * bug the requirement exists to prevent, so it refuses one: every rate below is
+ * a share of the population it was given.
+ */
+export function detectCapturePatterns(
+    captures: readonly EmergencyCapture[],
+    source: CaptureSource,
+    thresholds: CaptureThresholds = DEFAULT_CAPTURE_THRESHOLDS
+): CaptureFlag[] {
+    const foreign = captures.find((c) => c.source !== source);
+    if (foreign) {
+        throw new Error(
+            `detectCapturePatterns received a ${foreign.source} capture while reviewing ${source} — ` +
+                "the two sources must be reviewed separately (CD §D-9)"
+        );
+    }
+
+    const flags: CaptureFlag[] = [];
+    const seen = new Set<string>();
+    const push = (f: CaptureFlag) => {
+        const key = `${f.captureId}:${f.pattern}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        flags.push(f);
+    };
+
+    if (captures.length === 0) return flags;
+
+    // --- by device, within this source only --------------------------------
+    const byDevice = new Map<string, EmergencyCapture[]>();
+    for (const c of captures) {
+        const list = byDevice.get(c.device_reference) ?? [];
+        list.push(c);
+        byDevice.set(c.device_reference, list);
+    }
+
+    for (const [device, list] of byDevice) {
+        const share = list.length / captures.length;
+        // One device carrying most of a cohort is worth a look. With two devices
+        // in the cohort a half-share is unremarkable, so require a real spread.
+        if (byDevice.size >= 3 && share >= thresholds.deviceVolumeShare) {
+            for (const c of list) {
+                push({
+                    captureId: c.id,
+                    source,
+                    vendorId: c.food_partner_id,
+                    pattern: "device_volume_anomaly",
+                    severity: "minor",
+                    detail:
+                        `device ${device} recorded ${list.length} of ${captures.length} ` +
+                        `${source} captures (${Math.round(share * 100)}%)`,
+                });
+            }
+        }
+
+        if (list.length < thresholds.minimumSampleForRate) continue;
+
+        const rejected = list.filter((c) => c.status === "rejected").length;
+        const rejectionRate = rejected / list.length;
+        if (rejectionRate >= thresholds.rejectionRateThreshold) {
+            for (const c of list.filter((x) => x.status === "rejected")) {
+                push({
+                    captureId: c.id,
+                    source,
+                    vendorId: c.food_partner_id,
+                    pattern: "device_rejection_rate",
+                    severity: "major",
+                    detail:
+                        `device ${device} had ${rejected} of ${list.length} ${source} captures ` +
+                        `refused (${Math.round(rejectionRate * 100)}%)`,
+                });
+            }
+        }
+
+        const waived = list.filter((c) => c.waiver_status).length;
+        const waiverRate = waived / list.length;
+        if (waiverRate >= thresholds.waiverRateThreshold) {
+            for (const c of list.filter((x) => x.waiver_status)) {
+                push({
+                    captureId: c.id,
+                    source,
+                    vendorId: c.food_partner_id,
+                    pattern: "device_waiver_rate",
+                    severity: "minor",
+                    detail:
+                        `device ${device} waived the contribution on ${waived} of ${list.length} ` +
+                        `${source} captures (${Math.round(waiverRate * 100)}%)`,
+                });
+            }
+        }
+    }
+
+    // --- the same beneficiary identifier, more than once -------------------
+    const byIdentifier = new Map<string, EmergencyCapture[]>();
+    for (const c of captures) {
+        const id = c.beneficiary_identifier?.trim();
+        if (!id) continue;
+        const list = byIdentifier.get(id) ?? [];
+        list.push(c);
+        byIdentifier.set(id, list);
+    }
+    for (const [identifier, list] of byIdentifier) {
+        if (list.length < 2) continue;
+        for (const c of list) {
+            push({
+                captureId: c.id,
+                source,
+                vendorId: c.food_partner_id,
+                pattern: "identifier_reuse_offline",
+                severity: "major",
+                detail: `identifier ${identifier} appears on ${list.length} ${source} captures`,
+            });
+        }
+    }
+
+    // --- synced far later than it was captured -----------------------------
+    // A long gap is not proof of anything — a device can genuinely sit without a
+    // signal for days — but it is the window in which a record can be edited on
+    // a device, so it earns a glance.
+    for (const c of captures) {
+        if (!c.received_at) continue;
+        const capturedAt = Date.parse(c.captured_at);
+        const receivedAt = Date.parse(c.received_at);
+        if (Number.isNaN(capturedAt) || Number.isNaN(receivedAt)) continue;
+        const hours = (receivedAt - capturedAt) / 3_600_000;
+        if (hours >= thresholds.lateSyncHours) {
+            push({
+                captureId: c.id,
+                source,
+                vendorId: c.food_partner_id,
+                pattern: "late_sync",
+                severity: "minor",
+                detail:
+                    `captured ${Math.round(hours)} hours before it synced, from ${source} ` +
+                    `device ${c.device_reference}`,
+            });
+        }
+    }
+
+    return flags;
+}
+
+export interface SourceSweepResult {
+    scanned: number;
+    flagged: number;
+    queued: number;
+    failures: number;
+}
+
+/** One result per source — never a single pooled number. */
+export type CaptureSweepResult = Record<CaptureSource, SourceSweepResult>;
+
+const emptySourceResult = (): SourceSweepResult => ({
+    scanned: 0,
+    flagged: 0,
+    queued: 0,
+    failures: 0,
+});
+
+/**
+ * Review an emergency's offline captures, one source at a time.
+ *
+ * Returns a result per source rather than a total, because a total is exactly
+ * the pooling the requirement forbids: a reviewer asked to look at "eleven
+ * flags" learns nothing about which route produced them.
+ *
+ * Never throws, for the same reason the redemption sweep does not: closing an
+ * emergency is an accounting act and must not fail because a review aid did.
+ */
+export async function runOfflineCaptureReview(
+    client: Client,
+    emergencyId: string,
+    thresholds: CaptureThresholds = DEFAULT_CAPTURE_THRESHOLDS
+): Promise<CaptureSweepResult> {
+    const result: CaptureSweepResult = {
+        food_partner: emptySourceResult(),
+        volunteer: emptySourceResult(),
+    };
+
+    let rows: EmergencyCapture[] = [];
+    try {
+        const { data, error } = await client
+            .from("offline_transactions")
+            .select(
+                "id, source, device_reference, food_partner_id, volunteer_id, " +
+                    "beneficiary_identifier, captured_at, received_at, waiver_status, status"
+            )
+            .eq("emergency_id", emergencyId);
+        if (error) return result;
+        rows = (data ?? []) as unknown as EmergencyCapture[];
+    } catch {
+        return result;
+    }
+
+    for (const source of CAPTURE_SOURCES) {
+        const cohort = rows.filter((r) => r.source === source);
+        const bucket = result[source];
+        bucket.scanned = cohort.length;
+        if (cohort.length === 0) continue;
+
+        let flags: CaptureFlag[] = [];
+        try {
+            flags = detectCapturePatterns(cohort, source, thresholds);
+        } catch {
+            // A cohort that cannot be analysed must not take the other one with it.
+            bucket.failures += 1;
+            continue;
+        }
+        bucket.flagged = flags.length;
+
+        for (const flag of flags) {
+            const queued = await flagException(client, {
+                exceptionType: "emergency_pattern",
+                entityTable: "offline_transactions",
+                entityId: flag.captureId,
+                vendorId: flag.vendorId,
+                severity: flag.severity,
+                // The source leads the detail line: a reviewer reading the queue
+                // sees which route produced the flag before they read anything else.
+                detail: `[${source}] ${flag.pattern}: ${flag.detail}`,
+                emergencyId,
+            });
+            if (queued.queued) bucket.queued += 1;
+            else if (queued.reason !== "already queued") bucket.failures += 1;
+        }
+    }
+
+    return result;
+}

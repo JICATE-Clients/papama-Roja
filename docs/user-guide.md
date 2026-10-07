@@ -946,6 +946,10 @@ Every donation, token and redemption during an emergency is traceable to its Eme
 
 Closure writes a reconciliation record and populates the post-emergency review queue with flagged transactions only — rapid repeats, reused identifiers, volume and waiver anomalies. Ordinary transactions from the emergency stay under the normal 10% random audit rather than being re-examined wholesale.
 
+**Offline captures are reviewed separately by source.** A Food Partner recording at their own till and a volunteer recording in a field are different risk profiles, so each is measured against its own peers rather than pooled. A volunteer device holding three of five volunteer captures is 60% of its cohort and is flagged; pooled into an emergency of forty captures it would be 7% and would disappear. The closure response reports a count for each source, never a single total, and every flag in the queue is prefixed `[food_partner]` or `[volunteer]`.
+
+**What the offline review looks for:** one device carrying most of its cohort, a device whose captures are mostly refused, a device waiving almost every contribution, the same beneficiary identifier on more than one capture, and a capture that synced long after it was taken.
+
 ---
 
 ### 3.19 Offline Transaction Register

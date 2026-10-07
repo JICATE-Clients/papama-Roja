@@ -2,7 +2,11 @@ import { z } from "zod";
 
 import { BadRequestError, NotFoundError, defineRoute, parseBody } from "@/lib/api/handler";
 import { computeEmergencyClosure } from "@/lib/services/emergencyEvent";
-import { runPostEmergencyReview } from "@/lib/services/postEmergencyReview";
+import {
+    runOfflineCaptureReview,
+    runPostEmergencyReview,
+    type CaptureSweepResult,
+} from "@/lib/services/postEmergencyReview";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -221,6 +225,7 @@ export const PATCH = defineRoute(
         if (upError) throw new Error(upError.message);
 
         let closureId: string | null = null;
+        let offlineReview: CaptureSweepResult | null = null;
         let reviewFlagged = 0;
 
         if (body.action === "close") {
@@ -250,6 +255,16 @@ export const PATCH = defineRoute(
             } catch {
                 reviewFlagged = 0;
             }
+
+            // CD §D-9: offline captures are reviewed SEPARATELY BY SOURCE. A
+            // Food Partner recording at their own till and a volunteer recording
+            // in a field are different risk profiles, so the counts are reported
+            // per source and never added together.
+            try {
+                offlineReview = await runOfflineCaptureReview(admin, em.id);
+            } catch {
+                offlineReview = null;
+            }
         }
 
         await audit({
@@ -261,6 +276,7 @@ export const PATCH = defineRoute(
                 emergency_ref: em.emergency_ref,
                 closure_id: closureId,
                 review_flagged: reviewFlagged,
+                offline_review_by_source: offlineReview,
                 surplus_utilisation: body.surplus_utilisation ?? null,
                 reason: body.reason ?? null,
             },
@@ -271,6 +287,9 @@ export const PATCH = defineRoute(
             status,
             closure_id: closureId,
             review_flagged: reviewFlagged,
+            // Per source, deliberately not summed: a single total is the pooling
+            // the requirement forbids.
+            offline_review_by_source: offlineReview,
         };
     }
 );

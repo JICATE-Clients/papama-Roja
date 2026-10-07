@@ -332,8 +332,12 @@ JICATE's and the client's to make.** See §11.
 nothing) and `components/vendor/OfflineCapturePanel.tsx` on the scan screen,
 fed by `GET /api/offline/authorisation`. The capturer's identity (food partner /
 volunteer) is stamped from the session at sync, never taken from the device.
-Step 6 is served by the same sync endpoint but has no volunteer screen yet;
-step 7 still needs the by-source split. The capability ships switched OFF
+Step 6 is served by the same sync endpoint but has no volunteer screen yet.
+**Step 7 landed on 7 October 2026**: `runOfflineCaptureReview()` reviews each
+source as its own population and returns a result per source rather than a
+total, and every queued flag is prefixed with the source it came from. A
+mixed cohort is refused rather than averaged — pooling is the failure the
+requirement names, not a shortcut. The capability ships switched OFF
 (`offline_capture_enabled = false`) and the four limits stay NULL until JICATE
 answers §11.
 
@@ -351,7 +355,7 @@ already exists.
 | Emergency entity + active gate | ✅ E-1 |
 | Emergency waiver + verification relaxation | ✅ E-2 |
 | Exception queue (shared) | ✅ F-3 |
-| Post-emergency review sweep | ✅ E-3 — extend for source split |
+| Post-emergency review sweep | ✅ E-3, extended by source (7 Oct 2026) |
 | Geographic scope at redemption | ✅ A-2 |
 | Service-location snapshot | ✅ A-1 |
 
