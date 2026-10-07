@@ -211,6 +211,26 @@ when offline recording ends. With no emergency, the box does not appear at all.
 4. DevTools → Application → IndexedDB → `papama-offline`: the record holds a
    64-character **hash**, never the `PAPAMA:` code.
 
+### A19 · E-4 — Offline recording in the volunteer app
+*Added 7 October 2026, after the 26 September pass. The secondary route of
+CD §D-9 — for a field situation with no connected Food Partner.*
+
+With `offline_capture_enabled` **true** and an active emergency, sign in as a
+**volunteer** → `/volunteer/offline`.
+
+**Expect:** the same amber *Emergency offline recording* box as the till. With
+no emergency, the page shows only its explanation and no box.
+
+1. Scan (or paste) a real token code.
+2. DevTools → Network → **Offline**. Press **Record offline**.
+   **Expect:** *"Recorded offline…"*, and *1 record(s) waiting to sync*.
+3. Switch Network back **Online**.
+   **Expect:** the capture in `/admin/offline-transactions` with source
+   **volunteer**, as pending validation.
+4. **The line that must not move:** still as that volunteer, POST to
+   `/api/vendor/redemptions`.
+   **Expect:** **403**. Capture is a capability; online redemption is not.
+
 ### A15 · F-3 — Clearing needs a note
 **On `/admin/exception-queue`:** press **Clear** with the note box empty.
 **Expect:** the button is disabled. An unexplained clear is not a review.
@@ -296,21 +316,49 @@ second admin before the demo — you have 3 admin users already.
 
 ## Known limits — say these before anyone finds them
 
-- **Volunteer offline route has no screen.** The Food Partner route (primary)
-  is built (A18). Volunteers also lack `token_redemption/create` in the
-  permission matrix, so they cannot sync at all today — granting it is a
-  permissions decision, not something to change quietly.
-- **Post-emergency review is not yet split by source** (E-4 design step 7).
-- **Q-5 held** by the Work Order's own instruction, pending Lane 1 design.
+*Current as of 7 October 2026. Three limits listed here previously — the
+volunteer offline route, the post-emergency source split and Q-5 — were built
+between 26 September and 7 October and have been removed. Check this list
+against the delivery register before reading it aloud.*
+
+**Waiting on a client answer — not bugs, and worth saying so in those words:**
+
 - **`max_tokens_per_volunteer` is unset**, so the volunteer cap will correctly
-  test as *not enforced*. A missing client value, not a bug.
-- **Four offline limits unset**, same reason.
+  test as *not enforced*. A missing client value, not a defect.
+- **Four offline limits unset**, same reason: maximum pending records per
+  device and per volunteer, the sync window, and the alert threshold.
 - **Settlement policy for rejected offline captures** is seeded `review` — it
   decides nothing deliberately. The real choice is the client's.
 - **One Food Partner ("Dhruv") has no address**, so it cannot be
-  geographic-scope-checked. Data entry, not code.
-- **Payment is still mock** apart from manual UPI-UTR. No real money moves.
+  geographic-scope-checked. It only needs adding to the partner's details.
+
+**Deliberately not finished, and should surprise nobody later:**
+
+- **Payment is still mock** apart from manual UPI-UTR. No real money moves
+  until the client picks a payment route.
+- **A donor's own payment reference is accepted with no review.** A gateway
+  would verify it automatically, so the reconciliation screen is deliberately
+  deferred until the payment route is chosen rather than built and thrown away.
 - **No email is sent** — the provider is an external dependency.
+- **Offline capture ships switched off** (`offline_capture_enabled = false`)
+  and stays off until the four limits above are set.
+- **SMS and WhatsApp appeals are Phase 2**, pending DLT and WhatsApp Business
+  registration. The dispatch layer is channel-abstract, so they slot in.
+
+**Built since the last run, in case anyone remembers the old answer:**
+
+- **Volunteer offline capture works** (7 Oct). Volunteers hold a narrow
+  `offline_capture` capability and a screen at `/volunteer/offline`. They still
+  cannot redeem a token online — that is a separate permission, deliberately.
+- **Post-emergency review is split by source** (7 Oct). Food Partner and
+  volunteer captures are reviewed as separate populations, never pooled, and
+  every flag names its source.
+- **Q-5 is built** (7 Oct). The client chose a hard block: registration from
+  outside Coimbatore is refused, and the city is required while the lock is on.
+- **City lock is actually enforcing.** It had been switched on with no
+  operating city set, which enforced nothing anywhere; `operating_city` is now
+  Coimbatore. Three of the five seeded Food Partners are outside it and will be
+  refused at redemption — expect that during the demo, and use Green Bowl Mess.
 
 ---
 
@@ -336,6 +384,7 @@ second admin before the demo — you have 3 admin users already.
 | A16 | A-2 | **Pass** | Short reason refused; approved reissue minted PPM-RIS-MUHXY1TI; a second attempt refused — *"already been reissued"*. |
 | A17 | A-2 | **Pass** | Original stays `expired` and reads *"Expired – Reissued as PPM-RIS-…"*, linked both ways. |
 | A18 | E-4 | **Pass** | Under a live emergency the till shows the amber offline panel and `/api/offline/authorisation` returns authorised. With capture switched off the panel is gone and the till looks normal. |
+| A19 | E-4 | **Part-verified** | Added 7 Oct, after the pass. The API was verified end to end — volunteer authorisation 200 (source `volunteer`), sync 200 with the capture pending, and `/api/vendor/redemptions` 403 for that same volunteer. **The screen itself has not been driven in a browser**; do that at the demo. |
 | B1 | E-4 | **Pass** | After closure the same capture is refused — *"capture falls outside the emergency period — offline capture is emergency-only"*. |
 | B2 | E-4 | **Pass** | Future-dated capture refused — *"device clock is wrong"*. |
 | B3 | F-1 | **Pass** | Contribution report renders with the Outstanding figure. |
@@ -347,7 +396,9 @@ second admin before the demo — you have 3 admin users already.
 | C happy | F-2 | **Not run** | The client demonstration — needs two admin logins and a scheduled session. |
 | C exc 1–5 | F-2 | **Not run** | Same. |
 
-**Run:** 26 September 2026, against the live database at `localhost:3457`, driven through the real signed-in app (admin, volunteer and Food Partner sessions).
+**Run:** 26 September 2026, against the live database at `localhost:3457`, driven through the real signed-in app (admin, volunteer and Food Partner sessions). **21 of the 26 steps passed**, five were blocked on test data or a second admin login, and A14 failed, was fixed, and passed on re-run.
+
+**Since that run,** Q-5 was answered and built, the post-emergency review was split by source, and the volunteer offline route was opened (A19 above). Those are not folded into the figures here — this table is the record of 26 September, not a running total.
 
 **A FAIL is a finding, not a failure of the session.** Note what you did, what
 you saw, and what you expected — that is enough for me to fix it.
