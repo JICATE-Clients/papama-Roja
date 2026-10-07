@@ -284,6 +284,38 @@ in `skipped_for_scope`.
 
 ---
 
+
+### Re-run — 7 October 2026
+
+The five checks blocked on 26 September. Four were blocked on missing test data
+rather than a second login, which only became clear once a second admin session
+was used: the draw's population is settlements that are *locked or beyond*, and
+the single settlement was `pending` until B4 moved it.
+
+| Ref | Card | Result | What was seen |
+|---|---|---|---|
+| A11 | F-3 | **Pass** | Population 1, rate 0.10, sample **1**. 10% of 1 rounds to zero; the minimum-of-one rule drew 1. |
+| B4 | F-2 | **Pass** | Admin A locked (200). A approving its own → **400 "D-4(a): you locked this settlement — a different user must approve"**. Admin B approving → 200. |
+| B5 | A-2 | **Pass** | A token scoped to Ariyalur, offered at Green Bowl Mess (Coimbatore) → **400 "token_scope: this token is valid only in Ariyalur district"** — it names where the token *is* valid. |
+| B7 | P-1 | **Pass** | A real redemption's donor notification carried time, location "Coimbatore, Tamil Nadu", meal, value, token type, vendor, Emergency ID and token reference. **No beneficiary category.** |
+| B8 | F-5 | **Pass** | Pool oldest-first `…G-6023`, `…G-1495`; the grant moved **`…G-6023`** to `assigned_to_volunteer` and left the newer one in the pool. |
+
+**Data seeded to make these runnable**, and still present: a vendor login
+`greenbowl@papama.test` for Green Bowl Mess, one approved menu item (Sambar
+rice, ₹40), and three minted pool tokens. One of those tokens was **redeemed** —
+B7 cannot be checked without a meal actually being served.
+
+**Two traps worth remembering for the next run:**
+
+- The **face gate answers before the scope rule**, so a plain redemption attempt
+  reports "face verification is required" and never reaches geography. B5 and B7
+  were run inside an emergency with verification relaxation. Scope is financial
+  governance and stays on throughout — which is what B5 proves.
+- The redemption route needs the **service location** (`geo`), or it refuses with
+  "location required" before any other rule.
+
+---
+
 ## Part C — CD §D-4 demo script
 
 The client's required demonstration. Run in order.

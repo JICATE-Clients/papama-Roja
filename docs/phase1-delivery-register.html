@@ -279,7 +279,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
     <div class="col">
       <p class="eyebrow">Development status for the client</p>
       <h1>The 23 work orders, and what is left</h1>
-      <p class="lede">Every work order raised from the Technical Administration Guide and the client decisions of 18 August has been built, and the one exception — city lock at registration — was answered on 7 October and built. The acceptance pass has now been run against the live system: 21 of the 26 checks pass, five wait on test data or a second login, and one of the 21 failed at first — a genuine defect, found and fixed the same day.</p>
+      <p class="lede">Every work order raised from the Technical Administration Guide and the client decisions of 18 August has been built, and the one exception — city lock at registration — was answered on 7 October and built. <strong>All 26 acceptance checks now pass</strong>, against the live system: five of them were blocked in September on missing test data and a second administrator login, and were run once both were arranged. One check failed at first — a genuine defect, found and fixed the same day.</p>
     </div>
     <div class="tiles">
       <div class="tile">
@@ -292,7 +292,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
       </div>
       <div class="tile">
         <div class="k">Acceptance checks passed</div>
-          <div class="v good">21 <span class="n">of 26</span></div>
+          <div class="v good">26 <span class="n">of 26</span></div>
       </div>
       <div class="tile">
         <div class="k">Automated checks passing</div>
@@ -325,7 +325,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
       <div class="rule"></div>
       <p class="eyebrow mute">Section one</p>
       <h2>The acceptance pass</h2>
-      <p class="lede" style="font-size:var(--step-0)">Run on 26 September against the live system, step by step in the real application rather than in a test harness.</p>
+      <p class="lede" style="font-size:var(--step-0)">Run on 26 September against the live system, step by step in the real application rather than in a test harness, and completed on 7 October once the last five checks had the data and the second login they needed.</p>
       <p class="lede" style="font-size:var(--step--1)">The 23 are the work orders — the jobs to build. The 26 are the checks used to test them: several work orders need more than one check, and a few checks cover more than one.</p>
     </div>
     <div class="col stack">
@@ -367,8 +367,8 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
             <td>1</td><td class="st"><span class="chip held">Failed, fixed, passed</span></td>
           </tr>
           <tr>
-            <td class="what"><b>Waiting on data or a second login</b>Audit sampling needs several settlements in one cycle; the maker-checker rule needs a second administrator; the area restriction needs a Food Partner with a district on record; donor privacy needs a completed meal; oldest-first allocation needs tokens in the pool.</td>
-            <td>5</td><td class="st"><span class="chip held">Not yet possible</span></td>
+            <td class="what"><b>Audit sampling, maker-checker, area restriction, donor privacy and oldest-first</b>Blocked in September on missing test data and a second administrator login. Both were arranged on 7 October and all five passed — including the maker-checker refusal, where the administrator who locked a settlement was refused when approving it and a second administrator then approved it.</td>
+            <td>5</td><td class="st"><span class="chip built">All passed</span></td>
           </tr>
         </tbody>
       </table>
@@ -584,10 +584,10 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
       <div class="owner us">
         <div class="owner-head">
           <h3>With us</h3>
-          <span class="count">3</span>
+          <span class="count">2</span>
         </div>
         <ol>
-          <li><div><b>The last five acceptance checks</b>Twenty-one of twenty-six are done. The five that remain are held up only by missing test data and a second administrator login, both of which we can arrange with the client’s help.</div></li>
+          
           <li><div><b>The maker-checker demonstration</b>Ten happy-path steps and five exception scenarios, shown live. The client’s sign-off on the financial controls depends on seeing it; it needs two administrator logins, and a date is ours to propose.</div></li>
           <li><div><b>Donation reconciliation screen</b>Outside the 23, and the one we would start first. Today a donor's own payment reference is accepted with no review, and in pApAmA an unverified donation does not merely inflate a total — it mints tokens that get eaten, leaving a Food Partner owed real money. No donation should become spendable credit without an administrator approving it.</div></li>
         </ol>
