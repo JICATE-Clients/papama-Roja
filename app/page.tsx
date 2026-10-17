@@ -3,6 +3,7 @@ import Link from "next/link";
 import { HeroDome, MealStrip } from "@/components/landing/HeroGallery";
 import LightRays from "@/components/ui/LightRays/LightRays";
 import { C, EYEBROW, H2, SHELL } from "@/components/landing/theme";
+import { Logo } from "@/components/brand/Logo";
 import { LandingEffects } from "@/components/ui/LandingEffects";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTransparencyStats, type TransparencyStats } from "@/lib/services/transparency";
@@ -277,7 +278,7 @@ export default async function Home() {
                     so the sphere is still draggable through it. */}
                 <div aria-hidden="true" className="pa-hero-scrim" />
 
-                <Link href="/" style={{ position: "absolute", top: "clamp(20px, 4vw, 34px)", left: "clamp(20px, 4vw, 48px)", zIndex: 4, display: "inline-flex", alignItems: "center", minHeight: 44, fontSize: "clamp(20px, 3vw, 24px)", fontWeight: 800, letterSpacing: "-0.02em", color: C.accent, textDecoration: "none" }}>pApAmA</Link>
+                <Link href="/" style={{ position: "absolute", top: "clamp(20px, 4vw, 34px)", left: "clamp(20px, 4vw, 48px)", zIndex: 4, display: "inline-flex", alignItems: "center", minHeight: 44, textDecoration: "none" }} aria-label="pApAmA Foundation — home"><Logo variant="full" height={72} priority /></Link>
 
                 <div className="pa-hero-grid" style={{ position: "relative", zIndex: 3, minHeight: "100svh", maxWidth: 1800, margin: "0 auto", padding: "clamp(28px, 6vw, 56px) clamp(20px, 4vw, 48px)", display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.1fr)", gap: 40, alignItems: "center" }}>
                     <div>

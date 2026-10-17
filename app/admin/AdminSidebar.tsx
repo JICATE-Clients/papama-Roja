@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useAppUser } from "@/components/auth/AppUserProvider";
+import { LogoLockup } from "@/components/brand/Logo";
 import { can } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/client";
 
@@ -58,11 +59,8 @@ export function AdminSidebar() {
             className="pa-admin-sidebar fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-slate-200 bg-slate-50 md:flex"
         >
             <div className="flex items-baseline gap-2 px-5 py-5">
-                <Link
-                    href="/admin"
-                    className="text-xl font-extrabold tracking-tight text-[#0B7A55] transition hover:opacity-80"
-                >
-                    pApAmA
+                <Link href="/admin" className="transition hover:opacity-80">
+                    <LogoLockup height={28} priority />
                 </Link>
                 <span className="rounded-full bg-slate-200/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">
                     Admin

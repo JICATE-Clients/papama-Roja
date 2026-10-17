@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 
+import { LogoLockup } from "@/components/brand/Logo";
+
 /**
  * Mobile-only brand row (`md:hidden`).
  *
@@ -15,7 +17,7 @@ export function AdminTopBar() {
         <header className="sticky top-0 z-30 border-b border-slate-200 bg-slate-50/85 backdrop-blur-md md:hidden">
             <div className="flex items-center justify-between px-5 py-3">
                 <Link href="/admin" className="flex items-baseline gap-2">
-                    <span className="text-lg font-extrabold tracking-tight text-[#0B7A55]">pApAmA</span>
+                    <LogoLockup height={24} textClassName="text-lg font-extrabold tracking-tight text-[#1C4122]" priority />
                     <span className="rounded-full bg-slate-200/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">
                         Admin
                     </span>

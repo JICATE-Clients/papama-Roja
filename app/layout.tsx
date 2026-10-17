@@ -18,6 +18,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "pApAmA — Food Token Platform",
   description: "Turn donations into meals: fund, distribute, redeem, and settle food tokens.",
+  // `app/icon.png` and `app/apple-icon.png` are picked up by Next's file
+  // convention on their own; these entries add the explicit <link> tags and
+  // keep the legacy favicon.ico as a fallback for older browsers.
+  icons: {
+    icon: [
+      { url: "/icon.png", type: "image/png", sizes: "512x512" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 // viewport-fit=cover lets env(safe-area-inset-*) resolve to real values on

@@ -8,6 +8,7 @@ import { Suspense, useMemo, useState } from "react";
 import { clearDonorCache } from "@/lib/donor/auth";
 import { createClient } from "@/lib/supabase/client";
 import { C } from "@/components/landing/theme";
+import { Logo } from "@/components/brand/Logo";
 import { mealImages } from "@/components/landing/mealImages";
 
 /**
@@ -257,9 +258,9 @@ function LoginForm() {
                     />
                     <Link
                         href="/"
-                        style={{ position: "relative", display: "inline-flex", alignSelf: "flex-start", alignItems: "center", minHeight: 44, fontSize: 26, fontWeight: 800, letterSpacing: "-0.02em", color: C.accent, textDecoration: "none" }}
+                        style={{ position: "relative", display: "inline-flex", alignSelf: "flex-start", alignItems: "center", minHeight: 44, textDecoration: "none" }}
                     >
-                        pApAmA
+                        <Logo variant="full" height={92} priority />
                     </Link>
 
                     <div style={{ position: "relative" }}>
@@ -286,9 +287,9 @@ function LoginForm() {
                         <Link
                             href="/"
                             className="pa-login-mobilebrand"
-                            style={{ display: "none", alignItems: "center", minHeight: 44, marginBottom: 12, fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em", color: C.accent, textDecoration: "none" }}
+                            style={{ display: "none", alignItems: "center", minHeight: 44, marginBottom: 12, textDecoration: "none" }}
                         >
-                            pApAmA
+                            <Logo variant="full" height={64} priority />
                         </Link>
 
                         <Link
