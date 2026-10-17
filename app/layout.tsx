@@ -18,14 +18,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "pApAmA — Food Token Platform",
   description: "Turn donations into meals: fund, distribute, redeem, and settle food tokens.",
-  // `app/icon.png` and `app/apple-icon.png` are picked up by Next's file
-  // convention on their own; these entries add the explicit <link> tags and
-  // keep the legacy favicon.ico as a fallback for older browsers.
+  // Declaring `icons` suppresses Next's file-convention tags for icon.png and
+  // apple-icon.png, so they have to be named here — but NOT favicon.ico, which
+  // the convention still emits on its own, and emits better: it fingerprints
+  // the URL, which is the only thing that reliably busts the famously sticky
+  // favicon cache when the artwork changes. Listing it again here would just
+  // add a second, unhashed tag competing with that one.
   icons: {
-    icon: [
-      { url: "/icon.png", type: "image/png", sizes: "512x512" },
-      { url: "/favicon.ico", sizes: "any" },
-    ],
+    icon: [{ url: "/icon.png", type: "image/png", sizes: "512x512" }],
     apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
 };
